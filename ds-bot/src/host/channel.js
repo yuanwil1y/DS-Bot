@@ -99,7 +99,7 @@ export function install(rt) {
   })
   // What a host that only reads the team may still answer.
   // Updates change the dsh profile, not the team, so a reading host may run them too.
-  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library'])
+  const READS = new Set(['state', 'models', 'efforts', 'providers', 'provider-models', 'earlier', 'chat', 'run-stats', 'room-progress', 'exchange', 'exchange-text', 'file-text', 'usage', 'schedules', 'memory-view', 'browser-wait', 'browser-result', 'diagnostics', 'diagnostics-log', 'diagnostics-clear', 'update-check', 'update-install', 'dsh-update-install', 'repo-stars', 'approval-answer', 'thinking', 'avatar-library', 'hello', 'notices', 'avatar', 'room-chat', 'usage-summary'])
 
   function setPrefs(body) {
     if (body.theme !== undefined) {
@@ -153,7 +153,8 @@ export function install(rt) {
           await rt.catalog()
           await rt.loadSecrets()
           if (body.since === state.revision && (body.models === undefined || body.models === modelsKey())) return ok({ revision: state.revision, unchanged: true, ...live() })
-          return ok({ ...view(), ...live() })
+          // A phone asks for photos by reference and fetches each once (`avatar`).
+          return ok(body.avatars === 'ref' ? { ...rt.slimAvatars(view()), ...live() } : { ...view(), ...live() })
         case 'models':
           await rt.catalog({ fresh: true })
           return ok({ modelsKey: modelsKey() })
@@ -376,6 +377,16 @@ export function install(rt) {
         case 'learning-answer':
           await rt.load()
           return ok(await rt.learningEndpoint(endpoint, body))
+        // The mobile API (mobile.js).
+        case 'hello':
+        case 'notices':
+        case 'avatar':
+        case 'room-chat':
+        case 'usage-summary':
+        case 'memory-edit':
+        case 'memory-add':
+          await rt.load()
+          return ok(await rt.mobileEndpoint(endpoint, body))
         case 'answer-question': {
           if (typeof body.sessionId !== 'string') return fail('Nothing to send', 'bot/invalid')
           await rt.load()

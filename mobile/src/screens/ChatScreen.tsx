@@ -1,4 +1,5 @@
 // Grok-style chat for a Bot's private chat or a group chat: floating header, cards, pill composer.
+import { SIDE, parseSideLine, sideHostText, sideQuery } from '../api/side';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
@@ -16,9 +17,9 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 
-type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void };
+type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void };
 
-export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule }: Props) {
+export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, onSide }: Props) {
   const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state, refresh } = useStore();
   const id = (bot?.id ?? room?.id)!;
   const sessionId = bot ? bot.sessionId ?? bot.id : room!.id;
@@ -78,6 +79,16 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule }: 
   }
   function send() {
     const s = text.trim(); if (!s || !client) return;
+    const side = parseSideLine(s);
+    if (side) {
+      // `/side` never becomes a normal send: a refusal keeps the draft.
+      if (!bot) { setErr(SIDE.group); return; }
+      if (side.bare) { setErr(SIDE.empty); return; }
+      setErr(''); setText('');
+      client.sideAsk(bot.id, side.args.trim(), undefined, true).then((v) => { refresh(); onSide(v.chatId); },
+        (e: any) => { setText((v) => (v === '' ? s : v)); setErr(sideHostText(String(e?.message ?? e))); });
+      return;
+    }
     setText(''); setErr('');
     if (bot) { const m = addPending(model, s); setModel(m); deliver(s, m.pending!.at(-1)!.key); }
     else { const m = addPending({ items: [], drafts: {}, pending: rmodel.pending }, s); setRModel((r) => ({ ...r, pending: m.pending! })); deliver(s, m.pending!.at(-1)!.key); }
@@ -184,6 +195,14 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule }: 
               work.filter((w) => w.state === 'work').length ? `${work.filter((w) => w.state === 'work').map((w) => byId[w.botId]?.name).join('、')} 正在干活…` : ''].filter(Boolean).join(' · ')}
           </Text>
         </Pressable>
+      ) : null}
+      {bot && sideQuery(text) ? (
+        <View style={{ marginHorizontal: 14, borderRadius: 16, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder, overflow: 'hidden' }}>
+          <Pressable onPress={() => setText('/side ')} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, backgroundColor: pressed ? theme.cardHi : 'transparent' })}>
+            <Text style={{ color: theme.text, fontSize: 16 }}>side</Text>
+            <Text numberOfLines={1} style={{ color: theme.sub, fontSize: 14, marginLeft: 10, flex: 1 }}>{SIDE.hint}</Text>
+          </Pressable>
+        </View>
       ) : null}
       {mq != null ? (
         <View style={{ marginHorizontal: 14, borderRadius: 16, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder, maxHeight: 240, overflow: 'hidden' }}>

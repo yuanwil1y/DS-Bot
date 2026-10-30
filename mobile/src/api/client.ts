@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.6.0', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.7.0', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -70,6 +70,10 @@ export class BotClient {
   scheduleDelete(sessionId: string, id: string) { return this.call<ScheduleView>('schedule-delete', { sessionId, id }); }
   avatarLibrary(offset = 0, limit = 24) { return this.call<{ items: AvatarEntry[]; total: number; next: number }>('avatar-library', { offset, limit }); }
   avatarImport(items: { name: string; image: string }[]) { return this.call<{ imported?: unknown[]; duplicates?: unknown[]; failed?: { name: string; message: string }[] }>('avatar-import', { items }); }
+  sideNew(sessionId: string) { return this.call<{ chatId: string }>('side-new', { sessionId }); }
+  sideAsk(sessionId: string, text: string, chatId?: string, recent?: boolean) { return this.call<{ chatId: string; entryId: string }>('side-ask', { sessionId, text, ...(chatId ? { chatId } : {}), ...(recent ? { recent: true } : {}) }); }
+  sideCancel(chatId: string, entryId: string) { return this.call<any>('side-cancel', { chatId, entryId }); }
+  sideClose(chatId: string) { return this.call<any>('side-close', { chatId }); }
   avatarDelete(id: string) { return this.call<any>('avatar-delete', { id }); }
   updateRoom(id: string, p: Record<string, unknown>) { return this.call<any>('update-room', { id, ...p }); }
   memoryView(id: string, flags: { summarize?: boolean; regenerate?: boolean } = {}, room = false) { return this.call<any>('memory-view', { ...(room ? { roomId: id } : { botId: id }), ...flags }); }

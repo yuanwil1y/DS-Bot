@@ -29,6 +29,7 @@ export type Model = { ref: string; name: string; provider?: string; providerName
 export type PermissionCatalog = { options: { value: string; name: string; description?: string }[]; defaultPreset?: string };
 export type BotState = {
   revision: number;
+  sideChats?: Record<string, import('./side').SideChat[]>;
   mainBotId?: string;
   bots: Bot[];
   rooms?: Room[];

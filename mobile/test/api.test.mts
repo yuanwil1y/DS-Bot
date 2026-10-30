@@ -9,6 +9,7 @@ import { Feed } from '../src/api/feed';
 import { ManualCookieTokenAuth, parseConnection } from '../src/api/auth';
 import { emptyChat, withHistory, applyFeed, rows, addPending, emptyRoom, withRoomPage, roomRows } from '../src/api/chatModel';
 import { timingText } from '../src/api/schedules';
+import { parseSideLine, sideChatsOf, sideTitle } from '../src/api/side';
 import type { FeedEvent } from '../src/api/types';
 import { cardsFor, needsYou, roomWork, eventLabel, mentionQuery, insertMention, mentionCandidates } from '../src/api/cards';
 
@@ -234,6 +235,45 @@ log('派活 → stop-room-work → idle; feed:', roomRows(withRoomPage(emptyRoom
   await client.updateBot(W.id, { avatar: null, color: null } as any);
   b = (await client.state()).bots.find((x) => x.id === W.id); assert.ok(!b.avatar && !b.color, 'reset');
   log(`avatar: shape/color/photo/remove, library import(1 new + 1 dup)/list/delete, reset ok`);
+}
+
+// 0.7.0 侧边对话: side-new / side-ask (+follow-up, recent) / side-cancel / side-close, answers via state on a feed revision
+{
+  const st0 = await client.state();
+  const C = st0.bots.find((b) => b.id === st0.mainBotId) ?? st0.bots[0]; // has called the model (你好 above)
+  const R = st0.rooms![0];
+  await client.send(C.id, '你好'); await sleep(3000); // side asks need a Bot that already called a model
+  await assert.rejects(client.sideNew(R.id), /private chat/);
+  await assert.rejects(client.sideAsk(C.id, '   '), /Write a question/);
+  const { chatId } = await client.sideNew(C.id);
+  assert.ok(sideChatsOf(await client.state(), C.id).some((c) => c.id === chatId && c.entries.length === 0), 'empty chat listed');
+  const mark = events.length;
+  const a1 = await client.sideAsk(C.id, '进展如何？', chatId);
+  assert.equal(a1.chatId, chatId);
+  const chatNow = async () => sideChatsOf(await client.state(), C.id).find((c) => c.id === chatId)!;
+  const first = (await chatNow()).entries.at(-1)!;
+  assert.ok(first.status === 'answering' || first.status === 'done');
+  await assert.rejects(first.status === 'answering' ? client.sideAsk(C.id, '再问', chatId) : Promise.reject(new Error('Wait for the answer')), /Wait for the answer/);
+  const done1 = await until(async () => { const c = await chatNow(); return c.entries.at(-1)?.status === 'done' ? c : null; });
+  assert.equal(done1.entries[0].answer, 'Side note: 0 earlier pair(s) seen.');
+  assert.ok(events.slice(mark).some((e) => e.event === 'revision'), 'feed revision told the app to refetch');
+  assert.equal(sideTitle(done1), '进展如何？');
+  await client.sideAsk(C.id, '然后呢？', chatId);
+  const done2 = await until(async () => { const c = await chatNow(); return c.entries.length === 2 && c.entries[1].status === 'done' ? c : null; });
+  assert.equal(done2.entries[1].answer, 'Side note: 1 earlier pair(s) seen.', 'follow-up carries finished pairs');
+  // `/side` path: recent reuses the freshest chat
+  const r = await client.sideAsk(C.id, parseSideLine('/side 第三问')!.args, undefined, true);
+  assert.equal(r.chatId, chatId);
+  await until(async () => (await chatNow()).entries.length === 3 && (await chatNow()).entries[2].status === 'done');
+  // cancel: a slow answer is cancelled, or it already finished
+  const r2 = await client.sideAsk(C.id, '取消我', chatId);
+  const cr = await client.sideCancel(chatId, r2.entryId);
+  const e4 = await until(async () => { const e = (await chatNow()).entries[3]; return e && e.status !== 'answering' ? e : null; });
+  assert.ok(e4.status === 'cancelled' || (cr?.answering === false && e4.status === 'done'), 'cancelled or already done: ' + e4.status);
+  await client.sideClose(chatId);
+  assert.ok(!sideChatsOf(await client.state(), C.id).some((c) => c.id === chatId), 'closed chat gone');
+  await assert.rejects(client.sideAsk(C.id, 'x', chatId), /no longer here/);
+  log(`side chat: new/ask/follow-up(pairs 0→1)/recent/cancel(${e4.status})/close, group+empty refused, revision on answer ok`);
 }
 
 // pure helpers

@@ -11,6 +11,7 @@ import { FolderField, ModelField, PermissionPicker } from '../components/Pickers
 import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';
 import { BotSchedules, ScheduleSummary } from './Schedules';
+import { SIDE, sideChatsOf, sideHostText, sideTitle } from '../api/side';
 import type { Theme } from '../theme';
 
 export const tok = (x: number) => (x >= 1e6 ? (x / 1e6).toFixed(1) + 'M' : (x / 1e3).toFixed(1) + 'K');
@@ -39,7 +40,7 @@ export function Hint({ theme, children }: { theme: Theme; children: React.ReactN
   return <Text style={{ color: theme.faint, fontSize: 11, marginTop: 4 }}>{children}</Text>;
 }
 
-export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, onOpenBot, onChat, onSchedules }: { theme: Theme; bot?: Bot; room?: Room; onClose(): void; onSettings(): void; onMemory(botId: string): void; onOpenBot(id: string): void; onChat(): void; onSchedules(start?: string): void }) {
+export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, onOpenBot, onChat, onSchedules, onSide }: { theme: Theme; bot?: Bot; room?: Room; onClose(): void; onSettings(): void; onMemory(botId: string): void; onOpenBot(id: string): void; onChat(): void; onSchedules(start?: string): void; onSide(chatId: string): void }) {
   const { client, state, refresh } = useStore();
   const [tab, setTab] = useState<'d' | 'b'>('d');
   const [more, setMore] = useState(false);
@@ -57,6 +58,8 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
   const name = bot?.name ?? room?.name ?? '';
   const model = bot ? state?.models?.find((m) => m.ref === (bot.model ?? bot.appliedModel ?? state?.defaultModel)) : undefined;
   const memCount = memory?.entries?.length ?? 0;
+  const sides = bot ? sideChatsOf(state, bot.id) : [];
+  const newSide = () => { setMore(false); client!.sideNew(bot!.id).then((v) => { refresh(); onSide(v.chatId); }, (e: any) => ToastAndroid.show(sideHostText(String(e?.message ?? e)), ToastAndroid.SHORT)); };
   const share = () => Share.share({ message: name }).catch(() => {});
   const top = [
     { icon: '⚙', label: bot ? '编辑 Bot' : '编辑群聊', f: onSettings },
@@ -69,6 +72,19 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, paddingHorizontal: 16, paddingTop: 8 }}>
         {top.map((b) => <RoundButton key={b.label} theme={theme} label={b.label} onPress={b.f}><Icon name={b.icon} color={theme.text} size={18} /></RoundButton>)}
       </View>
+      {sides.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
+          {sides.map((c) => (
+            <Pressable key={c.id} onPress={() => onSide(c.id)} style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 220, height: 34, borderRadius: 17, paddingLeft: 12, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
+              <Text style={{ color: theme.sub, fontSize: 13, marginRight: 6 }}>◫</Text>
+              <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, flexShrink: 1 }}>{sideTitle(c)}</Text>
+              <Pressable hitSlop={8} accessibilityLabel={SIDE.close} onPress={() => client!.sideClose(c.id).then(refresh, () => {})} style={{ paddingHorizontal: 10, height: 34, justifyContent: 'center' }}>
+                <Text style={{ color: theme.sub, fontSize: 16 }}>×</Text>
+              </Pressable>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 }}>
         <View style={{ alignItems: 'center', marginTop: 10 }}>
           {bot ? <Avatar bot={bot} size={84} ring={theme.bg} /> : <GroupAvatar members={members} size={84} ring={theme.bg} />}
@@ -146,7 +162,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
           </>
         ) : null}
       </ScrollView>
-      <Menu theme={theme} visible={more} onClose={() => setMore(false)} items={[{ label: '侧边对话' }, { label: '终端', sep: true }, { label: '文件树' }]} />
+      <Menu theme={theme} visible={more} onClose={() => setMore(false)} items={bot ? [{ label: SIDE.title, onPress: newSide }, { label: '终端', sep: true }, { label: '文件树' }] : [{ label: '终端' }, { label: '文件树' }]} />
     </View>
   );
 }

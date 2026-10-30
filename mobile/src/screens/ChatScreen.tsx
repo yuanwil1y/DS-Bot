@@ -107,6 +107,11 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
+      {/* The empty state sits outside the inverted list: an inverted FlatList flips
+          ListEmptyComponent too (both axes on Android), so it rendered mirrored. */}
+      {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 62 + 40, left: 0, right: 0, alignItems: 'center' }}>
+        <Text style={{ color: theme.sub, textAlign: 'center' }}>{t.empty}</Text>
+      </View> : null}
       {loading ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
         <FlatList
           inverted
@@ -128,7 +133,6 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
               onReply={(act, vals) => client!.viewReply(cards.sessionId, cards.view!.id, act, vals).then(after)} onDismiss={() => client!.dismissView(cards.sessionId).then(after)} /> : null}
             {cards.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={byId[a.botId]?.name ?? 'Bot'} onError={onErr} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(after)} />)}
           </View></Boundary>}
-          ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40, transform: [{ scaleY: -1 }] }}>{t.empty}</Text>}
           renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{(({ item, index }: { item: ChatRow; index: number }) => {
             if (item.kind === 'event') return <Text style={{ color: theme.sub, fontSize: 13, textAlign: 'center', marginVertical: 6 }}>{item.text}</Text>;
             if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;

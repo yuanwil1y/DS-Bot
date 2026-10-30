@@ -47,7 +47,7 @@
 - 条目：
   - `{ id, kind: 'user', text, images?, time }`：用户的消息，包括一轮进行中插进来的。
   - `{ id, kind: 'bot', botId, name, color?, text, time, duration?, whole?, live? }`：成员的发言，或 Bot 从群外发进来的帖子。`whole: { length, file }` 表示帖子太长、转成了文件，用 `file-text` 读全文。
-  - `{ id, kind: 'event', event, botId?, name?, text?, code?, time }`：一轮里的事件，`event` 是 `working`、`approval`、`done`、`stopped`、`failed`、`missed`、`lookup`、`resumed`、`cut`，或定时任务的 `schedule`。
+  - `{ id, kind: 'event', event, botId?, name?, text?, code?, names?, count?, time }`：一轮里的事件，`event` 是 `working`、`approval`、`done`、`stopped`、`failed`、`missed`、`lookup`、`resumed`、`cut`、`admin-passed`（唯一的管理员没回答也没点名任何人）、`paused`（达到回复上限，`names` 是等着“继续”的成员，`count` 是上限），或定时任务的 `schedule`。
 - 一轮进行中时，最新一页在这轮的位置放上目前为止的发言（`live: true`），`running` 为真，`speaking` 是正在说话的成员。这轮结束后，同一条发言的 `id` 不变（`<callId>:<序号>`），客户端可以直接替换。
 - 发消息照旧用 `send`（`sessionId` 是群的 id）；停下成员的活照旧用 `stop-member-work`；群里成员的审批照旧用 `approval-answer`。
 
@@ -58,8 +58,10 @@
   - `group`：成员在群里发言。
   - `done`：成员做完了派给它的活。
   - `question`、`view`：Bot 的私聊里有提问卡、视图卡在等用户。
-  - `approval`：Bot 在等用户批准（在群里时带群）。
-- 每条：`{ seq, kind, botId, name, roomId?, title?, sessionId?, text, time }`。`name` 是 Bot 现在的名字，`title` 是群名，`text` 最多 300 字、压成一行。
+  - `approval`：Bot 在等用户批准（在群里时带群）。私密 Bot 往外发东西前的批准也走这里。
+  - `learning`：Bot 提出学一个技能或改 AGENTS.md，卡片在等用户；带 `proposalId`、`proposal`（`skill` 或 `agents`），`text` 是技能名或文件路径。用 `learning-answer` 回答。
+  - `browser`：Bot 把自己的浏览器交给用户（登录、付款、验证码等）；带 `reason`，`text` 是 Bot 的说明。
+- 每条：`{ seq, kind, botId, name, roomId?, title?, sessionId?, proposalId?, proposal?, reason?, text, time }`。`name` 是 Bot 现在的名字，`title` 是群名，`text` 最多 300 字、压成一行。
 - `notices`：`{ boot?, since? }` → `{ boot, seq, reset, notices }`。`boot` 不一致（重启过）或者 `since` 之后的提醒已经被挤掉时，`reset` 为真，客户端重读团队。内存里最多留 200 条。
 - 提醒只说「有事」，不记已读。已读和通知怎么弹由客户端决定。
 

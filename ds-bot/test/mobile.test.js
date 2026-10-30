@@ -179,6 +179,20 @@ test('roomItems turns a group Session into speaker-attributed items, oldest firs
   assert.deepEqual(open, [{ callId: 'r2', at: 7 }])
 })
 
+test('roomItems shows a sole admin passing and a paused round as events', () => {
+  const { items } = roomItems([
+    relayCall(1, 'r1'),
+    relayResult(2, 'r1', [
+      { kind: 'admin-passed', botId: 'm1', name: 'Chief', color: 'deepseek', time: 10 },
+      { kind: 'paused', names: ['Writer', 'Coder'], count: 8, time: 11 },
+    ]),
+  ])
+  assert.deepEqual(items, [
+    { id: 'r1:0', kind: 'event', event: 'admin-passed', botId: 'm1', name: 'Chief', color: 'deepseek', time: 10 },
+    { id: 'r1:1', kind: 'event', event: 'paused', names: ['Writer', 'Coder'], count: 8, time: 11 },
+  ])
+})
+
 test('a group round logs notices a returning client reads back, and the feed says the group changed', async (t) => {
   const { call, emit, relay, answer, sent, history, routes, stop } = start()
   t.after(stop)
@@ -331,6 +345,21 @@ test('a member\'s approval in a group is a notice that names the group', async (
   assert.deepEqual(notices.map(notice => [notice.kind, notice.botId, notice.roomId, notice.title, notice.text]), [['approval', writer.id, room.id, 'Launch', 'bash']])
   controller.abort()
   assert.equal(await answer, 'cancelled')
+})
+
+test('a learning proposal and a browser handoff are notices for the Bot', async (t) => {
+  const { call, rt, stop } = start()
+  t.after(stop)
+  const { writer } = await team(call)
+  const { boot, seq } = (await call('hello', {})).value
+  rt.learningProposed({ id: 'p1', kind: 'skill', botId: writer.id, name: 'release-notes' })
+  rt.browserHandoff(writer.id, { by: 'bot', reason: 'login', note: 'Sign in to the shop' })
+  rt.learningProposed({ id: 'p2', kind: 'skill', botId: 'nobody', name: 'gone' })
+  const { notices } = (await call('notices', { boot, since: seq })).value
+  assert.deepEqual(notices.map(({ kind, botId, proposalId, proposal, reason, text }) => ({ kind, botId, proposalId, proposal, reason, text })), [
+    { kind: 'learning', botId: writer.id, proposalId: 'p1', proposal: 'skill', reason: undefined, text: 'release-notes' },
+    { kind: 'browser', botId: writer.id, proposalId: undefined, proposal: undefined, reason: 'login', text: 'Sign in to the shop' },
+  ])
 })
 
 test('the Remote feed gets the same events as the HTTP feed, hello first', async (t) => {

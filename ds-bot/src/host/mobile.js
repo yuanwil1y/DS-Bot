@@ -19,8 +19,9 @@ export const API_MIN = 1
 export const CAPABILITIES = [
   'state', 'state-avatar-refs', 'avatar', 'chat', 'room-chat', 'send', 'feed', 'feed-room', 'notices',
   'questions', 'views', 'approvals', 'stop-member-work', 'memory', 'memory-edit', 'usage-summary', 'rpc',
+  'notice-learning', 'notice-browser',
 ]
-export const NOTICE_KINDS = ['message', 'group', 'done', 'question', 'view', 'approval']
+export const NOTICE_KINDS = ['message', 'group', 'done', 'question', 'view', 'approval', 'learning', 'browser']
 
 // Notices live in memory: a client away longer than this many notices, or across a
 // restart (a new `boot`), reads the team again instead.
@@ -29,7 +30,7 @@ const NOTICE_TEXT_MAX = 300
 const ROOM_PAGE = 60
 // A round's events come in bursts; one `room` feed event covers each burst.
 const ROOM_SIGNAL_MS = 150
-const ROUND_EVENTS = new Set(['done', 'stopped', 'working', 'approval', 'failed', 'missed', 'lookup', 'resumed', 'cut'])
+const ROUND_EVENTS = new Set(['done', 'stopped', 'working', 'approval', 'failed', 'missed', 'lookup', 'resumed', 'cut', 'admin-passed', 'paused'])
 const POST_HEADER = /^\[Group post from [^\r\n]*\]\r?\n/
 
 const flat = text => String(text ?? '').replace(/\s+/g, ' ').trim()
@@ -64,6 +65,9 @@ function replyItem(reply, id, extra = {}) {
     id, kind: 'event', event: reply.kind, ...who,
     ...(typeof reply.text === 'string' && reply.text !== '' ? { text: reply.text } : {}),
     ...(reply.code ? { code: reply.code } : {}),
+    // A round the reply limit paused: the members whose calls wait for Continue.
+    ...(Array.isArray(reply.names) ? { names: reply.names.map(String) } : {}),
+    ...(Number.isInteger(reply.count) ? { count: reply.count } : {}),
     time, ...extra,
   }
 }
@@ -173,6 +177,14 @@ export function install(rt) {
   rt.approvalWaiting = (entry) => {
     const room = rt.roomOf(entry.roomId)
     botNotice(entry.botId, { kind: 'approval', sessionId: entry.sessionId, ...(room ? { roomId: room.id, title: room.name } : {}), text: entry.tool })
+  }
+
+  // A Bot proposes a skill or an AGENTS.md change, or hands its browser to the user.
+  rt.learningProposed = (proposal) => {
+    botNotice(proposal.botId, { kind: 'learning', proposalId: proposal.id, proposal: proposal.kind, text: proposal.kind === 'agents' ? String(proposal.path ?? proposal.folder ?? '') : String(proposal.name ?? '') })
+  }
+  rt.browserHandoff = (botId, hold) => {
+    botNotice(botId, { kind: 'browser', reason: hold?.reason ?? 'other', text: hold?.note ?? '' })
   }
 
   ctx.on('session/event', (session, event) => {

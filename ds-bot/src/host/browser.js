@@ -253,6 +253,10 @@ export function install(rt) {
   }
   const channel = createBrowserChannel()
   ctx.effect(() => () => channel.dispose(), 'ds-bot: browser channel')
+  // A Bot that hands its browser to the user waits for them: a notice for clients away.
+  ctx.effect(() => channel.subscribeHolds((botId, hold) => {
+    if (hold?.by === 'bot') rt.browserHandoff?.(botId, hold)
+  }), 'ds-bot: browser handoff notices')
 
   ctx.tools.register(defineTool({
     name: 'read_browser',

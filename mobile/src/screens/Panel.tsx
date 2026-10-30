@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
 import { roomWork, type Bot, type Room } from '../api';
+import { shownMode } from '../api/cards';
 import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Icon, PillButton, RoundButton } from '../components/ui';
@@ -123,7 +124,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
               {w?.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={m.name} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(refresh)} onError={() => {}} />)}
             </View>); })}
             <Label theme={theme}>谁来回答</Label>
-            <Text style={{ color: theme.text, fontSize: 15 }}>{room.mode === 'all' ? '所有成员' : '管理员主持'}</Text>
+            <Text style={{ color: theme.text, fontSize: 15 }}>{shownMode(room, state?.bots ?? []) === 'everyone' ? '所有人' : '管理员主持'}</Text>
           </>
         ) : null}
 
@@ -179,7 +180,7 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme
         {bot ? <PillButton theme={theme} primary title={busy ? '…' : '保存'} disabled={busy || !dirty || !name.trim()} onPress={save} /> : null}
         <RoundButton theme={theme} icon="close" onPress={onClose} label="关闭" style={{ marginLeft: 8 }} />
       </View>
-      <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {bot ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -327,7 +328,11 @@ function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
   const byId = Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b]));
   const members = (room.members ?? []).map((id) => byId[id]).filter(Boolean) as Bot[];
   const admin = room.admin ? byId[room.admin] : undefined;
-  const mode = admin ? room.mode ?? 'admin' : 'everyone';
+  // Like the web pickers: a tap shows at once and settles when the room comes back.
+  const [pendingMode, setPendingMode] = useState<string | null>(null);
+  const [pendingShared, setPendingShared] = useState<boolean | null>(null);
+  const savedMode = shownMode(room, state?.bots ?? []);
+  const mode = pendingMode ?? savedMode;
   const [name, setName] = useState(room.named ? room.name : '');
   const [notice, setNotice] = useState(room.notice ?? '');
   const [relay, setRelay] = useState(room.relayLimit != null ? String(room.relayLimit) : '');
@@ -346,7 +351,10 @@ function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
   const input = { color: theme.text, fontSize: 16, paddingVertical: 6 };
   const hint = ROOM_MODES.find((m) => m[0] === mode)?.[2] ?? '';
   const catalog = state?.permissions;
-  const shared = room.permission !== undefined && room.permission !== null;
+  const savedShared = room.permission !== undefined && room.permission !== null;
+  const shared = pendingShared ?? savedShared;
+  useEffect(() => setPendingMode(null), [savedMode]);
+  useEffect(() => setPendingShared(null), [savedShared]);
   return (
     <>
       <Label theme={theme}>资料</Label>
@@ -367,7 +375,7 @@ function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
           {ROOM_MODES.map(([id, label]) => {
             const on = mode === id; const off = id === 'admin' && !admin;
             return (
-              <Pressable key={id} disabled={off} onPress={() => { if (!on) update({ mode: id }).catch(() => {}); }} style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, backgroundColor: on ? theme.cardHi : 'transparent', opacity: off ? 0.4 : 1 }}>
+              <Pressable key={id} disabled={off} onPress={() => { if (on) return; setPendingMode(id); update({ mode: id }).catch(() => setPendingMode(null)); }} style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, backgroundColor: on ? theme.cardHi : 'transparent', opacity: off ? 0.4 : 1 }}>
                 <Text style={{ color: on ? theme.text : theme.sub, fontWeight: on ? '600' : '400' }}>{label}</Text>
               </Pressable>
             );
@@ -390,7 +398,7 @@ function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
         <>
           <Label theme={theme}>权限</Label>
           <View style={box}>
-            <Pressable onPress={() => update({ permission: shared ? null : catalog.defaultPreset ?? catalog.options[0].value }).catch(() => {})} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Pressable accessibilityRole="switch" accessibilityState={{ checked: shared }} onPress={() => { const next = !shared; setPendingShared(next); update({ permission: next ? catalog.defaultPreset ?? catalog.options[0].value : null }).catch(() => setPendingShared(null)); }} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: theme.text }}>全员统一</Text>
                 <Text style={{ color: theme.faint, fontSize: 12 }}>在这个群里代替各成员自己的权限。</Text>
@@ -399,7 +407,7 @@ function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
                 <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: shared ? 'flex-end' : 'flex-start' }} />
               </View>
             </Pressable>
-            {shared ? <View style={{ marginTop: 10 }}><PermissionPicker theme={theme} catalog={catalog} saved={room.permission} onPick={(permission) => update({ permission })} /></View> : null}
+            {shared ? <View style={{ marginTop: 10 }}><PermissionPicker theme={theme} catalog={catalog} saved={room.permission ?? catalog.defaultPreset} onPick={(permission) => update({ permission })} /></View> : null}
           </View>
         </>
       ) : null}

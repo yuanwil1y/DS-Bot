@@ -94,3 +94,9 @@ export function noticeTarget(n: Notice): Target | null {
   if (n.roomId) return { kind: 'room', id: n.roomId };
   return n.botId ? { kind: 'bot', id: n.botId } : null;
 }
+
+// group-settings.js: the shown mode is room.mode when the admin is a member Bot, else everyone.
+export function shownMode(room: Pick<import('./types').Room, 'admin' | 'mode' | 'members'>, bots: Pick<import('./types').Bot, 'id'>[]): 'admin' | 'everyone' {
+  const hasAdmin = !!room.admin && bots.some((b) => b.id === room.admin) && (room.members ?? []).includes(room.admin);
+  return hasAdmin ? (room.mode === 'everyone' ? 'everyone' : 'admin') : 'everyone';
+}

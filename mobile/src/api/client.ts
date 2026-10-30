@@ -12,19 +12,31 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.5.0', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.5.1', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
   }
 
+  timeoutMs = 20000;
   async call<T>(endpoint: string, payload: object = {}, retry = true): Promise<T> {
-    const res = await fetch(`${this.conn.baseUrl}/api/bot`, {
+    // A stalled connection (e.g. a tunnel that went away) must fail instead of hanging,
+    // or a tap waits forever with no change and no error.
+    const abort = new AbortController();
+    const timer = setTimeout(() => abort.abort(), endpoint === 'memory-ask' || endpoint === 'folder-pick' ? 120000 : this.timeoutMs);
+    let res: Response;
+    try {
+      res = await fetch(`${this.conn.baseUrl}/api/bot`, {
+      signal: abort.signal,
       method: 'POST',
       credentials: 'include',
       headers: { 'content-type': 'application/json', accept: 'application/json', ...this.auth.headers() },
       body: JSON.stringify({ endpoint, payload }),
-    });
+      });
+    } catch (e: any) {
+      if (abort.signal.aborted) throw new ApiCallError('client/timeout', '连接超时，请检查网络');
+      throw e;
+    } finally { clearTimeout(timer); }
     if ((res.status === 401 || res.status === 403) && retry) {
       await this.auth.establish(this.conn);
       return this.call<T>(endpoint, payload, false);

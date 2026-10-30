@@ -10,6 +10,7 @@ import { Menu, NA } from '../components/Menu';
 import { FolderField, ModelField, PermissionPicker } from '../components/Pickers';
 import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';
+import { BotSchedules, ScheduleSummary } from './Schedules';
 import type { Theme } from '../theme';
 
 export const tok = (x: number) => (x >= 1e6 ? (x / 1e6).toFixed(1) + 'M' : (x / 1e3).toFixed(1) + 'K');
@@ -38,7 +39,7 @@ export function Hint({ theme, children }: { theme: Theme; children: React.ReactN
   return <Text style={{ color: theme.faint, fontSize: 11, marginTop: 4 }}>{children}</Text>;
 }
 
-export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, onOpenBot, onChat }: { theme: Theme; bot?: Bot; room?: Room; onClose(): void; onSettings(): void; onMemory(botId: string): void; onOpenBot(id: string): void; onChat(): void }) {
+export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, onOpenBot, onChat, onSchedules }: { theme: Theme; bot?: Bot; room?: Room; onClose(): void; onSettings(): void; onMemory(botId: string): void; onOpenBot(id: string): void; onChat(): void; onSchedules(start?: string): void }) {
   const { client, state, refresh } = useStore();
   const [tab, setTab] = useState<'d' | 'b'>('d');
   const [more, setMore] = useState(false);
@@ -141,10 +142,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
               <Text style={{ flex: 1, color: theme.text }}>{name}</Text>
               <Text style={{ color: theme.text }}>{usageLine(usage)}</Text>
             </View>
-            {bot ? <>
-              <Label theme={theme}>定时任务</Label>
-              <Text style={{ color: theme.faint }}>还没有定时任务，去添加（{NA}）</Text>
-            </> : null}
+            {bot ? <ScheduleSummary theme={theme} botId={bot.id} onOpen={onSchedules} /> : null}
           </>
         ) : null}
       </ScrollView>
@@ -154,7 +152,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
 }
 
 // Gear page ("设置"): 资料 (名字/标签), 模型, 工作文件夹, 说明 for a Bot; group settings show read-only.
-export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onClose(): void }) {
+export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar, onSchedules }: { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onClose(): void; onAvatar(): void; onSchedules(start?: string): void }) {
   const { client, state, refresh } = useStore();
   const [name, setName] = useState(bot?.name ?? room?.name ?? '');
   const [role, setRole] = useState(bot?.role ?? '');
@@ -184,11 +182,13 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme
         {bot ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Avatar bot={bot} size={64} ring={theme.bg} />
+              <Pressable onPress={onAvatar} accessibilityLabel="编辑 Bot 形象">
+                <Avatar bot={liveBot!} size={64} ring={theme.bg} />
+                <View style={{ position: 'absolute', right: -2, bottom: -2, width: 24, height: 24, borderRadius: 12, backgroundColor: theme.cardHi, borderWidth: 2, borderColor: theme.bg, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: theme.text, fontSize: 11 }}>✎</Text></View>
+              </Pressable>
               <View style={{ marginLeft: 14 }}>
                 <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600' }}>{bot.name}</Text>
                 <Text style={{ color: theme.sub }}>{[bot.role, isMain ? '主 Bot' : ''].filter(Boolean).join(' · ')}</Text>
-                <Hint theme={theme}>编辑 Bot 形象：{NA}</Hint>
               </View>
             </View>
             <Label theme={theme}>资料</Label>
@@ -210,6 +210,7 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme
             <Label theme={theme}>说明</Label>
             <View style={box}><TextInput value={ins} onChangeText={setIns} multiline placeholder="在 Bot 设置里添加说明" placeholderTextColor={theme.faint} style={[input, { minHeight: 120, textAlignVertical: 'top' }]} /></View>
             {err ? <Text style={{ color: theme.danger, marginTop: 8 }}>{err}</Text> : null}
+            <BotSchedules theme={theme} botId={bot.id} onNew={() => onSchedules(bot.id)} />
           </>
         ) : (
           liveRoom ? <GroupSettingsForm theme={theme} room={liveRoom} /> : null

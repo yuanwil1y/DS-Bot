@@ -1,24 +1,25 @@
 import React from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, View, useColorScheme } from 'react-native';
+import { SvgXml } from 'react-native-svg';
 import type { Bot } from '../api';
-import { botColor } from '../theme';
+import { usePrefs } from '../prefs';
+import { characterXml, lookOf, type Look } from '../avatar/mark';
 
-const shapes: Record<string, string> = { whale: '🐋', cat: '🐱', dog: '🐶', fox: '🦊', owl: '🦉', robot: '🤖', star: '⭐' };
+function useDark() { const sys = useColorScheme(); const { theme } = usePrefs(); return theme === 'auto' ? sys !== 'light' : theme === 'dark'; }
+
+/** The web's BotMark: the Bot's character (shape + color from lookOf), or its photo. */
+export function Mark({ look, size }: { look: Look; size: number }) {
+  const dark = useDark();
+  if (look.image) return <Image source={{ uri: look.image }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  return <SvgXml xml={characterXml(look.shape, look.color, dark)} width={size} height={size} />;
+}
 
 export function Avatar({ bot, size = 44, working, star, ring = '#111' }: { bot: Bot; size?: number; working?: boolean; star?: boolean; ring?: string }) {
-  const bg = botColor(bot.color, bot.id);
-  const img = bot.avatar?.image;
-  const glyph = bot.avatar?.shape ? shapes[bot.avatar.shape] : undefined;
+  const look = lookOf(bot) as Look;
   const dot = Math.max(12, size * 0.3);
   return (
     <View style={{ width: size, height: size }}>
-      {img ? (
-        <Image source={{ uri: img }} style={{ width: size, height: size, borderRadius: size / 2 }} />
-      ) : (
-        <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#fff', fontSize: size * (glyph ? 0.5 : 0.42), fontWeight: '600' }}>{glyph ?? bot.name.slice(0, 1).toUpperCase()}</Text>
-        </View>
-      )}
+      <Mark look={look} size={size} />
       {star ? <View style={{ position: 'absolute', right: -2, bottom: -2, width: dot, height: dot, borderRadius: dot, backgroundColor: '#f59e0b', borderWidth: 2, borderColor: ring, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#fff', fontSize: dot * 0.5, lineHeight: dot * 0.62 }}>★</Text></View> : null}
       {working ? <View style={{ position: 'absolute', right: 0, top: 0, width: size * 0.26, height: size * 0.26, borderRadius: size, backgroundColor: '#34c759', borderWidth: 2, borderColor: ring }} /> : null}
     </View>

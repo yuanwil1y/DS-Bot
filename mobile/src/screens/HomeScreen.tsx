@@ -13,7 +13,7 @@ import type { Theme } from '../theme';
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
 type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean };
 
-export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void }) {
+export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedules }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onSchedules(): void; onNew(mode: "chat" | "group"): void }) {
   const { state, status, unread, streaming, waiting, previews, refresh, client } = useStore();
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
@@ -86,7 +86,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
         )}
       />
       <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={64} left={16} items={[
-        { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务' }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
+        { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务', onPress: onSchedules }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
       ]} />
     </View>
   );

@@ -2,7 +2,7 @@
   "expo": {
     "name": "DeepSeek Bot",
     "slug": "deepseek-bot",
-    "version": "0.5.2",
+    "version": "0.6.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",

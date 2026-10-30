@@ -16,9 +16,9 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 
-type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void };
+type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void };
 
-export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
+export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule }: Props) {
   const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state, refresh } = useStore();
   const id = (bot?.id ?? room?.id)!;
   const sessionId = bot ? bot.sessionId ?? bot.id : room!.id;
@@ -220,7 +220,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
         </View>
       </View>
 
-      <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '添加文件' }, { label: '引用对话' }, { label: '定时任务' }]} />
+      <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '添加文件' }, { label: '引用对话' }, { label: '定时任务', onPress: onSchedule }]} />
     </KeyboardAvoidingView>
   );
 }

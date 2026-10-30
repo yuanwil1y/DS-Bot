@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.5.2', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.6.0', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -65,6 +65,12 @@ export class BotClient {
   refreshModels() { return this.call<{ modelsKey: string }>('models', {}); }
   folders() { return this.call<{ team: string | null; picker: string | null; folders: { path: string; title: string }[] }>('folders', {}); }
   folderList(path?: string) { return this.call<{ path: string; crumbs?: { path: string }[]; entries?: { name: string; path: string; hidden?: boolean }[]; truncated?: boolean }>('folder-list', path ? { path } : {}); }
+  schedules() { return this.call<ScheduleView>('schedules', {}); }
+  scheduleCreate(p: { target: string; title: string; prompt: string; when: ScheduleWhen }) { return this.call<ScheduleView>('schedule-create', p); }
+  scheduleDelete(sessionId: string, id: string) { return this.call<ScheduleView>('schedule-delete', { sessionId, id }); }
+  avatarLibrary(offset = 0, limit = 24) { return this.call<{ items: AvatarEntry[]; total: number; next: number }>('avatar-library', { offset, limit }); }
+  avatarImport(items: { name: string; image: string }[]) { return this.call<{ imported?: unknown[]; duplicates?: unknown[]; failed?: { name: string; message: string }[] }>('avatar-import', { items }); }
+  avatarDelete(id: string) { return this.call<any>('avatar-delete', { id }); }
   updateRoom(id: string, p: Record<string, unknown>) { return this.call<any>('update-room', { id, ...p }); }
   memoryView(id: string, flags: { summarize?: boolean; regenerate?: boolean } = {}, room = false) { return this.call<any>('memory-view', { ...(room ? { roomId: id } : { botId: id }), ...flags }); }
   answerQuestion(sessionId: string, questionId: string, answer: { selected: string[]; custom?: string }) { return this.call<any>('answer-question', { sessionId, questionId, answer: { selected: answer.selected, custom: answer.custom ?? '' } }); }
@@ -78,3 +84,13 @@ export class BotClient {
   notices(boot?: string, since?: number) { return this.call<{ boot: string; seq: number; reset: boolean; notices: Notice[] }>('notices', { ...(boot ? { boot } : {}), ...(since != null ? { since } : {}) }); }
   send(sessionId: string, text: string) { return this.call<boolean>('send', { sessionId, text }); }
 }
+
+export type ScheduleWhen =
+  | { kind: 'at'; at: string }
+  | { kind: 'daily'; time: string; timeZone: string }
+  | { kind: 'weekly'; time: string; timeZone: string; weekdays: number[] }
+  | { kind: 'every'; minutes: number };
+export type ScheduleTask = { id: string; sessionId: string; title: string; prompt: string; kind: string; scheduledAt?: string | null; everySeconds?: number | null; time?: string | null; timeZone?: string | null; weekdays?: number[] | null; expression?: string | null; status: string; botId?: string | null; roomId?: string | null };
+export type ScheduleView = { available: boolean; tasks: ScheduleTask[] };
+export type AvatarEntry = { id: string; name?: string; image: string };
+

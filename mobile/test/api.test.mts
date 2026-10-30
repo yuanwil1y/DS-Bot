@@ -8,6 +8,7 @@ import { BotClient } from '../src/api/client';
 import { Feed } from '../src/api/feed';
 import { ManualCookieTokenAuth, parseConnection } from '../src/api/auth';
 import { emptyChat, withHistory, applyFeed, rows, addPending, emptyRoom, withRoomPage, roomRows } from '../src/api/chatModel';
+import { timingText } from '../src/api/schedules';
 import type { FeedEvent } from '../src/api/types';
 import { cardsFor, needsYou, roomWork, eventLabel, mentionQuery, insertMention, mentionCandidates } from '../src/api/cards';
 
@@ -184,6 +185,55 @@ log('派活 → stop-room-work → idle; feed:', roomRows(withRoomPage(emptyRoom
   const mv = await client.memoryView(W.id, { summarize: true }); assert.ok(Array.isArray(mv.entries));
   const mr = await client.memoryView(room.id, { regenerate: true }, true); assert.ok(Array.isArray(mr.entries));
   log('settings: model/effort/permission/workDir, folders, update-room, memory-view ok');
+}
+
+// 0.6.0 定时任务 + Bot 形象
+{
+  const sv = await client.schedules();
+  if (!sv.available) log('schedules: plugin off (available:false) — off path ok');
+  else {
+    const at = new Date(Date.now() + 3600_000).toISOString();
+    const made: any[] = [];
+    const probe = await client.scheduleCreate({ target: W.id, title: '早间简报 at', prompt: '总结一下', when: { kind: 'at', at } }).then(() => null, (e) => e);
+    if (probe && /timing must contain exactly kind/.test(probe.message)) {
+      // The local /workspace/dsh (dsh-schedule 0.2.2-alpha) changed service.create; ds-bot 0.2.4's host
+      // (written for 0.2.1) is refused before the app is involved. The web UI fails the same way here.
+      log('schedules: list ok (available); create refused by local DSH schedule service version, not the app:', probe.message);
+    } else {
+    if (probe) throw probe;
+    let v0 = await client.schedules(); const p0 = v0.tasks.find((t) => t.title === '早间简报 at')!; await client.scheduleDelete(p0.sessionId, p0.id);
+    for (const when of [{ kind: 'at', at }, { kind: 'daily', time: '08:30', timeZone: 'Asia/Taipei' }, { kind: 'weekly', time: '09:00', timeZone: 'Asia/Taipei', weekdays: [1, 3] }, { kind: 'every', minutes: 90 }] as any[])
+      made.push(await client.scheduleCreate({ target: W.id, title: '早间简报 ' + when.kind, prompt: '总结一下', when }));
+    let v = await client.schedules();
+    const mine = v.tasks.filter((t) => t.title?.startsWith('早间简报 '));
+    assert.equal(mine.length, 4, 'four tasks listed');
+    assert.ok(mine.every((t) => timingText(t).length > 0));
+    await assert.rejects(client.scheduleCreate({ target: W.id, title: 'x', prompt: '', when: { kind: 'every', minutes: 90 } } as any));
+    for (const t of mine) await client.scheduleDelete(t.sessionId, t.id);
+    v = await client.schedules();
+    assert.equal(v.tasks.filter((t) => t.title?.startsWith('早间简报 ')).length, 0, 'deleted');
+    log('schedules: create at/daily/weekly/every, list, reject empty prompt, delete ok;', mine.map(timingText).join(' | '));
+  }
+  }
+  // avatar: shape / color / photo / library / reset
+  await client.updateBot(W.id, { avatar: { shape: 'kitty' }, color: 'green' } as any);
+  let b: any = (await client.state()).bots.find((x) => x.id === W.id);
+  assert.equal(b.avatar?.shape, 'kitty'); assert.equal(b.color, 'green');
+  const png = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  await client.updateBot(W.id, { avatar: { ...b.avatar, image: png } } as any);
+  b = (await client.state()).bots.find((x) => x.id === W.id);
+  assert.ok(b.avatar?.image, 'photo set'); assert.equal(b.avatar.shape, 'kitty');
+  await client.updateBot(W.id, { avatar: { shape: 'kitty' } } as any);
+  b = (await client.state()).bots.find((x) => x.id === W.id); assert.ok(!b.avatar?.image, 'photo removed');
+  const imp = await client.avatarImport([{ name: 'p1', image: png }, { name: 'p2', image: png }]);
+  assert.equal(imp.imported!.length, 1); assert.equal(imp.duplicates!.length, 1, 'same bytes kept once');
+  const lib = await client.avatarLibrary(0, 24);
+  assert.ok(lib.items.length >= 1 && lib.items[0].image, 'library lists');
+  for (const it of lib.items) await client.avatarDelete(it.id);
+  assert.equal((await client.avatarLibrary(0, 24)).items.length, 0, 'library emptied');
+  await client.updateBot(W.id, { avatar: null, color: null } as any);
+  b = (await client.state()).bots.find((x) => x.id === W.id); assert.ok(!b.avatar && !b.color, 'reset');
+  log(`avatar: shape/color/photo/remove, library import(1 new + 1 dup)/list/delete, reset ok`);
 }
 
 // pure helpers

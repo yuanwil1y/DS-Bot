@@ -11,9 +11,11 @@ import { ChatScreen } from './src/screens/ChatScreen';
 import { BotSettingsScreen, MemoryScreen, PanelScreen, UsageScreen } from './src/screens/Panel';
 import { SettingsSheet } from './src/screens/SettingsSheet';
 import { NewChatSheet } from './src/screens/NewChatSheet';
+import { SchedulesScreen } from './src/screens/Schedules';
+import { AvatarEditorScreen } from './src/screens/AvatarEditor';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
-type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage'; target: ChatTarget; memId?: string };
+type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage' | 'schedules' | 'avatar'; target: ChatTarget; memId?: string; start?: string };
 
 function Root() {
   const theme = useTheme();
@@ -32,17 +34,21 @@ function Root() {
   const bot = top?.target.kind === 'bot' ? state?.bots.find((b) => b.id === top.target.id) : undefined;
   const room = top?.target.kind === 'room' ? state?.rooms?.find((r) => r.id === top.target.id) : undefined;
   const open = (t: ChatTarget) => push({ name: 'chat', target: t });
+  const schedules = (start?: string) => push({ name: 'schedules', target: { kind: 'bot', id: '' }, start });
   let body: React.ReactNode;
   if (restoring) body = <ActivityIndicator style={{ flex: 1 }} />;
   else if (!client) body = <ConnectScreen theme={theme} />;
-  else if (top && (bot || room) && top.name === 'chat') body = <ChatScreen key={top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onDetails={() => push({ name: 'panel', target: top.target })} />;
+  else if (top && (bot || room) && top.name === 'chat') body = <ChatScreen key={top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onDetails={() => push({ name: 'panel', target: top.target })} onSchedule={() => schedules(top.target.id)} />;
+  else if (top?.name === 'schedules') body = <SchedulesScreen key={'sc' + (top.start ?? '')} theme={theme} start={top.start} onBack={pop} />;
+  else if (top?.name === 'avatar' && bot) body = <AvatarEditorScreen key={'a' + bot.id} theme={theme} bot={bot} onBack={pop} />;
   else if (top?.name === 'usage') body = <UsageScreen theme={theme} onBack={pop} />;
   else if (top && (bot || room) && top.name === 'panel') body = <PanelScreen key={'p' + top.target.id} theme={theme} bot={bot} room={room} onClose={pop}
     onSettings={() => push({ name: 'settings', target: top.target })} onMemory={(id) => push({ name: 'memory', target: top.target, memId: id })}
-    onOpenBot={(id) => push({ name: 'panel', target: { kind: 'bot', id } })} onChat={() => open(top.target)} />;
-  else if (top && (bot || room) && top.name === 'settings') body = <BotSettingsScreen key={'s' + top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onClose={() => setStack((s) => s.slice(0, -2))} />;
+    onOpenBot={(id) => push({ name: 'panel', target: { kind: 'bot', id } })} onChat={() => open(top.target)} onSchedules={(start) => schedules(start)} />;
+  else if (top && (bot || room) && top.name === 'settings') body = <BotSettingsScreen key={'s' + top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onClose={() => setStack((s) => s.slice(0, -2))}
+    onAvatar={() => push({ name: 'avatar', target: top.target })} onSchedules={(start) => schedules(start)} />;
   else if (top && (bot || room) && top.name === 'memory') body = <MemoryScreen key={'m' + top.target.id} theme={theme} id={top.memId ?? top.target.id} name={bot?.name ?? room?.name ?? ''} onBack={pop} />;
-  else body = <HomeScreen theme={theme} onOpen={open} onAccount={() => setSettings(true)} onUsage={() => push({ name: 'usage', target: { kind: 'bot', id: '' } })} onNew={setNewChat} />;
+  else body = <HomeScreen theme={theme} onOpen={open} onAccount={() => setSettings(true)} onUsage={() => push({ name: 'usage', target: { kind: 'bot', id: '' } })} onNew={setNewChat} onSchedules={() => schedules()} />;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />

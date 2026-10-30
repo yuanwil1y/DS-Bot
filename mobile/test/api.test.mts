@@ -154,6 +154,38 @@ const sp = await until(async () => { const p = await client.roomChat(room.id); r
 assert.ok(sp, 'stopped event row');
 log('派活 → stop-room-work → idle; feed:', roomRows(withRoomPage(emptyRoom(), sp)).filter((r) => r.kind === 'event').slice(-1).map((r) => r.text).join(''));
 
+// 0.5.0 settings: model / effort / permission / workDir, folders, update-room, memory options
+{
+  const st = await client.state();
+  assert.ok(Array.isArray(st.models) && st.permissions?.options?.length === 3, 'catalogs in state');
+  const m = st.models!.find((x) => x.reasoning?.efforts?.length) ?? st.models![0];
+  // A model change on a Bot with history moves it to a fresh part; use a Bot with none.
+  const P: any = st.bots.find((x) => x.name === 'Settings Probe') ?? await client.call<any>('create-bot', { name: 'Settings Probe' });
+  await client.updateBot(P.id, { model: m.ref });
+  const ef = await client.efforts(m.ref);
+  if (ef?.efforts?.length) await client.updateBot(P.id, { effort: ef.efforts[0].id });
+  await client.updateBot(P.id, { permission: 'read-only' });
+  let b = (await client.state()).bots.find((x) => x.id === P.id)!;
+  assert.equal(b.model, m.ref); assert.equal(b.permission, 'read-only');
+  if (ef?.efforts?.length) assert.equal(b.effort, ef.efforts[0].id);
+  await client.updateBot(P.id, { effort: null, permission: 'workspace-write' });
+  const fo = await client.folders(); assert.ok(Array.isArray(fo.folders));
+  const fl = await client.folderList(); assert.ok(fl.path && Array.isArray(fl.entries));
+  await client.updateBot(P.id, { workDir: fl.path });
+  b = (await client.state()).bots.find((x) => x.id === P.id)!; assert.equal(b.workDir, fl.path);
+  await client.updateBot(P.id, { workDir: '' });
+  b = (await client.state()).bots.find((x) => x.id === P.id)!; assert.ok(!b.workDir);
+  const was = st.rooms!.find((x) => x.id === room.id)!;
+  await client.updateRoom(room.id, { name: '测试群', notice: '公告', mode: 'everyone', relayLimit: 5 });
+  let r = (await client.state()).rooms!.find((x) => x.id === room.id)!;
+  assert.equal(r.name, '测试群'); assert.equal(r.named, true); assert.equal(r.notice, '公告'); assert.equal(r.mode, 'everyone'); assert.equal(r.relayLimit, 5);
+  await client.updateRoom(room.id, { name: '', notice: was.notice ?? '', relayLimit: null, mode: was.mode ?? 'everyone' });
+  r = (await client.state()).rooms!.find((x) => x.id === room.id)!; assert.ok(!r.named);
+  const mv = await client.memoryView(W.id, { summarize: true }); assert.ok(Array.isArray(mv.entries));
+  const mr = await client.memoryView(room.id, { regenerate: true }, true); assert.ok(Array.isArray(mr.entries));
+  log('settings: model/effort/permission/workDir, folders, update-room, memory-view ok');
+}
+
 // pure helpers
 assert.equal(mentionQuery('hi @Wr'), 'Wr'); assert.equal(mentionQuery('hi'), null);
 assert.equal(insertMention('hi @Wr', 'Writer'), 'hi @Writer ');

@@ -15,16 +15,25 @@ export type Bot = {
   instructions?: string;
   workDir?: string;
   appliedModel?: string;
+  effort?: string;
+  permission?: string;
+  pinned?: boolean;
+  hidden?: boolean;
   createdAt?: number;
   private?: boolean;
 };
-export type Room = { id: string; name: string; members?: string[]; admin?: string; mode?: string; notice?: string; preview?: string; createdAt?: number };
+export type Room = { id: string; name: string; named?: boolean; members?: string[]; admin?: string; mode?: string; notice?: string; preview?: string; createdAt?: number; workDir?: string; permission?: string; relayLimit?: number };
+export type Effort = { id: string; name: string; description?: string };
+export type Reasoning = { efforts: Effort[]; defaultEffort?: string };
+export type Model = { ref: string; name: string; provider?: string; providerName?: string; reasoning?: Reasoning; needsKey?: boolean };
+export type PermissionCatalog = { options: { value: string; name: string; description?: string }[]; defaultPreset?: string };
 export type BotState = {
   revision: number;
   mainBotId?: string;
   bots: Bot[];
   rooms?: Room[];
-  models?: { ref: string; name: string; providerName?: string }[];
+  models?: Model[];
+  permissions?: PermissionCatalog | null;
   defaultModel?: string;
   activity?: Record<string, unknown>;
   questions?: Record<string, Question>;

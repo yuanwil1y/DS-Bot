@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.4.3', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.5.0', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -44,10 +44,17 @@ export class BotClient {
   roomChat(roomId: string, cursor?: string) { return this.call<{ roomId: string; items: any[]; cursor: string | null; running?: boolean; speaking?: unknown }>('room-chat', cursor ? { roomId, cursor } : { roomId }); }
   usage(botId: string) { return this.call<any>('usage-summary', { botId, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }
   memory(botId: string) { return this.call<any>('memory-view', { botId }); }
-  memoryAdd(botId: string, text: string) { return this.call<any>('memory-add', { botId, text }); }
+  memoryAdd(botId: string, text: string, room = false) { return this.call<any>('memory-add', room ? { roomId: botId, text } : { botId, text }); }
   createBot(p: { name: string; role?: string; model?: string }) { return this.call<any>('create-bot', p); }
   createRoom(members: string[], admin?: string, name?: string) { return this.call<any>('create-room', { members, ...(admin ? { admin } : {}), ...(name ? { name } : {}) }); }
-  updateBot(id: string, p: { name?: string; role?: string; instructions?: string }) { return this.call<any>('update-bot', { id, ...p }); }
+  updateBot(id: string, p: Record<string, unknown>) { return this.call<any>('update-bot', { id, ...p }); }
+  // Same endpoints the web UI's model, folder, group and memory menus call.
+  efforts(ref: string) { return this.call<{ efforts: { id: string; name: string }[]; defaultEffort?: string }>('efforts', { ref }); }
+  refreshModels() { return this.call<{ modelsKey: string }>('models', {}); }
+  folders() { return this.call<{ team: string | null; picker: string | null; folders: { path: string; title: string }[] }>('folders', {}); }
+  folderList(path?: string) { return this.call<{ path: string; crumbs?: { path: string }[]; entries?: { name: string; path: string; hidden?: boolean }[]; truncated?: boolean }>('folder-list', path ? { path } : {}); }
+  updateRoom(id: string, p: Record<string, unknown>) { return this.call<any>('update-room', { id, ...p }); }
+  memoryView(id: string, flags: { summarize?: boolean; regenerate?: boolean } = {}, room = false) { return this.call<any>('memory-view', { ...(room ? { roomId: id } : { botId: id }), ...flags }); }
   answerQuestion(sessionId: string, questionId: string, answer: { selected: string[]; custom?: string }) { return this.call<any>('answer-question', { sessionId, questionId, answer: { selected: answer.selected, custom: answer.custom ?? '' } }); }
   dismissQuestion(sessionId: string) { return this.call<any>('dismiss-question', { sessionId }); }
   viewReply(sessionId: string, viewId: string, action: string, values: object) { return this.call<any>('view-reply', { sessionId, viewId, action, values }); }

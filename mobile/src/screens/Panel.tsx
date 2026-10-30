@@ -6,6 +6,8 @@ import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Icon, PillButton, RoundButton } from '../components/ui';
 import { Menu, NA } from '../components/Menu';
+import { FolderField, ModelField, PermissionPicker } from '../components/Pickers';
+import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -86,18 +88,16 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
         {bot && tab === 'd' ? (
           <>
             <Label theme={theme}>模型</Label>
-            <Field theme={theme} title={model?.name ?? bot.model ?? bot.appliedModel ?? '默认'} sub={model?.providerName} disabled />
-            <Label theme={theme}>权限</Label>
-            <View style={{ flexDirection: 'row', backgroundColor: theme.card, borderRadius: 12, padding: 3 }}>
-              {['仅可查看', '工作区内修改', '完全权限'].map((l, i) => (
-                <View key={l} style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10 }}>
-                  <Text style={{ color: i === 2 ? theme.danger : theme.sub, fontSize: 14, opacity: 0.6 }}>{l}</Text>
-                </View>
-              ))}
-            </View>
-            <Hint theme={theme}>{NA}（当前权限无法通过移动 API 读取或修改）</Hint>
+            <ModelField theme={theme} bot={bot} />
+            {state?.permissions?.options?.length ? (
+              <>
+                <Label theme={theme}>权限</Label>
+                <PermissionPicker theme={theme} catalog={state.permissions} saved={bot.permission ?? state.permissions.defaultPreset} repick={bot.permission === undefined}
+                  onPick={(permission) => client!.updateBot(bot.id, { permission }).then(refresh)} />
+              </>
+            ) : null}
             <Label theme={theme}>工作文件夹</Label>
-            <Field theme={theme} title={bot.workDir ? bot.workDir.split('/').pop() || bot.workDir : '总工作区'} disabled />
+            <FolderField theme={theme} value={bot.workDir} onPick={(workDir) => client!.updateBot(bot.id, { workDir }).then(refresh)} />
             <Pressable onPress={onSettings}><Text style={{ color: theme.sub, textAlign: 'center', marginTop: 16, fontSize: 14 }} numberOfLines={2}>{bot.instructions || '在 Bot 设置里添加说明'}</Text></Pressable>
           </>
         ) : null}
@@ -161,6 +161,8 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const isMain = !!bot && bot.id === state?.mainBotId;
+  const liveBot = bot ? state?.bots.find((b) => b.id === bot.id) ?? bot : undefined;
+  const liveRoom = room ? state?.rooms?.find((r) => r.id === room.id) ?? room : undefined;
   const model = bot ? state?.models?.find((m) => m.ref === (bot.model ?? bot.appliedModel ?? state?.defaultModel)) : undefined;
   const dirty = !!bot && (name !== bot.name || role !== (bot.role ?? '') || ins !== (bot.instructions ?? ''));
   async function save() {
@@ -200,62 +202,76 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose }: { theme
             <Label theme={theme}>模型</Label>
             <View style={box}>
               <Text style={{ color: theme.sub, marginBottom: 8 }}>这个 Bot 的每条消息都用它。</Text>
-              <Field theme={theme} title={model?.name ?? '默认'} sub={model?.providerName} disabled />
+              <ModelField theme={theme} bot={liveBot!} />
             </View>
             <Label theme={theme}>工作文件夹</Label>
-            <Field theme={theme} title={bot.workDir ?? '总工作区'} disabled />
+            <FolderField theme={theme} value={liveBot!.workDir} onPick={(workDir) => client!.updateBot(bot.id, { workDir }).then(refresh)} />
             <Label theme={theme}>说明</Label>
             <View style={box}><TextInput value={ins} onChangeText={setIns} multiline placeholder="在 Bot 设置里添加说明" placeholderTextColor={theme.faint} style={[input, { minHeight: 120, textAlignVertical: 'top' }]} /></View>
             {err ? <Text style={{ color: theme.danger, marginTop: 8 }}>{err}</Text> : null}
           </>
         ) : (
-          <>
-            <Label theme={theme}>群名</Label>
-            <Field theme={theme} title={name} disabled />
-            <Label theme={theme}>群公告</Label>
-            <Field theme={theme} title={room?.notice || '在群设置里添加群公告'} disabled />
-            <Hint theme={theme}>群设置修改{NA}（移动 API 无 update-room）</Hint>
-          </>
+          liveRoom ? <GroupSettingsForm theme={theme} room={liveRoom} /> : null
         )}
       </ScrollView>
     </View>
   );
 }
 
-// "记忆摘要" page: header + ⋯ (记忆选项) + close, entries, bottom input "询问或更新".
+// memory-panel.js MemoryDialog: 记忆摘要 / 全部记忆 pages, ⋯ 记忆选项 (全部记忆 N, 重新生成摘要), "询问或更新".
 export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: string; name: string; onBack(): void }) {
   const { client, state } = useStore();
-  const [memory, setMemory] = useState<any>(null);
+  const isRoom = !!state?.rooms?.some((r) => r.id === id);
+  const [view, setView] = useState<any>(null);
+  const [page, setPage] = useState<'summary' | 'entries'>('summary');
   const [text, setText] = useState('');
   const [opts, setOpts] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { client?.memory(id).then(setMemory).catch((e) => setErr(String(e?.message ?? e))); }, [client, id]);
-  const entries: any[] = memory?.entries ?? [];
+  const timer = React.useRef<any>(0);
+  const load = React.useCallback((flags: { summarize?: boolean; regenerate?: boolean } = {}) => {
+    clearTimeout(timer.current);
+    client?.memoryView(id, flags, isRoom).then((v) => {
+      setView(v); setErr('');
+      if (v?.summarizing) timer.current = setTimeout(() => load({ summarize: true }), 2000);
+    }).catch((e) => setErr(String(e?.message ?? e)));
+  }, [client, id, isRoom]);
+  useEffect(() => { load({ summarize: true }); return () => clearTimeout(timer.current); }, [load]);
+  const entries: any[] = view?.entries ?? [];
+  const count = entries.length;
   const ro = !!state?.readOnly;
   async function send() {
     if (!client || !text.trim()) return; setErr('');
-    try { setMemory(await client.memoryAdd(id, text.trim())); setText(''); } catch (e: any) { setErr(String(e?.message ?? e)); }
+    try { await client.memoryAdd(id, text.trim(), isRoom); setText(''); load({ summarize: true }); } catch (e: any) { setErr(String(e?.message ?? e)); }
   }
+  const status = view?.summarizing ? '正在生成摘要…' : '';
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回" />
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>记忆摘要</Text>
-        <Text style={{ flex: 1, color: theme.sub, marginLeft: 8 }}>{name}</Text>
+        <RoundButton theme={theme} icon="back" onPress={page === 'entries' ? () => setPage('summary') : onBack} label={page === 'entries' ? '返回摘要' : '返回'} />
+        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>{page === 'entries' ? '全部记忆' : '记忆摘要'}</Text>
+        <Text style={{ flex: 1, color: theme.sub, marginLeft: 8 }} numberOfLines={1}>{page === 'summary' ? [name, status].filter(Boolean).join(' · ') : status}</Text>
         <RoundButton theme={theme} icon="more" onPress={() => setOpts(true)} label="记忆选项" />
       </View>
       <ScrollView contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
-        {memory?.summary ? <Text style={{ color: theme.text, lineHeight: 22, marginBottom: 14 }}>{String(memory.summary)}</Text> : null}
-        {entries.length ? entries.map((e, i) => (
-          <View key={e.id ?? i} style={{ backgroundColor: theme.card, borderRadius: 12, padding: 12, marginBottom: 8 }}><Text style={{ color: theme.text }}>{String(e.text ?? e)}</Text></View>
-        )) : (
+        {err ? <Text style={{ color: theme.danger, marginBottom: 10 }}>{err}</Text> : null}
+        {view === null ? null : page === 'entries' ? (
+          entries.map((e, i) => (
+            <View key={i} style={{ backgroundColor: theme.card, borderRadius: 12, padding: 12, marginBottom: 8 }}>
+              {e.topic ? <Text style={{ color: theme.sub, fontSize: 12, marginBottom: 4 }}>{String(e.topic)}</Text> : null}
+              <Text style={{ color: theme.text }}>{String(e.text ?? '')}</Text>
+            </View>
+          ))
+        ) : count === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 28, color: theme.sub }}>▤</Text>
-            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: 10 }}>{name} 还没有记住任何内容</Text>
-            <Text style={{ color: theme.sub, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{`Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 ${name}，也可以在对话里说。`}</Text>
+            <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: 10 }}>{isRoom ? '这个群还没有记住任何内容' : `${name} 还没有记住任何内容`}</Text>
+            <Text style={{ color: theme.sub, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{isRoom ? '群会记住工作需要的决定、规则和事实，只有群成员在这个群里会读。可以在下面告诉它，也可以在群里说。' : `Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 ${name}，也可以在对话里说。`}</Text>
           </View>
-        )}
-        {err ? <Text style={{ color: theme.danger }}>{err}</Text> : null}
+        ) : view.summary ? (
+          <Text style={{ color: theme.text, lineHeight: 22 }}>{String(view.summary.text ?? '')}</Text>
+        ) : view.error ? (
+          <Text style={{ color: theme.sub }}>{`摘要没能生成：${view.error}`}</Text>
+        ) : <Text style={{ color: theme.sub }}>正在生成摘要…</Text>}
       </ScrollView>
       {!ro ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', margin: 14, backgroundColor: theme.fill, borderRadius: 26, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 18, padding: 5 }}>
@@ -265,7 +281,10 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
           </Pressable>
         </View>
       ) : null}
-      <Menu theme={theme} visible={opts} onClose={() => setOpts(false)} items={[{ label: '记忆选项' }]} />
+      <Menu theme={theme} visible={opts} onClose={() => setOpts(false)} items={[
+        { label: `全部记忆  ${count}`, onPress: () => setPage('entries') },
+        ...(count === 0 || view?.summarizing ? [{ label: '重新生成摘要' }] : [{ label: '重新生成摘要', onPress: () => load({ regenerate: true }) }]),
+      ]} />
     </View>
   );
 }
@@ -294,5 +313,113 @@ export function UsageScreen({ theme, onBack }: { theme: Theme; onBack(): void })
         ))}
       </ScrollView>
     </View>
+  );
+}
+
+// group-settings.js GroupSettingsForm: 资料 (群名, 群公告), 谁来回答 (+ relay limit),
+// 工作文件夹, 权限, 成员 (设为管理员 / 取消). Text saves on blur, like InlineText.
+const ROOM_MODES: [string, string, string][] = [
+  ['admin', '管理员主持', '普通消息先给管理员，由管理员用 @名字 点名其他成员。'],
+  ['everyone', '所有人', '每位成员轮流回答，管理员先说。'],
+];
+function GroupSettingsForm({ theme, room }: { theme: Theme; room: Room }) {
+  const { client, state, refresh } = useStore();
+  const byId = Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b]));
+  const members = (room.members ?? []).map((id) => byId[id]).filter(Boolean) as Bot[];
+  const admin = room.admin ? byId[room.admin] : undefined;
+  const mode = admin ? room.mode ?? 'admin' : 'everyone';
+  const [name, setName] = useState(room.named ? room.name : '');
+  const [notice, setNotice] = useState(room.notice ?? '');
+  const [relay, setRelay] = useState(room.relayLimit != null ? String(room.relayLimit) : '');
+  useEffect(() => setName(room.named ? room.name : ''), [room.name, room.named]);
+  useEffect(() => setNotice(room.notice ?? ''), [room.notice]);
+  useEffect(() => setRelay(room.relayLimit != null ? String(room.relayLimit) : ''), [room.relayLimit]);
+  const update = (patch: Record<string, unknown>) => client!.updateRoom(room.id, patch).then(refresh).catch((e) => { ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT); refresh(); throw e; });
+  const saveRelay = () => {
+    const text = relay.trim();
+    if (!text) { if (room.relayLimit != null) update({ relayLimit: null }).catch(() => {}); return; }
+    const n = Number(text);
+    if (!Number.isInteger(n) || n < 1 || n > 200 || n === room.relayLimit) { setRelay(room.relayLimit != null ? String(room.relayLimit) : ''); return; }
+    update({ relayLimit: n }).catch(() => {});
+  };
+  const box = { backgroundColor: theme.card, borderRadius: 14, borderWidth: 1, borderColor: theme.fillBorder, padding: 14 };
+  const input = { color: theme.text, fontSize: 16, paddingVertical: 6 };
+  const hint = ROOM_MODES.find((m) => m[0] === mode)?.[2] ?? '';
+  const catalog = state?.permissions;
+  const shared = room.permission !== undefined && room.permission !== null;
+  return (
+    <>
+      <Label theme={theme}>资料</Label>
+      <View style={box}>
+        <Text style={{ color: theme.sub }}>名字</Text>
+        <Text style={{ color: theme.faint, fontSize: 12 }}>留空就按成员命名。</Text>
+        <TextInput value={name} onChangeText={setName} maxLength={60} placeholder="按成员命名" placeholderTextColor={theme.faint} style={input}
+          onEndEditing={() => { if (name !== (room.named ? room.name : '')) update({ name }).catch(() => {}); }} />
+        <View style={{ height: 1, backgroundColor: theme.sep, marginVertical: 8 }} />
+        <Text style={{ color: theme.sub }}>群公告</Text>
+        <Text style={{ color: theme.faint, fontSize: 12 }}>每位成员在这个群里发言前都会读到。</Text>
+        <TextInput value={notice} onChangeText={setNotice} multiline maxLength={2000} placeholder="每位成员发言前都会读到的共同说明…" placeholderTextColor={theme.faint}
+          style={[input, { minHeight: 80, textAlignVertical: 'top' }]} onBlur={() => { if (notice !== (room.notice ?? '')) update({ notice }).catch(() => {}); }} />
+      </View>
+      <Label theme={theme}>谁来回答</Label>
+      <View style={box}>
+        <View style={{ flexDirection: 'row', backgroundColor: theme.bg, borderRadius: 12, padding: 3 }}>
+          {ROOM_MODES.map(([id, label]) => {
+            const on = mode === id; const off = id === 'admin' && !admin;
+            return (
+              <Pressable key={id} disabled={off} onPress={() => { if (!on) update({ mode: id }).catch(() => {}); }} style={{ flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 10, backgroundColor: on ? theme.cardHi : 'transparent', opacity: off ? 0.4 : 1 }}>
+                <Text style={{ color: on ? theme.text : theme.sub, fontWeight: on ? '600' : '400' }}>{label}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={{ color: theme.sub, fontSize: 12, marginTop: 8 }}>{`${hint} @提及总是指定由谁回答。`}</Text>
+        <View style={{ height: 1, backgroundColor: theme.sep, marginVertical: 10 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: theme.text }}>Bot 接力几次后暂停</Text>
+            <Text style={{ color: theme.faint, fontSize: 12 }}>从你在群里的上一条消息算起。</Text>
+          </View>
+          <TextInput value={relay} onChangeText={setRelay} keyboardType="number-pad" placeholder={String((room as any).relayLimitDefault ?? '')} placeholderTextColor={theme.faint}
+            onEndEditing={saveRelay} style={{ color: theme.text, width: 64, textAlign: 'center', backgroundColor: theme.bg, borderRadius: 8, paddingVertical: 6 }} />
+        </View>
+      </View>
+      <Label theme={theme}>工作文件夹</Label>
+      <FolderField theme={theme} value={room.workDir} group onPick={(workDir) => update({ workDir })} />
+      {catalog?.options?.length ? (
+        <>
+          <Label theme={theme}>权限</Label>
+          <View style={box}>
+            <Pressable onPress={() => update({ permission: shared ? null : catalog.defaultPreset ?? catalog.options[0].value }).catch(() => {})} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: theme.text }}>全员统一</Text>
+                <Text style={{ color: theme.faint, fontSize: 12 }}>在这个群里代替各成员自己的权限。</Text>
+              </View>
+              <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: shared ? '#4d6bfe' : theme.cardHi, justifyContent: 'center', paddingHorizontal: 3 }}>
+                <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: shared ? 'flex-end' : 'flex-start' }} />
+              </View>
+            </Pressable>
+            {shared ? <View style={{ marginTop: 10 }}><PermissionPicker theme={theme} catalog={catalog} saved={room.permission} onPick={(permission) => update({ permission })} /></View> : null}
+          </View>
+        </>
+      ) : null}
+      <Label theme={theme}>{`成员 · ${members.length}`}</Label>
+      <View style={box}>
+        {members.map((m) => {
+          const leads = room.admin === m.id;
+          return (
+            <View key={m.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
+              <Avatar bot={m} size={26} ring={theme.card} />
+              <Text style={{ flex: 1, color: theme.text, marginLeft: 10 }}>{m.name}{leads ? '  · 管理员' : ''}</Text>
+              <Pressable hitSlop={8} accessibilityLabel={leads ? '让群聊不设管理员' : undefined} onPress={() => update({ admin: leads ? null : m.id }).catch(() => {})}
+                style={{ backgroundColor: theme.cardHi, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                <Text style={{ color: theme.text, fontSize: 13 }}>{leads ? '取消' : '设为管理员'}</Text>
+              </Pressable>
+            </View>
+          );
+        })}
+        <Text style={{ color: theme.sub, fontSize: 12, marginTop: 6 }}>{admin ? `${admin.name} 主持这个群：可以用 @名字 点名成员、修改群设置、在群里发言。` : '还没有管理员。管理员可以用 @名字 点名成员、修改群设置、在群里发言。'}</Text>
+      </View>
+    </>
   );
 }

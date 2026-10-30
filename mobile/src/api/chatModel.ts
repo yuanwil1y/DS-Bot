@@ -1,8 +1,9 @@
 // Pure reducer for one private chat: history + feed events -> rendered rows.
 // Shared by the app and the Node test.
 import type { ChatItem, FeedEvent } from './types';
+import { eventLabel } from './cards';
 
-export type ChatRow = { key: string; kind: string; text: string; time?: number; streaming?: boolean; pending?: boolean; failed?: boolean; name?: string; botId?: string };
+export type ChatRow = { key: string; kind: string; text: string; data?: any; time?: number; streaming?: boolean; pending?: boolean; failed?: boolean; name?: string; botId?: string };
 export type Pending = { key: string; text: string; time: number; failed?: boolean };
 export type ChatModel = { items: ChatItem[]; drafts: Record<string, string>; pending?: Pending[] };
 
@@ -36,7 +37,7 @@ function reconcile(m: ChatModel): ChatModel {
 
 function mergeItems(a: ChatItem[], b: ChatItem[]): ChatItem[] {
   const seen = new Map<string, ChatItem>();
-  for (const i of [...a, ...b]) seen.set(i.seq != null ? `s${i.seq}` : `t${i.time}-${i.kind}-${i.text}`, i);
+  for (const i of [...a, ...b]) seen.set(i.seq != null ? `s${i.seq}-${i.kind}-${i.answers?.[0]?.id ?? ''}` : `t${i.time}-${i.kind}-${i.text}`, i);
   return [...seen.values()].sort((x, y) => (x.seq ?? x.time ?? 0) - (y.seq ?? y.time ?? 0));
 }
 
@@ -60,15 +61,15 @@ export function applyFeed(m: ChatModel, sessionId: string, e: FeedEvent): ChatMo
 
 export function rows(m: ChatModel): ChatRow[] {
   const out: ChatRow[] = m.items
-    .filter((i) => i.text)
-    .map((i, n) => ({ key: `i${i.seq ?? n}`, kind: i.kind, text: i.text ?? '', time: i.time }));
+    .filter((i) => i.text || (i.kind === 'answer' && i.questions?.length))
+    .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time, ...(i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } } : {}) }));
   for (const p of m.pending ?? []) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   for (const [id, text] of Object.entries(m.drafts)) out.push({ key: `d${id}`, kind: 'bot', text, streaming: true });
   return out;
 }
 
 // ---- Group chat (room-chat pages; items keyed by id, live rows replaced in place).
-export type RoomItem = { id: string; kind: 'user' | 'bot' | 'event' | string; text?: string; time?: number; botId?: string; name?: string; color?: string; event?: string; live?: boolean };
+export type RoomItem = { id: string; kind: 'user' | 'bot' | 'event' | string; text?: string; time?: number; botId?: string; name?: string; color?: string; event?: string; live?: boolean; code?: string; names?: string[]; count?: number };
 export type RoomModel = { items: RoomItem[]; pending: Pending[]; running?: boolean; speaking?: string[] };
 export const emptyRoom = (): RoomModel => ({ items: [], pending: [] });
 export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: boolean; speaking?: string[] }, latest = true): RoomModel {
@@ -86,7 +87,9 @@ export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: 
   return latest ? { items, pending, running: page.running, speaking: page.speaking } : { ...m, items, pending };
 }
 export function roomRows(m: RoomModel): ChatRow[] {
-  const out: ChatRow[] = m.items.filter((i) => i.kind !== 'event' && i.text).map((i) => ({ key: i.id, kind: i.kind, text: i.text ?? '', time: i.time, name: i.name, botId: i.botId, streaming: i.live }));
+  const out: ChatRow[] = m.items.filter((i) => i.kind === 'event' || i.text).map((i) => (i.kind === 'event'
+    ? { key: i.id, kind: 'event', text: eventLabel(i), time: i.time, name: i.name, botId: i.botId, data: { event: i.event } }
+    : { key: i.id, kind: i.kind, text: i.text ?? '', time: i.time, name: i.name, botId: i.botId, streaming: i.live }));
   for (const p of m.pending) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   return out;
 }

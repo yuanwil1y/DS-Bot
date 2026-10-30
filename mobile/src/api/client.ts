@@ -1,5 +1,5 @@
 import type { AuthStrategy, Connection } from './auth';
-import type { ApiResult, BotState, ChatPage, Hello } from './types';
+import type { ApiResult, BotState, ChatPage, Hello, Notice } from './types';
 
 export class ApiCallError extends Error {
   constructor(public code: string, message: string, public status = 200) { super(message); }
@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.2.0', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.4.0', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -48,5 +48,13 @@ export class BotClient {
   createBot(p: { name: string; role?: string; model?: string }) { return this.call<any>('create-bot', p); }
   createRoom(members: string[], admin?: string, name?: string) { return this.call<any>('create-room', { members, ...(admin ? { admin } : {}), ...(name ? { name } : {}) }); }
   updateBot(id: string, p: { name?: string; role?: string; instructions?: string }) { return this.call<any>('update-bot', { id, ...p }); }
+  answerQuestion(sessionId: string, questionId: string, answer: { selected: string[]; custom?: string }) { return this.call<any>('answer-question', { sessionId, questionId, answer: { selected: answer.selected, custom: answer.custom ?? '' } }); }
+  dismissQuestion(sessionId: string) { return this.call<any>('dismiss-question', { sessionId }); }
+  viewReply(sessionId: string, viewId: string, action: string, values: object) { return this.call<any>('view-reply', { sessionId, viewId, action, values }); }
+  dismissView(sessionId: string) { return this.call<any>('dismiss-view', { sessionId }); }
+  approvalAnswer(id: string, choice: 'allow' | 'reject') { return this.call<any>('approval-answer', { id, choice }); }
+  stopMemberWork(roomId: string, botId: string) { return this.call<boolean>('stop-member-work', { roomId, botId }); }
+  roomProgress(roomId: string) { return this.call<{ callId: string; replies: number; speaking?: string[] }[]>('room-progress', { roomId }); }
+  notices(boot?: string, since?: number) { return this.call<{ boot: string; seq: number; reset: boolean; notices: Notice[] }>('notices', { ...(boot ? { boot } : {}), ...(since != null ? { since } : {}) }); }
   send(sessionId: string, text: string) { return this.call<boolean>('send', { sessionId, text }); }
 }

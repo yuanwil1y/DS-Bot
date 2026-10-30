@@ -2,12 +2,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
 import {
+  cardsFor, insertMention, mentionCandidates, mentionQuery, roomWork,
   addPending, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
   type Bot, type ChatModel, type ChatRow, type Room, type RoomModel,
 } from '../api';
 import { Menu } from '../components/Menu';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
+import { ApprovalCard, QuestionCard, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import { fmt, t } from '../i18n';
@@ -16,7 +18,7 @@ import type { Theme } from '../theme';
 type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void };
 
 export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
-  const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state } = useStore();
+  const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state, refresh } = useStore();
   const id = (bot?.id ?? room?.id)!;
   const sessionId = bot ? bot.sessionId ?? bot.id : room!.id;
   const [model, setModel] = useState<ChatModel>(emptyChat);
@@ -40,15 +42,24 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
   }, [client, id]);
 
   useEffect(() => { setOpenBot(id); markRead(id); return () => setOpenBot(null); }, [id]);
+  const progTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progress = useCallback(() => {
+    if (!client || bot || progTimer.current) return;
+    progTimer.current = setTimeout(() => {
+      progTimer.current = null;
+      client.roomProgress(room!.id).then((p) => setRModel((m) => ({ ...m, running: p.length > 0 || m.running, speaking: p.flatMap((x) => x.speaking ?? []) }))).catch(() => {});
+    }, 300);
+  }, [client, id]);
+  // Live: private chats apply message/stream; groups re-read the first page on each
+  // `room` event (new row, round start/end) and ask room-progress on `live` ticks.
   useEffect(() => subscribe((e) => {
     if (bot) setModel((m) => applyFeed(m, sessionId, e));
     else if (e.event === 'room' && (e.data as any)?.roomId === id && !roomTimer.current)
       roomTimer.current = setTimeout(() => { roomTimer.current = null; load(); }, 150);
-  }), [sessionId, load]);
+    else if (e.event === 'live') progress();
+  }), [sessionId, load, progress]);
   // (Re)load on open and after every feed reconnect, to fill gaps.
   useEffect(() => { load(); }, [load, opens]);
-  // Groups: while a turn runs, poll the first page as a safety net for live rows.
-  useEffect(() => { if (bot || !rmodel.running) return; const h = setInterval(load, 2500); return () => clearInterval(h); }, [rmodel.running, load]);
 
   async function older() {
     if (!client || !cursor) return;
@@ -75,6 +86,12 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
     setText(r.text);
   }
 
+  const target = bot ? { kind: 'bot' as const, id: bot.id } : { kind: 'room' as const, id: room!.id };
+  const cards = useMemo(() => cardsFor(state, target), [state, id]);
+  const work = useMemo(() => (room ? roomWork(state, room.id) : []), [state, id]);
+  const onErr = (e: any) => setErr(String(e?.message ?? e));
+  const after = () => { refresh(); load(); };
+  const mq = room ? mentionQuery(text) : null;
   const list = useMemo(() => (bot ? rows(model) : roomRows(rmodel)), [bot, model, rmodel]);
   const data = useMemo(() => [...list].reverse(), [list]);
   async function share() {
@@ -97,8 +114,22 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
           contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 76 }}
           onEndReached={older}
           keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={<View>
+            {(rmodel.speaking ?? []).filter((b) => !list.some((r) => r.streaming && r.botId === b)).map((b) => (
+              <View key={b} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6, marginLeft: 4 }}>
+                {byId[b] ? <Avatar bot={byId[b]} size={20} working /> : null}
+                <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{`${byId[b]?.name ?? 'Bot'} 正在输入…`}</Text>
+              </View>))}
+            {cards.question ? <QuestionCard key={cards.question.id} theme={theme} q={cards.question} onError={onErr}
+              onAnswer={(a) => client!.answerQuestion(cards.sessionId, cards.question!.id, a).then(after)} onDismiss={() => client!.dismissQuestion(cards.sessionId).then(after)} /> : null}
+            {cards.view ? <ViewCardView key={cards.view.id} theme={theme} v={cards.view} onError={onErr}
+              onReply={(act, vals) => client!.viewReply(cards.sessionId, cards.view!.id, act, vals).then(after)} onDismiss={() => client!.dismissView(cards.sessionId).then(after)} /> : null}
+            {cards.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={byId[a.botId]?.name ?? 'Bot'} onError={onErr} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(after)} />)}
+          </View>}
           ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40, transform: [{ scaleY: -1 }] }}>{t.empty}</Text>}
           renderItem={({ item, index }) => {
+            if (item.kind === 'event') return <Text style={{ color: theme.sub, fontSize: 13, textAlign: 'center', marginVertical: 6 }}>{item.text}</Text>;
+            if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;
             const me = item.kind === 'user' || item.kind === 'answer';
             const prev = data[index + 1];
             const speaker = !me && room && item.botId ? byId[item.botId] : undefined;
@@ -139,6 +170,25 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
         <View style={{ width: 46 }} />
       </View>
 
+      {work.length ? (
+        <Pressable onPress={onDetails} style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 32, borderRadius: 16, paddingHorizontal: 12, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, marginBottom: 4, maxWidth: '90%' }}>
+          {work.slice(0, 3).map((w) => byId[w.botId] ? <Avatar key={w.botId} bot={byId[w.botId]} size={20} ring={theme.fill} /> : null)}
+          <Text numberOfLines={1} style={{ color: work.some((w) => w.state === 'ask') ? '#f0b84a' : theme.sub, fontSize: 13, marginLeft: 6, flexShrink: 1 }}>
+            {[work.filter((w) => w.state === 'ask').length ? `${work.filter((w) => w.state === 'ask').map((w) => byId[w.botId]?.name).join('、')} 等你批准` : '',
+              work.filter((w) => w.state === 'work').length ? `${work.filter((w) => w.state === 'work').map((w) => byId[w.botId]?.name).join('、')} 正在干活…` : ''].filter(Boolean).join(' · ')}
+          </Text>
+        </Pressable>
+      ) : null}
+      {mq != null ? (
+        <View style={{ marginHorizontal: 14, borderRadius: 16, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder, maxHeight: 240, overflow: 'hidden' }}>
+          {[...mentionCandidates(members, mq), ...('all'.includes(mq.toLowerCase()) ? [{ id: '@all', name: 'all' }] : [])].map((m: any) => (
+            <Pressable key={m.id} onPress={() => setText((s) => insertMention(s, m.name))} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 9, backgroundColor: pressed ? theme.cardHi : 'transparent' })}>
+              {byId[m.id] ? <Avatar bot={byId[m.id]} size={26} ring={theme.card} /> : <View style={{ width: 26 }} />}
+              <Text style={{ color: theme.text, fontSize: 16, marginLeft: 10 }}>{m.id === '@all' ? '@all（所有成员）' : m.name}</Text>
+              {m.id === room?.admin ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>管理员</Text> : null}
+            </Pressable>))}
+        </View>
+      ) : null}
       {err ? <Text numberOfLines={2} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 13 }}>{err}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 5, paddingRight: 5, paddingVertical: 5 }}>

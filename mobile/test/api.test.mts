@@ -9,6 +9,7 @@ import { Feed } from '../src/api/feed';
 import { ManualCookieTokenAuth, parseConnection } from '../src/api/auth';
 import { emptyChat, withHistory, applyFeed, rows, addPending, emptyRoom, withRoomPage, roomRows } from '../src/api/chatModel';
 import type { FeedEvent } from '../src/api/types';
+import { cardsFor, needsYou, roomWork, eventLabel, mentionQuery, insertMention, mentionCandidates } from '../src/api/cards';
 
 const url = process.argv[2] ?? readFileSync('/tmp/dsh-mobile/web.log', 'utf8').match(/http:\/\/[\d.:]+\/\?token=\S+/g)?.at(-1);
 assert.ok(url, 'no token URL');
@@ -90,6 +91,65 @@ if (st.rooms?.length) {
 const u = await client.usage(bot.id); assert.ok(u.day && typeof u.day.calls === 'number');
 const mem = await client.memory(bot.id); assert.ok(Array.isArray(mem.entries));
 log('usage-summary calls(24h) =', u.day.calls, '; memory entries =', mem.entries.length);
+
+
+// ---- M2/M3: cards, group live, notices ----
+const until = async (f: () => Promise<any>, ms = 15000) => { for (let i = 0; i < ms / 200; i++) { const v = await f(); if (v) return v; await sleep(200); } throw new Error('timeout'); };
+const W = (await client.state()).bots.find((b) => b.name === 'Writer')!;
+const tgt = { kind: 'bot' as const, id: W.id };
+const nb = await client.notices(); assert.ok(nb.boot && typeof nb.seq === 'number');
+
+// question answer
+await client.send(W.sessionId ?? W.id, '卡片 1');
+const q = (await until(async () => cardsFor(await client.state(), tgt).question))!;
+assert.ok(needsYou(await client.state()).some((n) => n.kind === 'question'));
+await client.answerQuestion(W.sessionId ?? W.id, q.id, { selected: [q.options[0].label] });
+await until(async () => !cardsFor(await client.state(), tgt).question);
+const hist = await until(async () => { const h = withHistory(emptyChat(), (await client.chat(W.id)).items); return rows(h).find((r) => r.kind === 'answer' && r.data?.answers?.[0]?.id === q.id); });
+assert.deepEqual(hist.data.answers[0].selected, [q.options[0].label]);
+log('question card → answer-question → settled answer row', q.question);
+
+// view dismiss
+await client.send(W.sessionId ?? W.id, '视图选项');
+const v = (await until(async () => cardsFor(await client.state(), tgt).view))!;
+await client.dismissView(W.sessionId ?? W.id);
+await until(async () => !cardsFor(await client.state(), tgt).view);
+log('view card', v.title, '→ dismiss-view clears it');
+
+// notices since boot/seq
+const ns = await client.notices(nb.boot, nb.seq);
+assert.equal(ns.reset, false); assert.ok(ns.notices.length > 0 && ns.notices.every((n) => n.seq > nb.seq));
+assert.equal((await client.notices('stale-boot', 0)).reset, true);
+log('notices catch-up:', ns.notices.map((n) => n.kind).join(','), '; stale boot → reset');
+
+// group: live room events + approval answer + stop member work
+const room = (await client.state()).rooms!.find((r) => (r.members ?? []).includes(W.id))!;
+const ev0 = events.length;
+await client.send(room.id, '@Writer 提权');
+const ap = (await until(async () => cardsFor(await client.state(), { kind: 'room', id: room.id }).approvals[0]))!;
+assert.equal(ap.botId, W.id);
+assert.ok(roomWork(await client.state(), room.id).some((w) => w.botId === W.id && w.state === 'ask'));
+assert.ok(events.slice(ev0).some((e) => e.event === 'room' && (e.data as any)?.roomId === room.id), 'room feed event');
+await client.approvalAnswer(ap.id, 'allow');
+await until(async () => !cardsFor(await client.state(), { kind: 'room', id: room.id }).approvals.length);
+await assert.rejects(client.approvalAnswer(ap.id, 'allow'));
+log('group approval card → allow; re-answer rejected');
+const rr = await until(async () => { const p = await client.roomChat(room.id); return !p.running && roomRows(withRoomPage(emptyRoom(), p)).filter((r) => r.kind === 'event').length ? p : null; }, 30000);
+log('room event rows:', roomRows(withRoomPage(emptyRoom(), rr)).filter((r) => r.kind === 'event').slice(-3).map((r) => r.text).join(' | '));
+
+await client.send(room.id, '派活 30');
+await until(async () => roomWork(await client.state(), room.id).some((w) => w.botId === W.id && w.state === 'work'), 20000);
+assert.ok(events.slice(ev0).some((e) => e.event === 'live'), 'live feed events');
+assert.equal(await client.stopMemberWork(room.id, W.id), true);
+await until(async () => !roomWork(await client.state(), room.id).some((w) => w.botId === W.id), 15000);
+log('派活 → member working → stop-member-work → idle');
+
+// pure helpers
+assert.equal(mentionQuery('hi @Wr'), 'Wr'); assert.equal(mentionQuery('hi'), null);
+assert.equal(insertMention('hi @Wr', 'Writer'), 'hi @Writer ');
+assert.equal(mentionCandidates([{ id: 'a', name: 'Writer' }, { id: 'b', name: 'Main' }] as any, 'wr').length, 1);
+assert.equal(eventLabel({ event: 'done', name: 'X' } as any), 'X 做完了');
+log('cards helpers ok');
 
 // reconnect: kill the socket, feed must come back by itself
 const opens = statuses.filter((s) => s === 'open').length;

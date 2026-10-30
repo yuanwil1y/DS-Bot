@@ -1,7 +1,8 @@
 // Bot / group panel = web UI "查看对话详情" panel (phone layout), pushed as a page.
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, Text, TextInput, View } from 'react-native';
-import type { Bot, Room } from '../api';
+import { roomWork, type Bot, type Room } from '../api';
+import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Icon, PillButton, RoundButton } from '../components/ui';
 import { Menu, NA } from '../components/Menu';
@@ -35,7 +36,7 @@ export function Hint({ theme, children }: { theme: Theme; children: React.ReactN
 }
 
 export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, onOpenBot, onChat }: { theme: Theme; bot?: Bot; room?: Room; onClose(): void; onSettings(): void; onMemory(botId: string): void; onOpenBot(id: string): void; onChat(): void }) {
-  const { client, state } = useStore();
+  const { client, state, refresh } = useStore();
   const [tab, setTab] = useState<'d' | 'b'>('d');
   const [more, setMore] = useState(false);
   const [usage, setUsage] = useState<any>(null);
@@ -104,7 +105,9 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
         {room ? (
           <>
             <Label theme={theme}>{`成员 · ${members.length}`}</Label>
-            {members.map((m) => (
+            {(() => { const busy = roomWork(state, room.id).filter((w) => w.state === 'work'); return busy.length > 1 ? (
+              <Pressable onPress={() => Promise.all(busy.map((w) => client!.stopMemberWork(room.id, w.botId))).then(refresh).catch(() => {})} style={{ alignSelf: 'flex-end' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>全部停止</Text></Pressable>) : null; })()}
+            {members.map((m) => { const w = roomWork(state, room.id).find((x) => x.botId === m.id); return (<View key={m.id}>
               <Pressable key={m.id} onPress={() => onOpenBot(m.id)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                 <Avatar bot={m} size={38} ring={theme.bg} />
                 <View style={{ marginLeft: 12, flex: 1 }}>
@@ -112,10 +115,13 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                     <Text style={{ color: theme.text, fontSize: 16 }}>{m.name}</Text>
                     {m.id === room.admin ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6, backgroundColor: theme.cardHi, paddingHorizontal: 5, borderRadius: 4 }}>管理员</Text> : null}
                   </View>
-                  {m.role ? <Text style={{ color: theme.sub, fontSize: 13 }}>{m.role}</Text> : null}
+                  {w ? <Text numberOfLines={1} style={{ color: w.state === 'ask' ? '#f0b84a' : theme.sub, fontSize: 13 }}>{w.state === 'ask' ? '等你批准' : `正在${w.doing ? ` ${w.doing}` : '干活'}…`}</Text>
+                    : m.role ? <Text style={{ color: theme.sub, fontSize: 13 }}>{m.role}</Text> : null}
                 </View>
+                {w?.state === 'work' ? <Pressable hitSlop={8} onPress={() => client!.stopMemberWork(room.id, m.id).then(refresh).catch(() => {})} style={{ paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>停止</Text></Pressable> : null}
               </Pressable>
-            ))}
+              {w?.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={m.name} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(refresh)} onError={() => {}} />)}
+            </View>); })}
             <Label theme={theme}>谁来回答</Label>
             <Text style={{ color: theme.text, fontSize: 15 }}>{room.mode === 'all' ? '所有成员' : '管理员主持'}</Text>
           </>

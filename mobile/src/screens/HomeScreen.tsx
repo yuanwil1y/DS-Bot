@@ -2,7 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
-import type { Bot, Room } from '../api';
+import { needsCount, type Bot, type Room } from '../api';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Badge, RoundButton, StatusDot } from '../components/ui';
 import { Menu } from '../components/Menu';
@@ -11,10 +11,12 @@ import { shortTime, t } from '../i18n';
 import type { Theme } from '../theme';
 
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
-type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; main?: boolean };
+type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean };
 
-export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void }) {
+export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onNotices }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void; onNotices(): void }) {
   const { state, status, unread, streaming, waiting, previews, refresh, client } = useStore();
+  const needs = useMemo(() => needsCount(state), [state]);
+  const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
   const q = '';
   const [acct, setAcct] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -27,19 +29,19 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
     const list: Item[] = [
       ...bots.map((b) => {
         const p = previews[b.id];
-        return { key: b.id, target: { kind: 'bot', id: b.id } as ChatTarget, name: b.name, bot: b, main: b.id === main?.id, preview: p ? (p.who === 'me' ? `${t.you}：` : '') + p.text : b.role ?? '', time: p?.time ?? b.createdAt, unread: unread[b.id] ?? 0, working: !!streaming[b.id] || b.id in activity || (b.sessionId ?? '') in activity, waiting: !!waiting[b.id] };
+        return { key: b.id, target: { kind: 'bot', id: b.id } as ChatTarget, name: b.name, bot: b, main: b.id === main?.id, preview: p ? (p.who === 'me' ? `${t.you}：` : '') + p.text : b.role ?? '', time: p?.time ?? b.createdAt, unread: unread[b.id] ?? 0, working: !!streaming[b.id] || b.id in activity || (b.sessionId ?? '') in activity, waiting: !!waiting[b.id] || !!needs[b.id], needs: needs[b.id] ?? 0 };
       }),
       ...((state?.rooms ?? []) as Room[]).map((r) => {
         const p = previews[r.id];
         const text = r.preview ?? (p ? (p.who && p.who !== 'me' ? `${p.who}：` : p.who === 'me' ? `${t.you}：` : '') + p.text : '');
-        return { key: r.id, target: { kind: 'room', id: r.id } as ChatTarget, name: r.name, members: (r.members ?? []).map((id) => byId[id]).filter(Boolean), preview: text, time: p?.time ?? r.createdAt, unread: unread[r.id] ?? 0, working: r.id in activity, waiting: !!waiting[r.id] };
+        return { key: r.id, target: { kind: 'room', id: r.id } as ChatTarget, name: r.name, members: (r.members ?? []).map((id) => byId[id]).filter(Boolean), preview: text, time: p?.time ?? r.createdAt, unread: unread[r.id] ?? 0, working: r.id in activity, waiting: !!waiting[r.id] || !!needs[r.id], needs: needs[r.id] ?? 0 };
       }),
     ];
     const w = q.trim().toLowerCase();
     return list
       .filter((i) => !w || i.name.toLowerCase().includes(w) || (i.bot?.role ?? '').toLowerCase().includes(w) || i.preview.toLowerCase().includes(w))
       .sort((a, b) => (b.time ?? 0) - (a.time ?? 0));
-  }, [bots, state?.rooms, previews, unread, streaming, waiting, activity, q, main?.id]);
+  }, [bots, state?.rooms, previews, unread, streaming, waiting, activity, q, main?.id, needs]);
 
   const header = main && !q ? (
     <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 28 }}>
@@ -55,7 +57,13 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
           {main ? <Avatar bot={main} size={34} ring={theme.fill} /> : null}
           <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
         </Pressable>
-        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
+        <View style={{ flexDirection: 'row' }}>
+          <RoundButton theme={theme} icon="🔔" onPress={onNotices} label="提醒" style={{ marginRight: 10 }}>
+            <Text style={{ fontSize: 18 }}>🔔</Text>
+            {needTotal ? <View style={{ position: 'absolute', right: -4, top: -4 }}><Badge n={needTotal} theme={theme} /></View> : null}
+          </RoundButton>
+          <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
+        </View>
       </View>
       <FlashList
         data={items}
@@ -74,6 +82,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4 }}>
                 <Text numberOfLines={1} style={{ flex: 1, color: item.waiting ? '#f5a623' : theme.sub, fontSize: 15 }}>{item.waiting ? t.waiting : item.working ? `${t.working}…` : item.preview}</Text>
+                {item.needs ? <View style={{ marginLeft: 8, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, backgroundColor: '#f5a623', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#000', fontSize: 12, fontWeight: '700' }}>{item.needs}</Text></View> : null}
                 <View style={{ marginLeft: 8 }}><Badge n={item.unread} theme={theme} /></View>
               </View>
             </View>

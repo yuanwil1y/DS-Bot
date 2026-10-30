@@ -30,8 +30,18 @@ export function parseConnection(input: string, token = ''): Connection {
  */
 export class NativeCookieTokenAuth implements AuthStrategy {
   async establish(conn: Connection) {
+    // The 303 lands on the web UI root, which may 404 when the server has no built UI
+    // (or is a proxy). That's fine: what matters is whether the cookie now opens the API.
     const res = await fetch(tokenUrl(conn), { credentials: 'include' });
-    if (res.status >= 400) throw new Error(`token rejected (HTTP ${res.status})`);
+    if (res.status === 401 || res.status === 403) throw new Error(`token rejected (HTTP ${res.status})`);
+    const check = await fetch(`${conn.baseUrl}/api/bot`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ endpoint: 'hello' }),
+    });
+    if (check.status === 401 || check.status === 403) throw new Error(`token rejected (HTTP ${check.status})`);
+    if (!check.ok) throw new Error(`server error (HTTP ${check.status})`);
   }
   headers() { return {}; }
 }

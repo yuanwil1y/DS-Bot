@@ -1,4 +1,4 @@
-// Home = web UI sidebar on a phone: Main Bot, Bots and groups; bottom: 账户 menu + 新建 (no top '+', no search).
+// Grok-style home: top account + '+' buttons, Main Bot centered, bots/groups list (no search, nothing at the bottom).
 import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -50,6 +50,13 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
+        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center' }}>
+          {main ? <Avatar bot={main} size={34} ring={theme.fill} /> : null}
+          <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
+        </Pressable>
+        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
+      </View>
       <FlashList
         data={items}
         keyExtractor={(i) => i.key}
@@ -73,14 +80,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme
           </Pressable>
         )}
       />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
-        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center' }}>
-          {main ? <Avatar bot={main} size={34} ring={theme.fill} /> : null}
-          <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
-        </Pressable>
-        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
-      </View>
-      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} bottom={70} items={[
+      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={64} left={16} items={[
         { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务' }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
       ]} />
     </View>

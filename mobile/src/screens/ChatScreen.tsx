@@ -5,6 +5,7 @@ import {
   addPending, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
   type Bot, type ChatModel, type ChatRow, type Room, type RoomModel,
 } from '../api';
+import { Menu } from '../components/Menu';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
 import { Icon, RoundButton } from '../components/ui';
@@ -25,6 +26,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
+  const [na, setNa] = useState('');
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
 
@@ -134,29 +136,36 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
             {sub ? <Text numberOfLines={1} style={{ color: status !== 'open' ? '#f5a623' : theme.sub, fontSize: 11 }}>{sub}</Text> : null}
           </View>
         </Pressable>
-        <RoundButton theme={theme} icon="more" onPress={() => setMenu(true)} label={t.more} />
+        <View style={{ width: 46 }} />
       </View>
 
       {err ? <Text numberOfLines={2} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 13 }}>{err}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 18, paddingRight: 5, paddingVertical: 5 }}>
-          <TextInput value={text} onChangeText={setText} placeholder={fmt(t.askBot, { name })} placeholderTextColor={theme.sub} multiline
-            style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 17, paddingVertical: 8 }} />
-          <Pressable onPress={send} disabled={!text.trim()} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: text.trim() ? theme.accent : theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="send" color={text.trim() ? theme.accentText : theme.sub} size={20} />
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 5, paddingRight: 5, paddingVertical: 5 }}>
+          <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="plus" color={theme.text} size={20} />
           </Pressable>
+          <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.sub} multiline
+            style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 17, paddingVertical: 8, marginLeft: 10 }} />
+          {text.trim() ? (
+            <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="send" color="#fff" size={20} />
+            </Pressable>
+          ) : (
+            <>
+              <Pressable onPress={() => setNa('听写')} accessibilityLabel="听写" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="mic" color={theme.sub} size={16} />
+              </Pressable>
+              <Pressable onPress={() => setNa('语音对话')} accessibilityLabel="开始语音对话" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
+      {na ? <Text onPress={() => setNa('')} style={{ color: theme.faint, textAlign: 'center', fontSize: 12, paddingBottom: 6 }}>{na}：暂不支持</Text> : null}
 
-      <Modal visible={menu} transparent animationType="fade" onRequestClose={() => setMenu(false)}>
-        <Pressable onPress={() => setMenu(false)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}>
-          <View style={{ position: 'absolute', right: 16, top: 64, backgroundColor: theme.cardHi, borderRadius: 18, minWidth: 200, overflow: 'hidden' }}>
-            {[{ l: t.details, f: () => { setMenu(false); onDetails(); } }, { l: t.share, f: share }].map((o) => (
-              <Pressable key={o.l} onPress={o.f} android_ripple={{ color: theme.fill }} style={{ paddingHorizontal: 18, paddingVertical: 15 }}><Text style={{ color: theme.text, fontSize: 16 }}>{o.l}</Text></Pressable>
-            ))}
-          </View>
-        </Pressable>
-      </Modal>
+      <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '添加文件' }, { label: '引用对话' }, { label: '定时任务' }]} />
     </KeyboardAvoidingView>
   );
 }

@@ -1,10 +1,11 @@
-// Grok-style home: account + new buttons, Main Bot centered, chats list, grid + search bar.
+// Home = web UI sidebar on a phone: Main Bot, Bots and groups; bottom: 账户 menu + 新建 (no top '+', no search).
 import React, { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, Text, TextInput, View } from 'react-native';
+import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import type { Bot, Room } from '../api';
 import { Avatar, GroupAvatar } from '../components/Avatar';
-import { Badge, Icon, RoundButton, StatusDot } from '../components/ui';
+import { Badge, RoundButton, StatusDot } from '../components/ui';
+import { Menu } from '../components/Menu';
 import { useStore } from '../store';
 import { shortTime, t } from '../i18n';
 import type { Theme } from '../theme';
@@ -12,10 +13,10 @@ import type { Theme } from '../theme';
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
 type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; main?: boolean };
 
-export function HomeScreen({ theme, onOpen, onAccount, onNew }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onNew(mode: "chat" | "group"): void }) {
+export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void }) {
   const { state, status, unread, streaming, waiting, previews, refresh, client } = useStore();
-  const [q, setQ] = useState('');
-  const [searching, setSearching] = useState(false);
+  const q = '';
+  const [acct, setAcct] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const bots = state?.bots ?? [];
   const main = bots.find((b) => b.id === state?.mainBotId) ?? bots[0];
@@ -49,13 +50,6 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew }: { theme: Theme; 
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 8 }}>
-        <RoundButton theme={theme} onPress={onAccount} label={t.settings}>
-          <Text style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>{(client?.conn.baseUrl.replace(/^https?:\/\//, '') ?? 'D').slice(0, 1).toUpperCase()}</Text>
-          <View style={{ position: 'absolute', right: 2, top: 2 }}><StatusDot theme={theme} status={status} /></View>
-        </RoundButton>
-        <RoundButton theme={theme} icon="plus" onPress={() => onNew("chat")} label={t.newChat} />
-      </View>
       <FlashList
         data={items}
         keyExtractor={(i) => i.key}
@@ -79,14 +73,16 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew }: { theme: Theme; 
           </Pressable>
         )}
       />
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10, gap: 12 }}>
-        <RoundButton theme={theme} icon="grid" onPress={() => onNew("group")} label={t.createGroup} size={52} />
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', height: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 16 }}>
-          <Icon name="search" color={theme.sub} size={22} />
-          <TextInput value={q} onChangeText={setQ} onFocus={() => setSearching(true)} onBlur={() => setSearching(false)} placeholder={t.search} placeholderTextColor={theme.sub} style={{ flex: 1, color: theme.text, fontSize: 17, marginLeft: 10 }} returnKeyType="search" />
-          {q || searching ? <Pressable onPress={() => setQ('')} hitSlop={10}><Icon name="close" color={theme.sub} size={16} /></Pressable> : null}
-        </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
+        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center' }}>
+          {main ? <Avatar bot={main} size={34} ring={theme.fill} /> : null}
+          <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
+        </Pressable>
+        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
       </View>
+      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} bottom={70} items={[
+        { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务' }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
+      ]} />
     </View>
   );
 }

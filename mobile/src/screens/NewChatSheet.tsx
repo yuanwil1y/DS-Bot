@@ -78,6 +78,7 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
             <Group theme={theme}>
               <Row theme={theme} icon="＋" label={t.createBot} onPress={() => { setName(q.trim()); setMode('bot'); }} />
               <Row theme={theme} icon="👥" label={t.createGroup} onPress={() => setMode('group')} />
+              <Row theme={theme} icon="⌘" label="添加 DSH Agent" value="暂不支持" />
             </Group>
           ) : null}
           <Group theme={theme}>

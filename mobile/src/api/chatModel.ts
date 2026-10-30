@@ -72,7 +72,13 @@ export function rows(m: ChatModel): ChatRow[] {
 export type RoomItem = { id: string; kind: 'user' | 'bot' | 'event' | string; text?: string; time?: number; botId?: string; name?: string; color?: string; event?: string; live?: boolean; code?: string; names?: string[]; count?: number };
 export type RoomModel = { items: RoomItem[]; pending: Pending[]; running?: boolean; speaking?: string[] };
 export const emptyRoom = (): RoomModel => ({ items: [], pending: [] });
-export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: boolean; speaking?: string[] }, latest = true): RoomModel {
+/** Server sends `speaking` as one botId string (room-chat, room-progress), sometimes an array or nothing. */
+export function speakingList(v: unknown): string[] {
+  if (typeof v === 'string') return v ? [v] : [];
+  if (Array.isArray(v)) return v.flatMap(speakingList);
+  return [];
+}
+export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: boolean; speaking?: unknown }, latest = true): RoomModel {
   const map = new Map<string, RoomItem>();
   // A fresh latest page replaces earlier live rows of the running turn.
   for (const i of m.items) if (!(latest && i.live)) map.set(i.id, i);
@@ -84,7 +90,7 @@ export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: 
     if (hit) { used.add(hit); return false; }
     return true;
   });
-  return latest ? { items, pending, running: page.running, speaking: page.speaking } : { ...m, items, pending };
+  return latest ? { items, pending, running: page.running, speaking: speakingList(page.speaking) } : { ...m, items, pending };
 }
 export function roomRows(m: RoomModel): ChatRow[] {
   const out: ChatRow[] = m.items.filter((i) => i.kind === 'event' || i.text).map((i) => (i.kind === 'event'

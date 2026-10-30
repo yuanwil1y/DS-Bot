@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.4.0', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.4.1', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -41,7 +41,7 @@ export class BotClient {
 
   state() { return this.call<BotState>('state'); }
   chat(botId: string, cursor?: string) { return this.call<ChatPage>('chat', cursor ? { botId, cursor } : { botId }); }
-  roomChat(roomId: string, cursor?: string) { return this.call<{ roomId: string; items: any[]; cursor: string | null; running?: boolean; speaking?: string[] }>('room-chat', cursor ? { roomId, cursor } : { roomId }); }
+  roomChat(roomId: string, cursor?: string) { return this.call<{ roomId: string; items: any[]; cursor: string | null; running?: boolean; speaking?: unknown }>('room-chat', cursor ? { roomId, cursor } : { roomId }); }
   usage(botId: string) { return this.call<any>('usage-summary', { botId, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }
   memory(botId: string) { return this.call<any>('memory-view', { botId }); }
   memoryAdd(botId: string, text: string) { return this.call<any>('memory-add', { botId, text }); }
@@ -54,7 +54,7 @@ export class BotClient {
   dismissView(sessionId: string) { return this.call<any>('dismiss-view', { sessionId }); }
   approvalAnswer(id: string, choice: 'allow' | 'reject') { return this.call<any>('approval-answer', { id, choice }); }
   stopMemberWork(roomId: string, botId: string) { return this.call<boolean>('stop-member-work', { roomId, botId }); }
-  roomProgress(roomId: string) { return this.call<{ callId: string; replies: number; speaking?: string[] }[]>('room-progress', { roomId }); }
+  roomProgress(roomId: string) { return this.call<{ callId: string; replies: unknown[]; speaking?: string | string[] }[]>('room-progress', { roomId }); }
   notices(boot?: string, since?: number) { return this.call<{ boot: string; seq: number; reset: boolean; notices: Notice[] }>('notices', { ...(boot ? { boot } : {}), ...(since != null ? { since } : {}) }); }
   send(sessionId: string, text: string) { return this.call<boolean>('send', { sessionId, text }); }
 }

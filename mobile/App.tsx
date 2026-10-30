@@ -55,8 +55,11 @@ function Root() {
   );
 }
 
-function Keyed() { const { lang } = usePrefs(); return <Root key={lang} />; }
+function Keyed() { const { lang } = usePrefs(); return <Boundary where="界面"><Root key={lang} /></Boundary>; }
+
+import { Boundary, installGlobalHandler } from './src/errors';
+installGlobalHandler();
 
 export default function App() {
-  return <SafeAreaProvider><PrefsProvider><StoreProvider><View style={{ flex: 1 }}><Keyed /></View></StoreProvider></PrefsProvider></SafeAreaProvider>;
+  return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><View style={{ flex: 1 }}><Keyed /></View></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
 }

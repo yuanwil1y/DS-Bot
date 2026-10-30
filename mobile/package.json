@@ -1,6 +1,6 @@
 {
   "name": "deepseek-bot-mobile",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "main": "index.ts",
   "dependencies": {
     "@shopify/flash-list": "2.3.2",
@@ -24,7 +24,7 @@
     "ios": "expo run:ios",
     "android": "expo run:android",
     "typecheck": "tsc --noEmit",
-    "test:api": "tsx test/api.test.mts"
+    "test:api": "tsx test/paihuo30.test.mts && tsx test/api.test.mts"
   },
   "private": true,
   "license": "Apache-2.0"

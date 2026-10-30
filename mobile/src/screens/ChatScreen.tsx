@@ -3,12 +3,13 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
 import {
   cardsFor, insertMention, mentionCandidates, mentionQuery, roomWork,
-  addPending, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
+  addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
   type Bot, type ChatModel, type ChatRow, type Room, type RoomModel,
 } from '../api';
 import { Menu } from '../components/Menu';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
+import { Boundary } from '../errors';
 import { ApprovalCard, QuestionCard, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
@@ -47,7 +48,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
     if (!client || bot || progTimer.current) return;
     progTimer.current = setTimeout(() => {
       progTimer.current = null;
-      client.roomProgress(room!.id).then((p) => setRModel((m) => ({ ...m, running: p.length > 0 || m.running, speaking: p.flatMap((x) => x.speaking ?? []) }))).catch(() => {});
+      client.roomProgress(room!.id).then((p) => setRModel((m) => ({ ...m, running: p.length > 0 || m.running, speaking: speakingList(p.map((x) => x.speaking)) }))).catch(() => {});
     }, 300);
   }, [client, id]);
   // Live: private chats apply message/stream; groups re-read the first page on each
@@ -114,7 +115,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
           contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 76 }}
           onEndReached={older}
           keyboardShouldPersistTaps="handled"
-          ListHeaderComponent={<View>
+          ListHeaderComponent={<Boundary where="卡片" inline resetKey={state}><View>
             {(rmodel.speaking ?? []).filter((b) => !list.some((r) => r.streaming && r.botId === b)).map((b) => (
               <View key={b} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6, marginLeft: 4 }}>
                 {byId[b] ? <Avatar bot={byId[b]} size={20} working /> : null}
@@ -125,9 +126,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
             {cards.view ? <ViewCardView key={cards.view.id} theme={theme} v={cards.view} onError={onErr}
               onReply={(act, vals) => client!.viewReply(cards.sessionId, cards.view!.id, act, vals).then(after)} onDismiss={() => client!.dismissView(cards.sessionId).then(after)} /> : null}
             {cards.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={byId[a.botId]?.name ?? 'Bot'} onError={onErr} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(after)} />)}
-          </View>}
+          </View></Boundary>}
           ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40, transform: [{ scaleY: -1 }] }}>{t.empty}</Text>}
-          renderItem={({ item, index }) => {
+          renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{(({ item, index }: { item: ChatRow; index: number }) => {
             if (item.kind === 'event') return <Text style={{ color: theme.sub, fontSize: 13, textAlign: 'center', marginVertical: 6 }}>{item.text}</Text>;
             if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;
             const me = item.kind === 'user' || item.kind === 'answer';
@@ -153,7 +154,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
                 </View>
               </View>
             );
-          }}
+          })(p)}</Boundary>}
         />
       )}
 

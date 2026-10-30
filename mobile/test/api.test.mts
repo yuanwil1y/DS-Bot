@@ -70,14 +70,15 @@ log('chat reload matches live view');
 
 // optimistic send: pending row shows at once, then is replaced by the server's copy
 {
-  let m = addPending(withHistory(emptyChat(), (await client.chat(bot.id)).items), '乐观消息测试');
+  const OPT = '乐观消息测试 ' + Date.now();
+  let m = addPending(withHistory(emptyChat(), (await client.chat(bot.id)).items), OPT);
   assert.equal(rows(m).filter((x) => x.pending).length, 1);
   const f2 = events.length;
-  await client.send(bot.sessionId ?? bot.id, '乐观消息测试');
+  await client.send(bot.sessionId ?? bot.id, OPT);
   for (let i = 0; i < 100 && !events.slice(f2).some((e) => e.event === 'stream' && e.data.phase === 'end'); i++) await sleep(100);
   for (const e of events.slice(f2)) m = applyFeed(m, bot.sessionId ?? bot.id, e);
   assert.equal(rows(m).filter((x) => x.pending).length, 0, 'pending reconciled by feed');
-  assert.equal(rows(m).filter((x) => x.text === '乐观消息测试').length, 1, 'no duplicate');
+  assert.equal(rows(m).filter((x) => x.text === OPT).length, 1, 'no duplicate');
   log('optimistic message reconciled with feed, no duplicate');
 }
 

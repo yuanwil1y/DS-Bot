@@ -8,7 +8,7 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-export const APP_VERSION = '0.4.2';
+export const APP_VERSION = '0.4.3';
 
 export function SettingsSheet({ theme, visible, onClose }: { theme: Theme; visible: boolean; onClose(): void }) {
   const { client, status, state, disconnect } = useStore();
@@ -23,7 +23,6 @@ export function SettingsSheet({ theme, visible, onClose }: { theme: Theme; visib
       <Group theme={theme} style={{ marginTop: 4 }}>
         <Row theme={theme} label={t.appName} caption={host} value={status === 'open' ? t.online : t.offline} />
         <Row theme={theme} label={t.plugin} value={client?.hello?.plugin?.version ?? '—'} />
-        <Row theme={theme} label={t.bots} value={String(state?.bots.length ?? 0)} />
         {state?.readOnly ? <Row theme={theme} label={t.readOnly} value="✓" /> : null}
       </Group>
       <Group theme={theme}>

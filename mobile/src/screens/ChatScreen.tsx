@@ -30,8 +30,6 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
   const setNa = (what: string) => ToastAndroid.show(`${what}：暂不支持`, ToastAndroid.SHORT);
-  const [stopping, setStopping] = useState(false);
-  const stopRound = () => { if (!client || !room) return; setStopping(true); client.stopRoomWork(room.id).then(() => { refresh(); load(); }).catch(onErr).finally(() => setStopping(false)); };
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
 
@@ -204,10 +202,6 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
           {text.trim() ? (
             <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color="#fff" size={20} />
-            </Pressable>
-          ) : room && rmodel.running ? (
-            <Pressable onPress={stopRound} disabled={stopping} accessibilityLabel="停止" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.text, alignItems: 'center', justifyContent: 'center', opacity: stopping ? 0.5 : 1 }}>
-              <View style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: theme.bg }} />
             </Pressable>
           ) : (
             <>

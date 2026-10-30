@@ -1,6 +1,6 @@
 {
   "name": "deepseek-bot-mobile",
-  "version": "0.4.2",
+  "version": "0.4.3",
   "main": "index.ts",
   "dependencies": {
     "@shopify/flash-list": "2.3.2",

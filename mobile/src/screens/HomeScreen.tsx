@@ -13,7 +13,7 @@ import type { Theme } from '../theme';
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
 type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean };
 
-export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onNotices }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void; onNotices(): void }) {
+export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onNew(mode: "chat" | "group"): void }) {
   const { state, status, unread, streaming, waiting, previews, refresh, client } = useStore();
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
@@ -58,10 +58,6 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onNotices
           <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
         </Pressable>
         <View style={{ flexDirection: 'row' }}>
-          <RoundButton theme={theme} icon="🔔" onPress={onNotices} label="提醒" style={{ marginRight: 10 }}>
-            <Text style={{ fontSize: 18 }}>🔔</Text>
-            {needTotal ? <View style={{ position: 'absolute', right: -4, top: -4 }}><Badge n={needTotal} theme={theme} /></View> : null}
-          </RoundButton>
           <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
         </View>
       </View>

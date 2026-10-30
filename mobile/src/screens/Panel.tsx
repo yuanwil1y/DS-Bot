@@ -105,8 +105,8 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
         {room ? (
           <>
             <Label theme={theme}>{`成员 · ${members.length}`}</Label>
-            {(() => { const busy = roomWork(state, room.id).filter((w) => w.state === 'work'); return busy.length > 1 ? (
-              <Pressable onPress={() => Promise.all(busy.map((w) => client!.stopMemberWork(room.id, w.botId))).then(refresh).catch(() => {})} style={{ alignSelf: 'flex-end' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>全部停止</Text></Pressable>) : null; })()}
+            {(() => { const busy = roomWork(state, room.id); return busy.length ? (
+              <Pressable onPress={() => client!.stopRoomWork(room.id).then(refresh).catch(() => {})} accessibilityLabel="停止本群的所有工作" style={{ alignSelf: 'flex-end' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>全部停止</Text></Pressable>) : null; })()}
             {members.map((m) => { const w = roomWork(state, room.id).find((x) => x.botId === m.id); return (<View key={m.id}>
               <Pressable key={m.id} onPress={() => onOpenBot(m.id)} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
                 <Avatar bot={m} size={38} ring={theme.bg} />
@@ -118,7 +118,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                   {w ? <Text numberOfLines={1} style={{ color: w.state === 'ask' ? '#f0b84a' : theme.sub, fontSize: 13 }}>{w.state === 'ask' ? '等你批准' : `正在${w.doing ? ` ${w.doing}` : '干活'}…`}</Text>
                     : m.role ? <Text style={{ color: theme.sub, fontSize: 13 }}>{m.role}</Text> : null}
                 </View>
-                {w?.state === 'work' ? <Pressable hitSlop={8} onPress={() => client!.stopMemberWork(room.id, m.id).then(refresh).catch(() => {})} style={{ paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>停止</Text></Pressable> : null}
+                {w ? <Pressable hitSlop={8} accessibilityLabel={`停止 · ${m.name}`} onPress={() => client!.stopMemberWork(room.id, m.id).then(refresh).catch(() => {})} style={{ paddingHorizontal: 12, height: 30, borderRadius: 15, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: '#ff6b6b', fontSize: 14 }}>停止</Text></Pressable> : null}
               </Pressable>
               {w?.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={m.name} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(refresh)} onError={() => {}} />)}
             </View>); })}

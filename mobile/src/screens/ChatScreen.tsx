@@ -1,6 +1,6 @@
 // Grok-style chat for a Bot's private chat or a group chat: floating header, cards, pill composer.
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
   cardsFor, insertMention, mentionCandidates, mentionQuery, roomWork,
   addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
@@ -29,7 +29,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
-  const [na, setNa] = useState('');
+  const setNa = (what: string) => ToastAndroid.show(`${what}：暂不支持`, ToastAndroid.SHORT);
+  const [stopping, setStopping] = useState(false);
+  const stopRound = () => { if (!client || !room) return; setStopping(true); client.stopRoomWork(room.id).then(() => { refresh(); load(); }).catch(onErr).finally(() => setStopping(false)); };
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
 
@@ -112,7 +114,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
           inverted
           data={data}
           keyExtractor={(r) => r.key}
-          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 76 }}
+          style={{ flex: 1, marginTop: 62 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12 }}
           onEndReached={older}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={<Boundary where="卡片" inline resetKey={state}><View>
@@ -202,6 +205,10 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
             <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color="#fff" size={20} />
             </Pressable>
+          ) : room && rmodel.running ? (
+            <Pressable onPress={stopRound} disabled={stopping} accessibilityLabel="停止" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.text, alignItems: 'center', justifyContent: 'center', opacity: stopping ? 0.5 : 1 }}>
+              <View style={{ width: 14, height: 14, borderRadius: 3, backgroundColor: theme.bg }} />
+            </Pressable>
           ) : (
             <>
               <Pressable onPress={() => setNa('听写')} accessibilityLabel="听写" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
@@ -214,7 +221,6 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails }: Props) {
           )}
         </View>
       </View>
-      {na ? <Text onPress={() => setNa('')} style={{ color: theme.faint, textAlign: 'center', fontSize: 12, paddingBottom: 6 }}>{na}：暂不支持</Text> : null}
 
       <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '添加文件' }, { label: '引用对话' }, { label: '定时任务' }]} />
     </KeyboardAvoidingView>

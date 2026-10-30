@@ -144,6 +144,15 @@ assert.ok(events.slice(ev0).some((e) => e.event === 'live'), 'live feed events')
 assert.equal(await client.stopMemberWork(room.id, W.id), true);
 await until(async () => !roomWork(await client.state(), room.id).some((w) => w.botId === W.id), 15000);
 log('派活 → member working → stop-member-work → idle');
+const ev1 = events.length;
+await client.send(room.id, `派活 30 #${Date.now()}`);
+await until(async () => roomWork(await client.state(), room.id).some((w) => w.botId === W.id && w.state === 'work'), 20000);
+assert.equal(await client.stopRoomWork(room.id), true);
+await until(async () => !roomWork(await client.state(), room.id).length, 15000);
+assert.ok(events.slice(ev1).some((e) => e.event === 'room' && (e.data as any)?.roomId === room.id), 'room feed after stop');
+const sp = await until(async () => { const p = await client.roomChat(room.id); return roomRows(withRoomPage(emptyRoom(), p)).some((r) => r.kind === 'event' && /停下了/.test(r.text ?? '')) ? p : null; }, 15000);
+assert.ok(sp, 'stopped event row');
+log('派活 → stop-room-work → idle; feed:', roomRows(withRoomPage(emptyRoom(), sp)).filter((r) => r.kind === 'event').slice(-1).map((r) => r.text).join(''));
 
 // pure helpers
 assert.equal(mentionQuery('hi @Wr'), 'Wr'); assert.equal(mentionQuery('hi'), null);

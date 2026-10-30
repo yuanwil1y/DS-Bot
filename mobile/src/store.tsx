@@ -15,6 +15,8 @@ type Ctx = {
   restoring: boolean;
   unread: Record<string, number>;
   streaming: Record<string, boolean>;
+  waiting: Record<string, boolean>;
+  previews: Record<string, { text: string; time?: number; who?: string }>;
   connect(conn: Connection): Promise<void>;
   disconnect(): Promise<void>;
   refresh(): Promise<void>;
@@ -33,6 +35,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [restoring, setRestoring] = useState(true);
   const [unread, setUnread] = useState<Record<string, number>>({});
   const [streaming, setStreaming] = useState<Record<string, boolean>>({});
+  const [waiting, setWaiting] = useState<Record<string, boolean>>({});
+  const [previews, setPreviews] = useState<Ctx['previews']>({});
   const feed = useRef<Feed | null>(null);
   const listeners = useRef(new Set<Listener>());
   const openBot = useRef<string | null>(null);
@@ -52,10 +56,27 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const d = e.data as any;
     if (e.event === 'revision' || e.event === 'hello') refreshSoon();
     if (e.event === 'stream' && d?.botId) setStreaming((s) => ({ ...s, [d.botId]: d.phase !== 'end' }));
-    if (e.event === 'notice' && d?.kind === 'message' && d.botId && d.botId !== openBot.current)
-      setUnread((u) => ({ ...u, [d.botId]: (u[d.botId] ?? 0) + 1 }));
+    if (e.event === 'message' && d?.botId && d.item?.text)
+      setPreviews((p) => ({ ...p, [d.botId]: { text: d.item.text, time: d.item.time ?? Date.now(), who: d.item.kind === 'user' ? 'me' : undefined } }));
+    if (e.event === 'room' && d?.roomId) { setPreviews((p) => ({ ...p, [d.roomId]: { ...(p[d.roomId] ?? { text: '' }), time: Date.now() } })); refreshSoon(); }
+    if (e.event === 'notice' && d) {
+      const id = d.kind === 'group' && d.roomId ? d.roomId : d.botId;
+      if (id && id !== openBot.current && (d.kind === 'message' || d.kind === 'group'))
+        setUnread((u) => ({ ...u, [id]: (u[id] ?? 0) + 1 }));
+      if (id && ['question', 'approval', 'view', 'learning', 'browser'].includes(d.kind)) setWaiting((w) => ({ ...w, [d.roomId ?? id]: true }));
+    }
     listeners.current.forEach((l) => l(e));
   }, [refreshSoon]);
+
+  // Last line of every chat for the home list (bots: chat page; groups: room-chat page).
+  const loadPreviews = useCallback(async (c: BotClient, st: BotState) => {
+    const out: Ctx['previews'] = {};
+    await Promise.all([
+      ...st.bots.map(async (b) => { try { const p = await c.chat(b.id); const i = [...p.items].reverse().find((x) => x.text); if (i) out[b.id] = { text: i.text!, time: i.time, who: i.kind === 'user' ? 'me' : undefined }; } catch {} }),
+      ...(st.rooms ?? []).map(async (r) => { try { const p = await c.roomChat(r.id); const i = [...p.items].reverse().find((x: any) => x.text && x.kind !== 'event'); if (i) out[r.id] = { text: i.text, time: i.time, who: i.kind === 'user' ? 'me' : i.name }; } catch {} }),
+    ]);
+    setPreviews((p) => ({ ...out, ...Object.fromEntries(Object.entries(p).filter(([k, v]) => (v.time ?? 0) > (out[k]?.time ?? 0) && v.text)) }));
+  }, []);
 
   const start = useCallback(async (conn: Connection) => {
     const c = new BotClient(conn, new NativeCookieTokenAuth());
@@ -63,10 +84,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     feed.current?.stop();
     clientRef.current = c;
     setClient(c);
-    setState(await c.state());
+    const st = await c.state();
+    setState(st);
+    loadPreviews(c, st);
     const f = new Feed(conn, c.auth, onEvent, (s, n) => { setStatus(s); setOpens(n); });
     feed.current = f; f.start();
-  }, [onEvent]);
+  }, [onEvent, loadPreviews]);
 
   const connect = useCallback(async (conn: Connection) => {
     await start(conn);
@@ -75,7 +98,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const disconnect = useCallback(async () => {
     feed.current?.stop(); feed.current = null; clientRef.current = null;
-    setClient(null); setState(null);
+    setClient(null); setState(null); setPreviews({}); setUnread({});
     await SecureStore.deleteItemAsync(KEY);
   }, []);
 
@@ -91,8 +114,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   }, [start, refresh]);
 
   const value: Ctx = {
-    client, state, status, opens, restoring, unread, streaming, connect, disconnect, refresh,
-    markRead: (id) => setUnread((u) => ({ ...u, [id]: 0 })),
+    client, state, status, opens, restoring, unread, streaming, waiting, previews, connect, disconnect, refresh,
+    markRead: (id) => { setUnread((u) => ({ ...u, [id]: 0 })); setWaiting((w) => ({ ...w, [id]: false })); },
     subscribe: (l) => { listeners.current.add(l); return () => { listeners.current.delete(l); }; },
     setOpenBot: (id) => { openBot.current = id; },
   };

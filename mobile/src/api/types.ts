@@ -12,16 +12,24 @@ export type Bot = {
   model?: string;
   waiting?: unknown;
   sessionId?: string;
+  instructions?: string;
+  workDir?: string;
+  appliedModel?: string;
+  createdAt?: number;
+  private?: boolean;
 };
+export type Room = { id: string; name: string; members?: string[]; admin?: string; mode?: string; notice?: string; preview?: string; createdAt?: number };
 export type BotState = {
   revision: number;
   mainBotId?: string;
   bots: Bot[];
-  rooms?: { id: string; name: string }[];
+  rooms?: Room[];
+  models?: { ref: string; name: string; providerName?: string }[];
+  defaultModel?: string;
   activity?: Record<string, unknown>;
   [k: string]: unknown;
 };
-export type Hello = { api: number | null; boot: string; seq: number; revision: number; capabilities: string[]; readOnly?: boolean };
+export type Hello = { api: number | null; plugin?: { name: string; version: string }; boot: string; seq: number; revision: number; capabilities: string[]; readOnly?: boolean };
 export type ChatItem = { kind: 'user' | 'bot' | 'answer' | string; text?: string; time?: number; seq?: number; turn?: number };
 export type ChatPage = { sessionId: string; items: ChatItem[]; cursor: string | null };
 

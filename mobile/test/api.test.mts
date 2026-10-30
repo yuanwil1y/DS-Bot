@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { BotClient } from '../src/api/client';
 import { Feed } from '../src/api/feed';
 import { ManualCookieTokenAuth, parseConnection } from '../src/api/auth';
-import { emptyChat, withHistory, applyFeed, rows } from '../src/api/chatModel';
+import { emptyChat, withHistory, applyFeed, rows, addPending, emptyRoom, withRoomPage, roomRows } from '../src/api/chatModel';
 import type { FeedEvent } from '../src/api/types';
 
 const url = process.argv[2] ?? readFileSync('/tmp/dsh-mobile/web.log', 'utf8').match(/http:\/\/[\d.:]+\/\?token=\S+/g)?.at(-1);
@@ -66,6 +66,30 @@ log('send -> feed', kinds.join('/'), '-> streamed draft', JSON.stringify(sawDraf
 const after = await client.chat(bot.id);
 assert.equal(after.items.at(-1)?.text, r.at(-1)?.text);
 log('chat reload matches live view');
+
+// optimistic send: pending row shows at once, then is replaced by the server's copy
+{
+  let m = addPending(withHistory(emptyChat(), (await client.chat(bot.id)).items), '乐观消息测试');
+  assert.equal(rows(m).filter((x) => x.pending).length, 1);
+  const f2 = events.length;
+  await client.send(bot.sessionId ?? bot.id, '乐观消息测试');
+  for (let i = 0; i < 100 && !events.slice(f2).some((e) => e.event === 'stream' && e.data.phase === 'end'); i++) await sleep(100);
+  for (const e of events.slice(f2)) m = applyFeed(m, bot.sessionId ?? bot.id, e);
+  assert.equal(rows(m).filter((x) => x.pending).length, 0, 'pending reconciled by feed');
+  assert.equal(rows(m).filter((x) => x.text === '乐观消息测试').length, 1, 'no duplicate');
+  log('optimistic message reconciled with feed, no duplicate');
+}
+
+// group chat page + usage + memory (read-only calls)
+if (st.rooms?.length) {
+  const p = await client.roomChat(st.rooms[0].id);
+  const rm = withRoomPage(emptyRoom(), p);
+  assert.ok(roomRows(rm).length > 0);
+  log('room-chat rows =', roomRows(rm).length, 'running =', !!p.running);
+}
+const u = await client.usage(bot.id); assert.ok(u.day && typeof u.day.calls === 'number');
+const mem = await client.memory(bot.id); assert.ok(Array.isArray(mem.entries));
+log('usage-summary calls(24h) =', u.day.calls, '; memory entries =', mem.entries.length);
 
 // reconnect: kill the socket, feed must come back by itself
 const opens = statuses.filter((s) => s === 'open').length;

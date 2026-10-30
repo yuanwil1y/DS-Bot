@@ -11,7 +11,7 @@ export function ConnectScreen({ theme }: { theme: Theme }) {
   const [token, setToken] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  const input = { color: theme.text, backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginTop: 12 };
+  const input = { color: theme.text, backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, borderRadius: 24, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginTop: 12 };
 
   async function go() {
     setErr(''); setBusy(true);
@@ -30,8 +30,8 @@ export function ConnectScreen({ theme }: { theme: Theme }) {
       <TextInput style={input} value={url} onChangeText={setUrl} placeholder={t.server} placeholderTextColor={theme.sub} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
       <TextInput style={input} value={token} onChangeText={setToken} placeholder={t.token} placeholderTextColor={theme.sub} autoCapitalize="none" autoCorrect={false} secureTextEntry />
       {err ? <Text style={{ color: '#ef4444', marginTop: 10 }}>{err}</Text> : null}
-      <Pressable onPress={go} disabled={busy || !url} style={{ marginTop: 20, backgroundColor: theme.accent, opacity: busy || !url ? 0.5 : 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center' }}>
-        {busy ? <View style={{ flexDirection: 'row', gap: 8 }}><ActivityIndicator color="#fff" /><Text style={{ color: '#fff', fontWeight: '600' }}>{t.connecting}</Text></View> : <Text style={{ color: '#fff', fontSize: 16, fontWeight: '600' }}>{t.connect}</Text>}
+      <Pressable onPress={go} disabled={busy || !url} style={{ marginTop: 20, backgroundColor: theme.accent, opacity: busy || !url ? 0.5 : 1, borderRadius: 26, paddingVertical: 15, alignItems: 'center' }}>
+        {busy ? <View style={{ flexDirection: 'row', gap: 8 }}><ActivityIndicator color={theme.accentText} /><Text style={{ color: theme.accentText, fontWeight: '600' }}>{t.connecting}</Text></View> : <Text style={{ color: theme.accentText, fontSize: 16, fontWeight: '600' }}>{t.connect}</Text>}
       </Pressable>
     </KeyboardAvoidingView>
   );

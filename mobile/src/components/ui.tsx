@@ -1,0 +1,90 @@
+// Grok-style primitives: round icon buttons, pills, grouped rounded rows, sheets.
+import React from 'react';
+import { Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { Theme } from '../theme';
+
+/** Simple line icons drawn with text glyphs (no icon font dependency). */
+const glyphs: Record<string, string> = { back: '‹', plus: '+', more: '⋯', close: '✕', search: '⌕', grid: '⊞', share: '⇪', chevron: '›', send: '↑', check: '✓', mic: '🎙' };
+export function Icon({ name, color, size = 22 }: { name: keyof typeof glyphs | string; color: string; size?: number }) {
+  const g = glyphs[name] ?? name;
+  const big = name === 'back' || name === 'chevron';
+  return <Text style={{ color, fontSize: big ? size * 1.45 : name === 'plus' ? size * 1.25 : size, lineHeight: big ? size * 1.55 : size * 1.3, fontWeight: name === 'more' || name === 'send' ? '700' : '300', textAlign: 'center', includeFontPadding: false }}>{g}</Text>;
+}
+
+export function RoundButton({ theme, icon, onPress, size = 46, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {
+  return (
+    <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}>
+      {children ?? <Icon name={icon ?? ''} color={theme.text} />}
+    </Pressable>
+  );
+}
+
+export function PillButton({ theme, title, onPress, primary, disabled }: { theme: Theme; title: string; onPress?: () => void; primary?: boolean; disabled?: boolean }) {
+  return (
+    <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => ({ alignSelf: 'center', paddingHorizontal: 18, height: 40, borderRadius: 20, justifyContent: 'center', backgroundColor: primary ? theme.accent : theme.cardHi, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 })}>
+      <Text style={{ color: primary ? theme.accentText : theme.text, fontSize: 16, fontWeight: '600' }}>{title}</Text>
+    </Pressable>
+  );
+}
+
+export function Group({ theme, children, title, caption, style }: { theme: Theme; children: React.ReactNode; title?: string; caption?: string; style?: ViewStyle }) {
+  const items = React.Children.toArray(children).filter(Boolean);
+  return (
+    <View style={[{ marginTop: 20 }, style]}>
+      {title ? <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 22, marginBottom: 8 }}>{title}</Text> : null}
+      <View style={{ backgroundColor: theme.card, borderRadius: 20, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
+        {items.map((c, i) => <View key={i}>{i > 0 ? <View style={{ height: 1, backgroundColor: theme.sep, marginLeft: 18 }} /> : null}{c}</View>)}
+      </View>
+      {caption ? <Text style={{ color: theme.faint, fontSize: 13, marginHorizontal: 22, marginTop: 8 }}>{caption}</Text> : null}
+    </View>
+  );
+}
+
+export function Row({ theme, icon, label, value, caption, onPress, chevron = !!onPress, right, danger }: { theme: Theme; icon?: string; label: string; value?: string; caption?: string; onPress?: () => void; chevron?: boolean; right?: React.ReactNode; danger?: boolean }) {
+  return (
+    <Pressable disabled={!onPress} onPress={onPress} android_ripple={onPress ? { color: theme.cardHi } : undefined} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, minHeight: 58, paddingVertical: 12 }}>
+      {icon ? <View style={{ width: 28, marginRight: 10, alignItems: 'center' }}><Text style={{ color: theme.text, fontSize: 18 }}>{icon}</Text></View> : null}
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: danger ? theme.danger : theme.text, fontSize: 17 }}>{label}</Text>
+        {caption ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 3 }} numberOfLines={3}>{caption}</Text> : null}
+      </View>
+      {value ? <Text numberOfLines={1} style={{ color: theme.sub, fontSize: 16, marginLeft: 12, maxWidth: '55%' }}>{value}</Text> : null}
+      {right}
+      {chevron ? <View style={{ marginLeft: 8 }}><Icon name="chevron" color={theme.sub} size={16} /></View> : null}
+    </Pressable>
+  );
+}
+
+export function ToggleRow({ theme, label, value, onChange }: { theme: Theme; label: string; value: boolean; onChange(v: boolean): void }) {
+  return <Row theme={theme} label={label} right={<Switch value={value} onValueChange={onChange} thumbColor={value ? '#000' : '#ccc'} trackColor={{ true: '#c7c7cc', false: theme.cardHi }} />} />;
+}
+
+/** Full-height sheet with a round close button (Grok settings style). */
+export function Sheet({ theme, visible, onClose, children, right }: { theme: Theme; visible: boolean; onClose(): void; children: React.ReactNode; right?: React.ReactNode }) {
+  const ins = useSafeAreaInsets();
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', paddingTop: ins.top + 8 }}>
+        <View style={{ flex: 1, backgroundColor: theme.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
+            <RoundButton theme={theme} icon="close" onPress={onClose} />
+            {right}
+          </View>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 40 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/** Small floating status dot/label instead of a permanent banner. */
+export function StatusDot({ theme, status }: { theme: Theme; status: string }) {
+  if (status === 'open') return null;
+  return <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: status === 'connecting' ? '#f5a623' : theme.danger }} />;
+}
+
+export function Badge({ n, theme }: { n: number; theme: Theme }) {
+  if (n <= 0) return null;
+  return <View style={{ minWidth: 20, height: 20, borderRadius: 10, backgroundColor: theme.badge, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 }}><Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>{n > 99 ? '99+' : n}</Text></View>;
+}

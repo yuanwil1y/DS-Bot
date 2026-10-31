@@ -13,7 +13,8 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-export const APP_VERSION = '0.9.0';
+import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
+export const APP_VERSION = '0.9.1';
 
 export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void }) {
   const { client, status, state, disconnect, refresh } = useStore();
@@ -79,6 +80,10 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
         {lastErr ? <Text selectable style={{ color: '#ff6b6b', fontSize: 12, padding: 12 }}>{`[${lastErr.where}] ${lastErr.message}\n${lastErr.stack ?? ''}`.slice(0, 1200)}{'\n（点上面一行清除）'}</Text> : null}
       </Group>
       <Text style={{ color: theme.faint, textAlign: 'center', marginTop: 24 }}>{t.appVersion} {APP_VERSION}</Text>
+      {/* TEST-ONLY: appearance self-test for screen recording; remove before a real release. */}
+      <Group theme={theme} title="测试">
+        <Row theme={theme} label="外观自动测试（测试用）" caption="自动切换各外观组合，便于录屏对照网页；仅本机临时生效，结束或停止后恢复" onPress={() => { onClose(); startAppearanceTest(); }} />
+      </Group>
     </Sheet>
   );
 }

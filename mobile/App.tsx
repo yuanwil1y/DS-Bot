@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, BackHandler, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +16,8 @@ import { SchedulesScreen } from './src/screens/Schedules';
 import { AvatarEditorScreen } from './src/screens/AvatarEditor';
 import { SideChatScreen } from './src/screens/SideChat';
 import { VoiceModeScreen } from './src/screens/VoiceMode';
+import { STEPS, pokeAll, stopAppearanceTest, testSet, useAppearanceTest } from './src/appearanceTest'; // TEST-ONLY
+import { Pressable, Text } from 'react-native';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
 type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage' | 'schedules' | 'avatar' | 'side' | 'voice'; target: ChatTarget; memId?: string; start?: string; chatId?: string };
@@ -59,6 +61,8 @@ function Root() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       {body}
+      {/* TEST-ONLY: appearance self-test runner + overlay; remove before a real release. */}
+      <AppearanceTestRunner stack={stack} setStack={setStack} closeSettings={() => setSettings(false)} />
       {client ? <SettingsSheet theme={theme} visible={settings} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
     </SafeAreaView>
@@ -72,4 +76,48 @@ installGlobalHandler();
 
 export default function App() {
   return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><TeamPrefsProvider><View style={{ flex: 1 }}><Keyed /></View></TeamPrefsProvider></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
+}
+
+// TEST-ONLY appearance self-test (see src/appearanceTest.tsx). Remove before a real release.
+function AppearanceTestRunner({ stack, setStack, closeSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; closeSettings(): void }) {
+  const test = useAppearanceTest();
+  const { state, previews } = useStore();
+  const latest = useRef({ state, previews }); latest.current = { state, previews };
+  useEffect(() => {
+    if (!test.running) return;
+    let cancelled = false;
+    const saved = stack;
+    closeSettings();
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    (async () => {
+      const st = latest.current.state;
+      const mainId = (st as any)?.mainBotId ?? st?.bots?.[0]?.id ?? '';
+      // The chat with the longest messages we know of (longest preview); else the Main Bot.
+      const cands: ChatTarget[] = [...(st?.bots ?? []).map((b) => ({ kind: 'bot', id: b.id }) as ChatTarget), ...(st?.rooms ?? []).map((r) => ({ kind: 'room', id: r.id }) as ChatTarget)];
+      const len = (t: ChatTarget) => latest.current.previews[t.id]?.text?.length ?? 0;
+      const chat = cands.sort((a, b) => len(b) - len(a))[0] ?? { kind: 'bot', id: mainId };
+      await wait(800);
+      for (const step of STEPS) {
+        if (cancelled) return;
+        testSet({ override: step.prefs, dark: step.dark, label: step.label });
+        setStack(step.view === 'chat' ? [{ name: 'chat', target: chat }] : step.view === 'panel' ? [{ name: 'chat', target: { kind: 'bot', id: mainId } }, { name: 'panel', target: { kind: 'bot', id: mainId } }] : []);
+        if (step.poke) { await wait(1500); if (!cancelled) pokeAll(); await wait(step.hold - 1500); } else await wait(step.hold);
+      }
+      if (cancelled) return;
+      testSet({ override: null, dark: null, label: '测试完成' });
+      setStack(saved);
+      await wait(2500);
+      if (!cancelled) stopAppearanceTest();
+    })();
+    return () => { cancelled = true; setStack(saved); };
+  }, [test.running]);
+  if (!test.running) return null;
+  return (
+    <View pointerEvents="box-none" style={{ position: 'absolute', top: 40, left: 0, right: 0, alignItems: 'center', zIndex: 1000, elevation: 1000 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(0,0,0,.78)', borderRadius: 999, paddingVertical: 6, paddingLeft: 14, paddingRight: 6 }}>
+        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{test.label}</Text>
+        <Pressable onPress={stopAppearanceTest} style={{ backgroundColor: '#e5484d', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}><Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>停止</Text></Pressable>
+      </View>
+    </View>
+  );
 }

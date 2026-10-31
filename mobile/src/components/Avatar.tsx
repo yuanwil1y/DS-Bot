@@ -4,6 +4,7 @@ import { SvgXml } from 'react-native-svg';
 import type { Bot } from '../api';
 import { usePrefs } from '../prefs';
 import { animatedXml, characterXml, lookOf, shapeOf, type Look } from '../avatar/mark';
+import { onPoke } from '../appearanceTest';
 import { ANIMS, ORIGIN, bodyBox, eyesBox, plan, progress, sample, svgTransform, type MarkState, type Motion, type Play } from '../avatar/motion';
 import { useTeamPrefs } from '../teamPrefs';
 import { useTheme } from '../theme';
@@ -17,6 +18,7 @@ export function Mark({ look, size, state = 'idle', live = false, pokeable = fals
   const motion = useMotion();
   const reduced = useReducedMotion();
   const [poked, setPoked] = useState(false);
+  useEffect(() => (pokeable ? onPoke(() => setPoked(true)) : undefined), [pokeable]); // TEST-ONLY auto poke
   const image = !!look.image;
   const p = reduced ? { body: null, eyes: null, eye: null } : plan({ state, shape: look.shape, image, motion, live, id, poked });
   const box = image ? { x: 0, y: 0, w: 100, h: 100 } : bodyBox(look.shape);

@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StoreProvider, useStore } from './src/store';
 import { PrefsProvider, usePrefs } from './src/prefs';
+import { TeamPrefsProvider } from './src/teamPrefs';
 import { useTheme } from './src/theme';
 import { ConnectScreen } from './src/screens/ConnectScreen';
 import { HomeScreen, type ChatTarget } from './src/screens/HomeScreen';
@@ -70,5 +71,5 @@ import { Boundary, installGlobalHandler } from './src/errors';
 installGlobalHandler();
 
 export default function App() {
-  return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><View style={{ flex: 1 }}><Keyed /></View></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
+  return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><TeamPrefsProvider><View style={{ flex: 1 }}><Keyed /></View></TeamPrefsProvider></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
 }

@@ -24,7 +24,7 @@ function Entry({ theme, entry, cancelled, onCancel }: { theme: Theme; entry: Sid
     <View style={{ marginBottom: 14 }}>
       <View style={{ alignItems: 'flex-end' }}>
         <View style={{ maxWidth: '85%', backgroundColor: theme.bubbleMe, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 }}>
-          <Text style={{ color: theme.text, fontSize: 15 }}>{entry.question}</Text>
+          <Text style={{ color: theme.userText, fontSize: 15 }}>{entry.question}</Text>
         </View>
       </View>
       <View style={{ marginTop: 8, alignItems: 'flex-start' }}>

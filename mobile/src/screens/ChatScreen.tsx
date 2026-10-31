@@ -25,6 +25,8 @@ import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
+import { useTeamPrefs } from '../teamPrefs';
+import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
 type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void; onOpenChat(t: { kind: 'bot' | 'room'; id: string }): void };
 
@@ -158,6 +160,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const fresh = release.base === null ? 0 : replies - release.base;
   const showDown = unpinned && fresh > 0 && !release.dismissed;
   const listRef = useRef<FlatList<ChatRow>>(null);
+  const [colW, setColW] = useState(0);
+  const look = useTeamPrefs().resolved;
   // index.js beginVisit/endVisit + cells.js NewDivider + header.js "N 条新消息 ↑".
   const [visit, setVisit] = useState<Visit | null>(null);
   useEffect(() => {
@@ -205,6 +209,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           data={data}
           keyExtractor={(r) => r.key}
           style={{ flex: 1, marginTop: 62 }}
+          onLayout={(e) => setColW(e.nativeEvent.layout.width - 28)}
           contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12 }}
           onEndReached={older}
           keyboardShouldPersistTaps="handled"
@@ -240,24 +245,49 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;
             const me = item.kind === 'user' || item.kind === 'answer';
             const prev = data[index + 1];
-            const speaker = !me && room && item.botId ? byId[item.botId] : undefined;
-            const showName = !!room && !me && (prev?.botId !== item.botId || prev?.kind === 'user');
+            const next = index > 0 ? data[index - 1] : undefined;
+            const isBot = (r?: ChatRow) => !!r && r.kind !== 'user' && r.kind !== 'answer' && r.kind !== 'event' && r.kind !== 'view';
+            const same = (r?: ChatRow) => !!r && (me ? r.kind === 'user' : isBot(r) && r.botId === item.botId);
+            const first = !same(prev); const last = !same(next);
+            const speaker = me ? undefined : (item.botId ? byId[item.botId] : undefined) ?? (room ? undefined : bot ?? undefined);
+            const col = Math.max(0, colW);
+            // styles.js: grouped bubbles round their inner corners to 6px.
+            const corners = me
+              ? { borderTopRightRadius: first ? 18 : 6, borderBottomRightRadius: last ? 18 : 6 }
+              : { borderTopLeftRadius: first ? 18 : 6, borderBottomLeftRadius: last ? 18 : 6 };
             if (me) return (
-              <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ alignSelf: 'flex-end', maxWidth: '85%', marginVertical: 5, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
-                <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11 }}>
-                  <Text selectable style={{ color: theme.text, fontSize: 17, lineHeight: 25 }}>{item.text}</Text>
+              <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ alignSelf: 'flex-end', maxWidth: col ? userMax(col, look.width) : '80%', marginTop: first ? 10 : 4, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
+                <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
+                  <Text selectable style={{ color: theme.userText, fontSize: 17, lineHeight: 25 }}>{item.text}</Text>
                 </View>
                 {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
               </Pressable>
             );
-            return (
-              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginVertical: 5 }}>
-                {showName ? <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginLeft: 4 }}>
-                  {speaker ? <Avatar bot={speaker} size={20} /> : null}
-                  <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{item.name ?? speaker?.name}</Text>
+            const flat = look.layout === 'flat';
+            const lead = !!room; // cells.js: group rows carry the speaker's avatar (data-lead)
+            const name = item.name ?? speaker?.name ?? 'Bot';
+            const when = item.time ? new Date(item.time).toTimeString().slice(0, 5) : '';
+            const body = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={17} />;
+            if (flat) return (
+              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? 16 : 10, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
+                {first ? <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 22, marginBottom: 4 }}>
+                  {speaker ? <View style={{ marginRight: 8 }}><Avatar bot={speaker} size={22} /></View> : null}
+                  <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600' }}>{name}</Text>
+                  {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
                 </View> : null}
-                <View style={{ backgroundColor: theme.bubbleBot, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, alignSelf: 'stretch' }}>
-                  <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={17} />
+                {body}
+              </Pressable>
+            );
+            const max = col ? (lead ? leadBubbleMax(col, look.width) : bubbleMax(col, look.width)) : '80%';
+            return (
+              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? (room ? 16 : 10) : 4, alignSelf: 'flex-start', maxWidth: max }}>
+                {lead && first ? <View style={{ flexDirection: 'row', alignItems: 'baseline', marginLeft: 42, marginBottom: 4 }}>
+                  <Text style={{ color: inkTextHex(speaker?.color ?? 'gray', theme.dark), fontSize: 12, lineHeight: 16, fontWeight: '500' }}>{name}</Text>
+                  {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
+                </View> : null}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
+                  {lead ? <View style={{ width: 22, marginRight: 8 }}>{last && speaker ? <Avatar bot={speaker} size={22} /> : null}</View> : null}
+                  <View style={{ flexShrink: 1, backgroundColor: theme.bubbleBot, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>{body}</View>
                 </View>
               </Pressable>
             );

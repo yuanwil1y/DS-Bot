@@ -149,7 +149,7 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
       </View>
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 20, paddingBottom: 36 }}>
         <Pressable disabled={blocked} onPress={togglePause} accessibilityLabel={phase === 'paused' ? VOICE.resume : VOICE.pause}
-          style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: phase === 'paused' ? theme.bubbleMe : theme.cardHi, alignItems: 'center', justifyContent: 'center', opacity: blocked ? 0.4 : 1 }}>
+          style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: phase === 'paused' ? theme.border : theme.cardHi, alignItems: 'center', justifyContent: 'center', opacity: blocked ? 0.4 : 1 }}>
           <Icon name="mic" color={theme.text} size={20} />
           {phase === 'paused' ? <View style={{ position: 'absolute', width: 28, height: 2, backgroundColor: theme.text, transform: [{ rotate: '-45deg' }] }} /> : null}
         </Pressable>

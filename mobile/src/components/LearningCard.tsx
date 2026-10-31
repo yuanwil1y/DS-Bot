@@ -81,7 +81,7 @@ export function LearningCard({ theme, proposal, onAnswer }: { theme: Theme; prop
       {error ? <Text style={{ color: theme.danger, fontSize: 13, marginTop: 6 }}>{error}</Text> : null}
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 8 }}>
         <Pressable disabled={busy} onPress={() => answer(false)} style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, justifyContent: 'center', backgroundColor: theme.fill }}><Text style={{ color: theme.text, fontSize: 14 }}>拒绝</Text></Pressable>
-        <Pressable disabled={busy} onPress={() => answer(true)} style={{ paddingHorizontal: 16, height: 34, borderRadius: 17, justifyContent: 'center', backgroundColor: theme.text }}><Text style={{ color: theme.bg, fontSize: 14, fontWeight: '600' }}>✓ 批准</Text></Pressable>
+        <Pressable disabled={busy} onPress={() => answer(true)} style={{ paddingHorizontal: 16, minHeight: 34, paddingVertical: 6, borderRadius: 17, justifyContent: 'center', backgroundColor: theme.text }}><Text style={{ color: theme.bg, fontSize: 14, fontWeight: '600' }}>✓ 批准</Text></Pressable>
       </View>
     </View>
   );

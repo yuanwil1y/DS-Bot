@@ -9,7 +9,7 @@ import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api
 import { NARROW, clockText, localText, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
 export { timingText };
 import { Avatar, GroupAvatar } from '../components/Avatar';
-import { PageHeader, PillButton, RoundButton } from '../components/ui';
+import { Actions, Icon, PageHeader, PillButton, RoundButton, Select, Soft } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -118,49 +118,54 @@ export function TaskForm({ theme, start, onDone, onCancel }: { theme: Theme; sta
   };
   const toggleDay = (d: number) => setWeekdays((ds) => (ds.includes(d) ? ds.filter((x) => x !== d) : [...ds, d].sort()));
   const targetName = bots.find((b) => b.id === target)?.name ?? rooms.find((r) => r.id === target)?.name ?? '';
-  const box = { backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.fillBorder, padding: 14, marginTop: 12 };
-  const input = { color: theme.text, fontSize: 16, paddingVertical: 6 };
-  const small = { color: theme.text, fontSize: 15, backgroundColor: theme.fill, borderRadius: 10, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 10, paddingVertical: 6, marginTop: 8 };
+  // schedules.js TaskForm: one .bt-set-card of .bt-set-row's (10px 12px, ≥48px, 13px labels), the
+  // 发给 .bt-select at 58% (phone media query), and a right-aligned .bt-task-foot of small soft buttons.
+  const row = { paddingVertical: 10, paddingHorizontal: 12, minHeight: 48 };
+  const line = { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 12 };
+  const label = { color: theme.text, fontSize: 13, fontWeight: '500' as const };
+  const input = { color: theme.text, fontSize: 16, paddingVertical: 4, paddingHorizontal: 8 };
+  const small = { color: theme.text, fontSize: 15, minHeight: 32, backgroundColor: theme.fill, borderRadius: 8, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 10, paddingVertical: 5 };
+  const option = (id: string, name: string) => <Pressable key={id} onPress={() => { setTarget(id); setPick(false); }} style={{ paddingVertical: 9, flexDirection: 'row', alignItems: 'center' }}><Text style={{ flex: 1, color: theme.text, fontSize: 15 }}>{name}</Text>{target === id ? <Icon name="check" color={theme.text} size={15} /> : null}</Pressable>;
   return (
-    <View>
-      <Pressable onPress={() => setPick((v) => !v)} style={[box, { flexDirection: 'row', alignItems: 'center' }]}>
-        <Text style={{ flex: 1, color: theme.sub }}>发给</Text>
-        <Text style={{ color: theme.text, fontSize: 15 }}>{targetName} ⌄</Text>
-      </Pressable>
-      {pick ? <View style={[box, { paddingVertical: 6 }]}>
+    <Card theme={theme}>
+      <View style={[row, line]}>
+        <Text style={[label, { flex: 1 }]}>发给</Text>
+        <Select theme={theme} label="发给" value={targetName} onPress={() => setPick((v) => !v)} style={{ width: '58%' }} />
+      </View>
+      {pick ? <View style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
         <Text style={{ color: theme.faint, fontSize: 12, marginTop: 4 }}>Bot</Text>
-        {bots.map((b) => <Pressable key={b.id} onPress={() => { setTarget(b.id); setPick(false); }} style={{ paddingVertical: 9, flexDirection: 'row' }}><Text style={{ flex: 1, color: theme.text, fontSize: 15 }}>{b.name}</Text>{target === b.id ? <Text style={{ color: theme.text }}>✓</Text> : null}</Pressable>)}
+        {bots.map((b) => option(b.id, b.name))}
         {rooms.length ? <Text style={{ color: theme.faint, fontSize: 12, marginTop: 6 }}>群聊</Text> : null}
-        {rooms.map((r) => <Pressable key={r.id} onPress={() => { setTarget(r.id); setPick(false); }} style={{ paddingVertical: 9, flexDirection: 'row' }}><Text style={{ flex: 1, color: theme.text, fontSize: 15 }}>{r.name}</Text>{target === r.id ? <Text style={{ color: theme.text }}>✓</Text> : null}</Pressable>)}
+        {rooms.map((r) => option(r.id, r.name))}
       </View> : null}
-      <View style={box}>
-        <Text style={{ color: theme.sub }}>名字</Text>
-        <TextInput value={title} onChangeText={setTitle} maxLength={120} autoFocus placeholder="早间简报" placeholderTextColor={theme.faint} style={input} />
+      <View style={[row, line]}>
+        <Text style={label}>名字</Text>
+        <TextInput value={title} onChangeText={setTitle} maxLength={120} autoFocus placeholder="早间简报" placeholderTextColor={theme.faint} style={[input, { flex: 1, textAlign: 'right' }]} />
       </View>
-      <View style={box}>
-        <Text style={{ color: theme.sub }}>要做什么</Text>
-        <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder="总结一下昨天以来的变化，以及今天需要我处理的事。" placeholderTextColor={theme.faint} style={[input, { minHeight: 72, textAlignVertical: 'top' }]} />
+      <View style={[row, { gap: 6 }]}>
+        <Text style={label}>要做什么</Text>
+        <TextInput value={prompt} onChangeText={setPrompt} multiline placeholder="总结一下昨天以来的变化，以及今天需要我处理的事。" placeholderTextColor={theme.faint} style={[input, { minHeight: 66, textAlignVertical: 'top', paddingHorizontal: 0 }]} />
       </View>
-      <View style={box}>
-        <Text style={{ color: theme.sub }}>什么时候</Text>
+      <View style={[row, { gap: 8 }]}>
+        <Text style={label}>什么时候</Text>
         <Seg theme={theme} items={KINDS} value={kind} onChange={(v) => setKind(v as ScheduleWhen['kind'])} />
-        {kind === 'at' ? <Pressable accessibilityRole="button" accessibilityLabel="日期和时间" onPress={() => pickAt(at, setAt)} style={[small, { justifyContent: 'center' }]}><Text style={{ color: theme.text }}>{at}</Text></Pressable> : null}
-        {kind === 'weekly' ? <View accessibilityLabel="星期" style={{ flexDirection: 'row', marginTop: 10, justifyContent: 'space-between' }}>
-          {[1, 2, 3, 4, 5, 6, 7].map((d) => { const on = weekdays.includes(d); return <Pressable key={d} onPress={() => toggleDay(d)} style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: on ? theme.accent : theme.fillBorder, backgroundColor: on ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: on ? theme.accentText : theme.sub }}>{NARROW[d]}</Text></Pressable>; })}
+        {kind === 'at' ? <Pressable accessibilityRole="button" accessibilityLabel="日期和时间" onPress={() => pickAt(at, setAt)} style={[small, { justifyContent: 'center', alignSelf: 'flex-start' }]}><Text style={{ color: theme.text }}>{at}</Text></Pressable> : null}
+        {kind === 'weekly' ? <View accessibilityLabel="星期" style={{ flexDirection: 'row', gap: 4, flexWrap: 'wrap' }}>
+          {[1, 2, 3, 4, 5, 6, 7].map((d) => { const on = weekdays.includes(d); return <Pressable key={d} onPress={() => toggleDay(d)} style={{ minWidth: 34, minHeight: 34, borderRadius: 17, borderWidth: 1, borderColor: on ? theme.accent : theme.fillBorder, backgroundColor: on ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: on ? theme.accentText : theme.sub, fontSize: 12 }}>{NARROW[d]}</Text></Pressable>; })}
         </View> : null}
-        {kind === 'daily' || kind === 'weekly' ? <Pressable accessibilityRole="button" accessibilityLabel="时间" onPress={() => pickTime(time, setTime)} style={[small, { width: 110, justifyContent: 'center' }]}><Text style={{ color: theme.text }}>{time}</Text></Pressable> : null}
-        {kind === 'every' ? <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ color: theme.sub, marginTop: 8, marginRight: 8 }}>每</Text>
-          <TextInput accessibilityLabel="数量" value={count} onChangeText={setCount} keyboardType="number-pad" style={[small, { width: 72, marginRight: 8 }]} />
+        {kind === 'daily' || kind === 'weekly' ? <Pressable accessibilityRole="button" accessibilityLabel="时间" onPress={() => pickTime(time, setTime)} style={[small, { minWidth: 110, alignSelf: 'flex-start', justifyContent: 'center' }]}><Text style={{ color: theme.text }}>{time}</Text></Pressable> : null}
+        {kind === 'every' ? <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: theme.sub, fontSize: 13 }}>每</Text>
+          <TextInput accessibilityLabel="数量" value={count} onChangeText={setCount} keyboardType="number-pad" style={[small, { width: 72 }]} />
           <View style={{ flex: 1 }}><Seg theme={theme} items={UNITS.map(([id, , l]) => [id, l])} value={unit} onChange={setUnit} /></View>
         </View> : null}
       </View>
-      {error ? <Text style={{ color: theme.danger, marginTop: 10 }}>{error}</Text> : null}
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 14, gap: 10 }}>
-        <PillButton theme={theme} title="取消" onPress={onCancel} />
-        <PillButton theme={theme} primary title={busy ? '创建中…' : '创建任务'} disabled={busy || !target || !title.trim() || !prompt.trim()} onPress={submit} />
-      </View>
-    </View>
+      {error ? <Text style={{ color: theme.danger, fontSize: 13, ...row, minHeight: 0 }}>{error}</Text> : null}
+      <Actions end style={row}>
+        <Soft theme={theme} title="取消" onPress={onCancel} />
+        <Soft theme={theme} send title={busy ? '创建中…' : '创建任务'} disabled={busy || !target || !title.trim() || !prompt.trim()} onPress={submit} />
+      </Actions>
+    </Card>
   );
 }
 
@@ -201,7 +206,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
           ) : (
             <>
               {adding ? <TaskForm theme={theme} start={start} onDone={() => setAdding(false)} onCancel={() => setAdding(false)} />
-                : <View style={{ alignItems: 'flex-start' }}><PillButton theme={theme} title="+ 新建任务" onPress={() => setAdding(true)} /></View>}
+                : <Actions><Soft theme={theme} icon="plus" title="新建任务" onPress={() => setAdding(true)} /></Actions>}
               {groups.length === 0 && !adding ? <View style={{ marginTop: 16 }}><Card theme={theme}><Text style={{ color: theme.sub, padding: 16 }}>还没有定时任务。</Text></Card></View>
                 : groups.map((g) => <View key={g.id} style={{ marginTop: 20 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, marginLeft: 4 }}>{g.avatar}<Text style={{ color: theme.sub, fontSize: 14, marginLeft: 6 }}>{g.name}</Text></View>
@@ -226,7 +231,7 @@ export function BotSchedules({ theme, botId, onNew }: { theme: Theme; botId: str
       <Card theme={theme}>
         {!view.available ? <View style={{ padding: 16, alignItems: 'flex-start' }}><Text style={{ color: theme.sub, fontSize: 13 }}>{OFF_HINT}</Text><HarnessButton theme={theme} /></View> : null}
         {tasks.map((t) => <TaskRow key={t.id} theme={theme} task={t} />)}
-        {view.available ? <Pressable onPress={onNew} style={{ padding: 16 }}><Text style={{ color: theme.text, fontSize: 15 }}>＋ 新建任务</Text></Pressable> : null}
+        {view.available ? <Pressable onPress={onNew} style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}><Icon name="plus" color={theme.text} size={18} /><Text style={{ color: theme.text, fontSize: 15 }}>新建任务</Text></Pressable> : null}
       </Card>
     </View>
   );

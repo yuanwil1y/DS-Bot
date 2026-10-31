@@ -2,6 +2,7 @@
 // Labels follow the web UI's zh dictionary.
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { Icon } from './ui';
 import * as Clipboard from 'expo-clipboard';
 import { SvgChart, chartCsv } from './ChartSvg';
 import { asText, choiceValue, inputDefault, resolve, viewInputs, viewScope } from '../vendor/deepview/views';
@@ -23,7 +24,7 @@ function Shell({ theme, title, detail, onDismiss, busy, children, badge }: { the
           {detail ? <Text style={{ color: theme.sub, fontSize: 14, marginTop: 4 }}>{detail}</Text> : null}
         </View>
         {badge ? <Text style={{ color: theme.sub, fontSize: 12, backgroundColor: theme.cardHi, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>{badge}</Text> : null}
-        {onDismiss ? <Pressable onPress={onDismiss} disabled={busy} accessibilityLabel="关闭问题" hitSlop={10} style={{ marginLeft: 8 }}><Text style={{ color: theme.sub, fontSize: 18 }}>✕</Text></Pressable> : null}
+        {onDismiss ? <Pressable onPress={onDismiss} disabled={busy} accessibilityLabel="关闭问题" hitSlop={10} style={{ marginLeft: 8 }}><Icon name="close" color={theme.sub} size={16} /></Pressable> : null}
       </View>
       {children}
     </View>
@@ -38,7 +39,7 @@ function OptRow({ theme, i, label, desc, picked, onPress, disabled }: { theme: T
         <Text style={{ color: theme.text, fontSize: 15 }}>{label}</Text>
         {desc ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 2 }}>{desc}</Text> : null}
       </View>
-      {picked ? <Text style={{ color: theme.accent, fontSize: 16 }}>✓</Text> : null}
+      {picked ? <Icon name="check" color={theme.accent} size={16} /> : null}
     </Pressable>
   );
 }
@@ -234,7 +235,7 @@ function Chart({ n, c }: { n: any; c: Ctx }) {
   return <View style={{ gap: 8 }} onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}>
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
       <View style={{ flex: 1 }}>{n.title ? <Text style={{ color: theme.text, fontSize: 13, fontWeight: '500' }}>{n.title}</Text> : null}</View>
-      <Pressable onPress={() => setMenu((v) => !v)} hitSlop={8}><Text style={{ color: theme.sub, fontSize: 16 }}>⋯</Text></Pressable>
+      <Pressable onPress={() => setMenu((v) => !v)} hitSlop={8}><Icon name="more" color={theme.sub} size={18} /></Pressable>
     </View>
     {menu ? <View style={{ alignSelf: 'flex-end', backgroundColor: theme.card, borderWidth: 0.5, borderColor: theme.fillBorder, borderRadius: 10, paddingVertical: 4 }}>
       {[[asTable ? '以图表查看' : '以表格查看', () => { setMenu(false); setAsTable((v) => !v); }], ['复制数据', copy], ['下载图片 · 移动端暂未实现', null]].map(([label, fn]: any) =>
@@ -311,7 +312,7 @@ function WidgetCard({ theme, title, view, onSubmit, onDismiss, busy = false, rai
   const body = <Node n={view} c={c} />;
   const head = title || onDismiss ? <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 }}>
     <Text style={{ flex: 1, color: settled ? theme.sub : theme.text, fontSize: 13, lineHeight: 18, fontWeight: '500' }}>{title}</Text>
-    {onDismiss ? <Pressable onPress={onDismiss} disabled={busy} accessibilityLabel="关闭视图" hitSlop={10} style={{ marginLeft: 8 }}><Text style={{ color: theme.sub, fontSize: 16 }}>✕</Text></Pressable> : null}</View> : null;
+    {onDismiss ? <Pressable onPress={onDismiss} disabled={busy} accessibilityLabel="关闭视图" hitSlop={10} style={{ marginLeft: 8 }}><Icon name="close" color={theme.sub} size={16} /></Pressable> : null}</View> : null;
   if (!framed) return <View style={{ marginVertical: 8 }}>{head}{body}</View>;
   return <View style={{ backgroundColor: theme.card, borderRadius: 18, borderWidth: 1, borderColor: theme.fillBorder, padding: 14, marginVertical: 6, opacity: settled ? 0.75 : 1 }}>{head}{body}</View>;
 }
@@ -397,7 +398,7 @@ export function SecretCard({ theme, bot, bots, request, saved, onSet, onAllow, o
           <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', lineHeight: 22 }}>{request.kind === 'allow' ? `允许 ${bot.name} 使用 ${request.name}？` : `${bot.name} 需要一个密钥`}</Text>
           <Text style={{ color: theme.sub, fontSize: 14, marginTop: 4 }}><Text style={{ fontFamily: 'monospace' }}>{request.name}</Text>{request.purpose ? ` · ${request.purpose}` : ''}</Text>
         </View>
-        {busy ? null : <Pressable onPress={cancel} accessibilityLabel="取消请求" hitSlop={10} style={{ marginLeft: 8 }}><Text style={{ color: theme.sub, fontSize: 18 }}>✕</Text></Pressable>}
+        {busy ? null : <Pressable onPress={cancel} accessibilityLabel="取消请求" hitSlop={10} style={{ marginLeft: 8 }}><Icon name="close" color={theme.sub} size={16} /></Pressable>}
       </View>
       {request.kind === 'allow' ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 10 }}>🔑 已保存，可用范围：{scopeLabel(saved?.scope, bots)}</Text> : null}
       {filling ? <View style={{ marginTop: 10, gap: 8 }}>

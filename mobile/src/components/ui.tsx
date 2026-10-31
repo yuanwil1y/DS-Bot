@@ -11,6 +11,7 @@ import { ICONS } from './icons.gen';
 // The web's own icons (icons.gen.ts, generated from ds-bot icons.js), drawn at the web's size
 // unless a size is given; currentColor becomes the passed color.
 export function Icon({ name, color, size }: { name: string; color: string; size?: number }) {
+  if (name === 'chevron-down') return <View style={{ transform: [{ rotate: '90deg' }] }}><Icon name="chevron" color={color} size={size} /></View>;
   const xml = ICONS[name];
   if (!xml) return <Text style={{ color, fontSize: size ?? 16 }}>{name}</Text>;
   const own = Number(/width="([\d.]+)"/.exec(xml)?.[1] ?? 16);
@@ -28,8 +29,33 @@ export function RoundButton({ theme, icon, onPress, size = 36, children, label, 
 
 export function PillButton({ theme, title, onPress, primary, disabled }: { theme: Theme; title: string; onPress?: () => void; primary?: boolean; disabled?: boolean }) {
   return (
-    <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => ({ alignSelf: 'center', paddingHorizontal: 18, height: 40, borderRadius: 20, justifyContent: 'center', backgroundColor: primary ? theme.accent : theme.cardHi, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 })}>
+    <Pressable disabled={disabled} onPress={onPress} style={({ pressed }) => ({ alignSelf: 'center', paddingHorizontal: 18, minHeight: 40, paddingVertical: 8, borderRadius: 20, justifyContent: 'center', backgroundColor: primary ? theme.accent : theme.cardHi, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 })}>
       <Text style={{ color: primary ? theme.accentText : theme.text, fontSize: 16, fontWeight: '600' }}>{title}</Text>
+    </Pressable>
+  );
+}
+
+/** web .bt-soft (36px, 14px, 0 16px) / .bt-soft-sm (28px, 12px, 0 12px): pill, --bt-hover fill, no border.
+ * `send` = .bt-send.bt-soft-sm (accent). `icon` = .bt-with-icon (14px svg, gap 4). Heights are minimums so
+ * a large/bold system font grows the button instead of clipping it. No outer margin: rows use gap. */
+export function Soft({ theme, title, onPress, disabled, sm = true, send, danger, icon, label }: { theme: Theme; title: string; onPress?: () => void; disabled?: boolean; sm?: boolean; send?: boolean; danger?: boolean; icon?: string; label?: string }) {
+  const ink = send ? theme.accentText : danger ? theme.danger : theme.text;
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} disabled={disabled} onPress={onPress} hitSlop={4} style={({ pressed }) => ({ minHeight: sm ? 28 : 36, paddingVertical: 4, paddingHorizontal: sm ? 12 : 16, borderRadius: 999, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, alignSelf: 'flex-start', backgroundColor: send ? theme.accent : pressed ? theme.active : theme.cardHi, opacity: disabled ? (send ? 0.35 : 0.4) : 1 })}>
+      {icon ? <Icon name={icon} color={ink} size={14} /> : null}
+      <Text style={{ color: ink, fontSize: sm ? 12 : 14 }}>{title}</Text>
+    </Pressable>
+  );
+}
+/** web .bt-actions: a left-aligned wrapping row, gap 8 (gap 6 for .bt-connector-form-row; end = .bt-task-foot). */
+export const Actions = ({ children, gap = 8, end, style }: { children: React.ReactNode; gap?: number; end?: boolean; style?: ViewStyle }) =>
+  <View style={[{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap, justifyContent: end ? 'flex-end' : 'flex-start' }, style]}>{children}</View>;
+/** web .bt-select (closed state): 34px, radius 8, 1px line, card fill, 13px, with a chevron-down. */
+export function Select({ theme, value, onPress, label, style }: { theme: Theme; value: string; onPress(): void; label?: string; style?: ViewStyle }) {
+  return (
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[{ minHeight: 34, paddingVertical: 6, paddingHorizontal: 8, borderRadius: 8, borderWidth: 1, borderColor: theme.border, backgroundColor: theme.card, flexDirection: 'row', alignItems: 'center', gap: 6 }, style]}>
+      <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 13 }}>{value}</Text>
+      <Icon name="chevron-down" color={theme.sub} size={14} />
     </Pressable>
   );
 }
@@ -50,7 +76,7 @@ export function Group({ theme, children, title, caption, style }: { theme: Theme
 export function Row({ theme, icon, label, value, caption, onPress, chevron = !!onPress, right, danger }: { theme: Theme; icon?: string; label: string; value?: string; caption?: string; onPress?: () => void; chevron?: boolean; right?: React.ReactNode; danger?: boolean }) {
   return (
     <Pressable disabled={!onPress} onPress={onPress} android_ripple={onPress ? { color: theme.cardHi } : undefined} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, minHeight: 58, paddingVertical: 12 }}>
-      {icon ? <View style={{ width: 28, marginRight: 10, alignItems: 'center' }}><Text style={{ color: theme.text, fontSize: 18 }}>{icon}</Text></View> : null}
+      {icon !== undefined ? <View style={{ width: 28, marginRight: 10, alignItems: 'center' }}>{ICONS[icon] ? <Icon name={icon} color={theme.text} size={18} /> : <Text style={{ color: theme.text, fontSize: 18 }}>{icon}</Text>}</View> : null}
       <View style={{ flex: 1 }}>
         <Text style={{ color: danger ? theme.danger : theme.text, fontSize: 17 }}>{label}</Text>
         {caption ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 3 }} numberOfLines={3}>{caption}</Text> : null}

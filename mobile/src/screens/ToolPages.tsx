@@ -5,8 +5,7 @@ import { Linking, Pressable, Text, TextInput, ToastAndroid, View } from 'react-n
 import { Avatar } from '../components/Avatar';
 import { SvgXml } from 'react-native-svg';
 import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
-import { Group } from '../components/ui';
-import { Soft } from './AboutFeedback';
+import { Group, Soft, Actions, Icon } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 import { ACTIONS, DURATIONS, TOKEN_URL, addGrants, blank, capabilityPayload, capabilitySecondary, connectorStatus, editDraft, expired, grantKinds, grantTime, newGrant, removeGrants, sortCapabilities, type Draft, type Grant } from '../api/toolsModel';
@@ -29,14 +28,13 @@ function Field({ theme, label, value, onChange, multiline, disabled, placeholder
 function Choice({ theme, label, on, onPress, disabled }: { theme: Theme; label: string; on: boolean; onPress(): void; disabled?: boolean }) {
   return (
     <Pressable disabled={disabled} onPress={onPress} accessibilityState={{ checked: on, disabled }} style={{ paddingHorizontal: 12, height: 32, borderRadius: 999, justifyContent: 'center', marginRight: 8, marginBottom: 8, backgroundColor: on ? theme.active : theme.cardHi, borderWidth: 1, borderColor: on ? theme.text : 'transparent', opacity: disabled && !on ? 0.4 : 1 }}>
-      <Text style={{ color: theme.text, fontSize: 13 }}>{on ? '✓ ' : ''}{label}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>{on ? <Icon name="check" color={theme.text} size={13} /> : null}<Text style={{ color: theme.text, fontSize: 13 }}>{label}</Text></View>
     </Pressable>
   );
 }
 function Choices({ theme, label, children }: { theme: Theme; label: string; children: React.ReactNode }) {
   return <View style={{ paddingHorizontal: 16, paddingTop: 12 }}><Label theme={theme} text={label} /><View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{children}</View></View>;
 }
-const Actions = ({ children }: { children: React.ReactNode }) => <View style={{ flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap', padding: 12 }}>{children}</View>;
 function Item({ theme, name, status, children, lead }: { theme: Theme; name: string; status?: string; children?: React.ReactNode; lead?: React.ReactNode }) {
   return (
     <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -45,7 +43,7 @@ function Item({ theme, name, status, children, lead }: { theme: Theme; name: str
         <Text style={{ color: theme.text, fontSize: 15 }}>{name}</Text>
         {status ? <Text style={{ color: theme.sub, fontSize: 12, marginTop: 2 }}>{status}</Text> : null}
       </View>
-      <View style={{ flexDirection: 'row' }}>{children}</View>
+      <View style={{ flexDirection: 'row', gap: 6 }}>{children}</View>
     </View>
   );
 }
@@ -82,10 +80,10 @@ export function ConnectorsPage({ theme }: { theme: Theme }) {
           {open === c.id && c.state === 'off' ? (
             <View>
               <Field theme={theme} label="GitHub token" value={token} onChange={setToken} secure />
-              <Pressable onPress={() => void Linking.openURL(TOKEN_URL)} style={{ paddingHorizontal: 16, paddingTop: 8 }}><Text style={{ color: theme.accent, fontSize: 13 }}>去 GitHub 生成 token</Text></Pressable>
-              <Actions>
+              <Actions gap={6} style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Pressable onPress={() => void Linking.openURL(TOKEN_URL)}><Text style={{ color: theme.accent, fontSize: 13 }}>去 GitHub 生成 token</Text></Pressable>
                 <Soft theme={theme} title="取消" onPress={() => { setOpen(''); setToken(''); }} />
-                <Soft theme={theme} primary title={busy ? '正在连接…' : '连接'} disabled={busy || !token.trim()} onPress={() => void connect(c.id)} />
+                <Soft theme={theme} title={busy ? '正在连接…' : '连接'} disabled={busy || !token.trim()} onPress={() => void connect(c.id)} />
               </Actions>
             </View>
           ) : null}
@@ -128,9 +126,9 @@ function CapabilityForm({ theme, draft, setDraft, items, onClose }: { theme: The
       {draft.kind === 'pack' ? (available.length === 0 ? <Hint theme={theme} text="请先保存 MCP 服务或技能。" />
         : <Choices theme={theme} label="能力包">{available.map((i) => <Choice key={i.name} theme={theme} label={i.name} on={draft.items.includes(i.name)} onPress={() => set('items', draft.items.includes(i.name) ? draft.items.filter((n) => n !== i.name) : [...draft.items, i.name])} />)}</Choices>) : null}
       <Err theme={theme} text={error} />
-      <Actions>
+      <Actions gap={6} style={{ paddingTop: 12, paddingBottom: 12, paddingHorizontal: 18 }}>
         <Soft theme={theme} title="取消" onPress={onClose} />
-        <Soft theme={theme} primary title={editing ? '保存更改' : '添加能力'} onPress={() => void submit()} />
+        <Soft theme={theme} title={editing ? '保存更改' : '添加能力'} onPress={() => void submit()} />
       </Actions>
     </View>
   );
@@ -147,11 +145,11 @@ export function CapabilitiesPage({ theme }: { theme: Theme }) {
   useFT('cap.delete', (name: string) => { const it = items.find((i) => i.name === name); if (it) remove(it); else ftLog(`跳过：没有能力 ${name}`); }); // TEST-ONLY: the self-test's own temp skill only
   return (
     <>
-      <Group theme={theme} title="共享能力">
-        <Actions><Soft theme={theme} title="添加能力" onPress={() => setDraft(blank())} /></Actions>
-        {draft ? <CapabilityForm theme={theme} draft={draft} setDraft={(f) => setDraft((d) => (d ? f(d) : d))} items={items} onClose={() => setDraft(null)} /> : null}
-      </Group>
-      <Group theme={theme}>
+      {/* capability-settings.js: h3 共享能力 → .bt-actions (left, no card) → form → .bt-set-card list */}
+      <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 22, marginTop: 20, marginBottom: 8 }}>共享能力</Text>
+      <Actions><Soft theme={theme} title="添加能力" onPress={() => setDraft(blank())} /></Actions>
+      {draft ? <CapabilityForm theme={theme} draft={draft} setDraft={(f) => setDraft((d) => (d ? f(d) : d))} items={items} onClose={() => setDraft(null)} /> : null}
+      <Group theme={theme} style={{ marginTop: 0 }}>
         {items.length === 0 ? <Hint theme={theme} text="还没有保存能力" /> : items.map((item) => (
           <Item key={item.name} theme={theme} name={item.name} status={capabilitySecondary(item)}>
             {item.kind === 'mcp' && item.transport === 'stdio' && !item.approved ? <Soft theme={theme} title="允许" onPress={() => run(() => client!.capabilityApprove(item.name))} /> : null}
@@ -198,7 +196,8 @@ export function BrowserPage({ theme }: { theme: Theme }) {
         <Field theme={theme} label="网站" value={site} onChange={setSite} placeholder="example.com — 留空表示所有网站" />
         <Choices theme={theme} label="操作">{ACTIONS.map(([k, l]) => <Choice key={k} theme={theme} label={l} on={kinds.includes(k)} onPress={() => setKinds((ks) => (ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]))} />)}</Choices>
         <Choices theme={theme} label="时限">{DURATIONS.map(([k, l]) => <Choice key={k} theme={theme} label={l} on={duration === k} onPress={() => setDuration(k)} />)}</Choices>
-        <Actions><Soft theme={theme} primary title={busy ? '保存中…' : '添加'} disabled={busy || !chosen || kinds.length === 0} onPress={() => void add()} /></Actions>
+        {/* .bt-browser-form-foot: right, 10px 12px, top line; the button is a default .bt-soft */}
+        <Actions end style={{ paddingVertical: 10, paddingHorizontal: 12, borderTopWidth: 0.5, borderTopColor: theme.sep }}><Soft theme={theme} sm={false} title={busy ? '保存中…' : '添加'} disabled={busy || !chosen || kinds.length === 0} onPress={() => void add()} /></Actions>
       </Group>
     </>
   );

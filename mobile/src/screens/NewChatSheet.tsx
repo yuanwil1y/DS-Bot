@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import type { Bot } from '../api';
 import { AdminStar, Avatar } from '../components/Avatar';
-import { Group, PillButton, Row, Sheet } from '../components/ui';
+import { Icon, Group, PillButton, Row, Sheet } from '../components/ui';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
@@ -109,7 +109,7 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
           <Group theme={theme} title={t.name}><TextInput value={name} onChangeText={setName} autoFocus maxLength={40} style={input} placeholder={fallbackName} placeholderTextColor={theme.faint} /></Group>
           {name.trim() && problem ? <Text style={{ color: theme.danger, marginHorizontal: 6 }}>{problem}</Text> : clash ? <Text style={{ color: theme.danger, marginHorizontal: 6 }}>{`已经有叫 ${finalName} 的 Bot 了`}</Text> : null}
           {state?.models?.length ? <Group theme={theme} title={t.model}>
-            {state.models.map((m) => <Row key={m.ref} theme={theme} label={m.name} caption={m.providerName} value={m.ref === model ? '✓' : ''} onPress={() => setModel(m.ref)} chevron={false} />)}
+            {state.models.map((m) => <Row key={m.ref} theme={theme} label={m.name} caption={m.providerName} right={m.ref === model ? <Icon name="check" color={theme.text} size={16} /> : undefined} onPress={() => setModel(m.ref)} chevron={false} />)}
           </Group> : null}
         </>
       ) : (
@@ -130,10 +130,10 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
           </View>
           {mode === 'chat' && !readOnly ? (
             <Group theme={theme}>
-              {w && !exact ? <Row theme={theme} icon="＋" label={`新建 Bot「${q.trim()}」`} onPress={() => { setName(q.trim()); setMode('bot'); }} /> : null}
-              <Row theme={theme} icon="＋" label={t.createBot} onPress={() => { setName(q.trim()); setMode('bot'); }} />
-              <Row theme={theme} icon="👥" label={t.createGroup} onPress={() => setMode('group')} />
-              <Row theme={theme} icon="⌘" label="添加 DSH Agent" value="移动端暂未实现" />
+              {w && !exact ? <Row theme={theme} icon="plus" label={`新建 Bot「${q.trim()}」`} onPress={() => { setName(q.trim()); setMode('bot'); }} /> : null}
+              <Row theme={theme} icon="plus" label={t.createBot} onPress={() => { setName(q.trim()); setMode('bot'); }} />
+              <Row theme={theme} icon="people" label={t.createGroup} onPress={() => setMode('group')} />
+              <Row theme={theme} icon="" label="添加 DSH Agent" value="移动端暂未实现" />
             </Group>
           ) : null}
           <Group theme={theme}>

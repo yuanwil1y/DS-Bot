@@ -378,7 +378,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           <Pressable onPress={() => { setAbove((a) => ({ ...a, seen: true })); listRef.current?.scrollToIndex({ index: dividerAt, viewPosition: 0.8, animated: true }); }} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
             <Text style={{ color: theme.text, fontSize: 13 }}>↑ {unread.count === 1 ? '1 条新消息' : unread.count > 0 ? `${unread.count} 条新消息` : '新消息'}</Text>
           </Pressable>
-          <Pressable onPress={() => setAbove((a) => ({ ...a, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Text style={{ color: theme.sub, fontSize: 13 }}>✕</Text></Pressable>
+          <Pressable onPress={() => setAbove((a) => ({ ...a, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Icon name="close" color={theme.sub} size={13} /></Pressable>
         </View>
       ) : null}
       {showDown ? (
@@ -386,7 +386,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           <Pressable onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
             <Text style={{ color: theme.text, fontSize: 13 }}>↓ {fresh === 1 ? '1 条新消息' : `${fresh} 条新消息`}</Text>
           </Pressable>
-          <Pressable onPress={() => setRelease((r) => ({ ...r, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Text style={{ color: theme.sub, fontSize: 13 }}>✕</Text></Pressable>
+          <Pressable onPress={() => setRelease((r) => ({ ...r, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Icon name="close" color={theme.sub} size={13} /></Pressable>
         </View>
       ) : null}
       {dock ? (

@@ -4,8 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Pressable, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { Avatar } from '../components/Avatar';
-import { Group, Icon } from '../components/ui';
-import { Soft } from './AboutFeedback';
+import { Group, Icon, Soft } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -42,7 +41,7 @@ export function SecretsPage({ theme }: { theme: Theme }) {
         onValue={(value) => run(client!.secretSet({ name: s.name, value }))} onDelete={() => run(client!.secretDelete(s.name))} />)}
       {adding ? <AddSecret theme={theme} onSave={(p) => run(client!.secretSet({ ...p, scope: 'all' }))} onDone={() => setAdding(false)} /> : null}
     </Group>
-    {adding ? null : <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, marginLeft: -8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="添加密钥" onPress={() => setAdding(true)} /></View>}
+    {adding ? null : <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, gap: 8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="添加密钥" onPress={() => setAdding(true)} /></View>}
   </>;
 }
 
@@ -79,14 +78,12 @@ function SecretRow({ theme, secret, open, onToggle, onScope, onPurpose, onValue,
       <ScopeEditor key={JSON.stringify(secret.scope)} theme={theme} secret={secret} bots={bots} onSave={onScope} />
       <PurposeEditor key={secret.purpose ?? ''} theme={theme} secret={secret} onSave={onPurpose} />
       <ValueEditor theme={theme} secret={secret} onSave={onValue} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 0 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
         {confirm ? <>
           <Hint theme={theme} flex text={`删除 ${secret.name}？Bot 会立刻失去它。`} />
           <Soft theme={theme} title="保留" onPress={() => setConfirm(false)} />
           <Soft theme={theme} title="删除" danger onPress={onDelete} />
-        </> : <Pressable onPress={() => setConfirm(true)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 4, height: 30, paddingHorizontal: 12, borderRadius: 999, backgroundColor: theme.cardHi, opacity: pressed ? 0.7 : 1 })}>
-          <Icon name="trash" color={theme.danger} size={13} /><Text style={{ color: theme.danger, fontSize: 13 }}>删除</Text>
-        </Pressable>}
+        </> : <Soft theme={theme} danger icon="trash" title="删除" onPress={() => setConfirm(true)} />}
       </View>
     </View> : null}
   </View>;
@@ -110,7 +107,7 @@ function ScopeEditor({ theme, secret, bots, onSave }: { theme: Theme; secret: Se
         <Avatar bot={b} size={20} badge={false} /><Text style={{ fontSize: 12, color: on ? theme.text : theme.sub }}>{b.name}</Text>{on ? <Icon name="check" color={theme.text} size={13} /> : null}
       </Pressable>;
     })}</View> : null}
-    <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, marginLeft: -8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="保存权限" disabled={same} onPress={() => onSave(mode === 'all' ? 'all' : picked)} /></View>
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, gap: 8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="保存权限" disabled={same} onPress={() => onSave(mode === 'all' ? 'all' : picked)} /></View>
   </View>;
 }
 
@@ -119,7 +116,7 @@ function PurposeEditor({ theme, secret, onSave }: { theme: Theme; secret: Secret
   const same = purpose.trim() === (secret.purpose ?? '');
   return <View style={{ gap: 8 }}>
     <Label theme={theme} text="用途" />
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}><Input theme={theme} value={purpose} onChange={setPurpose} placeholder="用途" /><Soft theme={theme} title="保存" disabled={same} onPress={() => onSave(purpose.trim())} /></View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Input theme={theme} value={purpose} onChange={setPurpose} placeholder="用途" /><Soft theme={theme} title="保存" disabled={same} onPress={() => onSave(purpose.trim())} /></View>
   </View>;
 }
 
@@ -130,7 +127,7 @@ function ValueEditor({ theme, secret, onSave }: { theme: Theme; secret: SecretVi
   const save = () => { if (long) void onSave(value).then((ok) => { if (ok) { setValue(''); setReplaced(true); } }); };
   return <View style={{ gap: 8 }}>
     <Label theme={theme} text="替换值" />
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}><Input theme={theme} value={value} onChange={(v) => { setValue(v); setReplaced(false); }} placeholder="粘贴或输入密钥" label={`${secret.name} 的新值`} masked /><Soft theme={theme} title="替换" disabled={!long} onPress={save} /></View>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Input theme={theme} value={value} onChange={(v) => { setValue(v); setReplaced(false); }} placeholder="粘贴或输入密钥" label={`${secret.name} 的新值`} masked /><Soft theme={theme} title="替换" disabled={!long} onPress={save} /></View>
     {value !== '' && !long ? <Hint theme={theme} text={`至少 ${MIN_VALUE} 个字符。`} />
       : replaced ? <View accessibilityRole="text" style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}><Icon name="check" color="#16a34a" size={13} /><Hint theme={theme} text="已替换。Bot 从下一条命令开始拿到新值。" /></View> : null}
   </View>;
@@ -146,7 +143,7 @@ function AddSecret({ theme, onSave, onDone }: { theme: Theme; onSave(p: { name: 
     <View style={{ flexDirection: 'row' }}><Input theme={theme} value={name} onChange={setName} label="密钥名" placeholder="名字，例如 GITHUB_TOKEN" upper mono /></View>
     <View style={{ flexDirection: 'row' }}><Input theme={theme} value={purpose} onChange={setPurpose} placeholder="用途" /></View>
     <View style={{ flexDirection: 'row' }}><Input theme={theme} value={value} onChange={setValue} label="值" placeholder="粘贴或输入密钥" masked /></View>
-    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
       <Hint theme={theme} flex text="新密钥默认所有 Bot 可用，之后可以收窄。" />
       <Soft theme={theme} title="取消" onPress={onDone} />
       <Soft theme={theme} title="保存密钥" disabled={!ready} onPress={save} />

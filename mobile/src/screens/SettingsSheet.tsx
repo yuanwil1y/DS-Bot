@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { clearLastError, loadLastError, type LastError } from '../errors';
 import { Text, ToastAndroid } from 'react-native';
 import type { ChatTarget } from './HomeScreen';
-import { Group, Row, Sheet } from '../components/ui';
+import { Icon, Group, Row, Sheet } from '../components/ui';
 import { AppearanceGroup, MotionGroup } from '../components/Appearance';
 import { FolderField } from '../components/Pickers';
 import { View } from 'react-native';
@@ -62,7 +62,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
       <Group theme={theme} style={{ marginTop: 4 }}>
         <Row theme={theme} label={t.appName} caption={host} value={status === 'open' ? t.online : t.offline} />
         <Row theme={theme} label={t.plugin} value={client?.hello?.plugin?.version ?? '—'} />
-        {state?.readOnly ? <Row theme={theme} label={t.readOnly} value="✓" /> : null}
+        {state?.readOnly ? <Row theme={theme} label={t.readOnly} right={<Icon name="check" color={theme.text} size={16} />} /> : null}
       </Group>
       <Group theme={theme}>
         <Row theme={theme} label={t.language} value={label(prefs.lang)} onPress={() => prefs.set({ lang: cycle<typeof prefs.lang>(prefs.lang, ['auto', 'zh', 'en']) })} />

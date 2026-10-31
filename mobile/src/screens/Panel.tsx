@@ -37,7 +37,7 @@ function Field({ theme, title, sub, onPress, disabled }: { theme: Theme; title: 
         {sub ? <Text style={{ color: theme.sub, fontSize: 12, marginTop: 2 }}>{sub}</Text> : null}
       </View>
       {disabled ? <Text style={{ color: theme.faint, fontSize: 11, marginRight: 8 }}>{NA}</Text> : null}
-      <Text style={{ color: theme.sub }}>⌄</Text>
+      <Icon name="chevron-down" color={theme.sub} size={16} />
     </Pressable>
   );
 }
@@ -169,7 +169,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                   <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, flexShrink: 1 }}>{sideTitle(c)}</Text>
                 </Pressable>
                 <Pressable hitSlop={12} accessibilityLabel={SIDE.close} onPress={() => client!.sideClose(c.id).then(refresh, () => {})} style={{ paddingHorizontal: 12, height: 36, justifyContent: 'center' }}>
-                  <Text style={{ color: theme.sub, fontSize: 18, lineHeight: 20 }}>×</Text>
+                  <Icon name="close" color={theme.sub} size={16} />
                 </Pressable>
               </View>
             ))}
@@ -272,7 +272,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                 <Pressable accessibilityLabel={`管理 ${name} 的记忆`} onPress={() => memId && onMemory(memId)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 14, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 14, paddingVertical: 12 }}>
                   <Text style={{ color: theme.text, fontSize: 15 }}>▤  </Text>
                   <Text style={{ flex: 1, color: theme.text, fontSize: 15 }}>{memCount === null ? '加载中…' : memCount === 0 ? '还没有保存内容' : `${memCount} 条`}</Text>
-                  <Text style={{ color: theme.sub }}>管理 ›</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}><Text style={{ color: theme.sub }}>管理</Text><Icon name="chevron" color={theme.sub} size={14} /></View>
                 </Pressable>
               </>
             )}
@@ -381,7 +381,7 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar,
               {caps.map((c: any) => <SRow key={c.name} theme={theme} label={c.name} hint={attached.has(c.name) ? capStatus(statuses[c.name]) : undefined}>{sw(attached.has(c.name), (v) => run(client!.call('bot-capability', { botId: b.id, name: c.name, attached: v })), c.name)}</SRow>)}
             </SCard> : null}
             {st?.memory === false ? null : <SCard theme={theme} title="记忆">
-              <SRow theme={theme} label={memCount === null ? '加载中…' : memCount === 0 ? '还没有保存内容' : `${memCount} 条`} onPress={() => onMemory?.(b.id)}><Text style={{ color: theme.sub }}>管理 ›</Text></SRow>
+              <SRow theme={theme} label={memCount === null ? '加载中…' : memCount === 0 ? '还没有保存内容' : `${memCount} 条`} onPress={() => onMemory?.(b.id)}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}><Text style={{ color: theme.sub }}>管理</Text><Icon name="chevron" color={theme.sub} size={14} /></View></SRow>
             </SCard>}
             <BotSchedules theme={theme} botId={b.id} onNew={() => onSchedules(b.id)} />
             <SCard theme={theme} title="主 Bot">
@@ -554,7 +554,7 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
         <View style={{ marginHorizontal: 14, marginTop: 8, backgroundColor: theme.card, borderRadius: 16, padding: 12 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text numberOfLines={1} style={{ flex: 1, color: theme.sub, fontSize: 13 }}>{answer.asked}</Text>
-            {answer.pending ? null : <Pressable onPress={() => setAnswer(null)} accessibilityLabel="关闭" hitSlop={8}><Text style={{ color: theme.sub }}>✕</Text></Pressable>}
+            {answer.pending ? null : <Pressable onPress={() => setAnswer(null)} accessibilityLabel="关闭" hitSlop={8}><Icon name="close" color={theme.sub} size={14} /></Pressable>}
           </View>
           {answer.pending ? <Text style={{ color: theme.sub, marginTop: 6 }}>思考中…</Text>
             : answer.error ? <Text style={{ color: theme.danger, marginTop: 6 }}>{answer.error}</Text>
@@ -709,7 +709,7 @@ function GroupSettingsForm({ theme, room, onOpenBot, onDeleted }: { theme: Theme
                 style={{ backgroundColor: theme.cardHi, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
                 <Text style={{ color: theme.text, fontSize: 13 }}>{leads ? '取消' : '设为管理员'}</Text>
               </Pressable>
-              {members.length > 2 ? <Pressable hitSlop={8} accessibilityLabel={`把 ${m.name} 移出群聊`} onPress={() => update({ remove: [m.id] }).catch(() => {})} style={{ paddingLeft: 12 }}><Text style={{ color: theme.sub, fontSize: 18 }}>×</Text></Pressable> : null}
+              {members.length > 2 ? <Pressable hitSlop={8} accessibilityLabel={`把 ${m.name} 移出群聊`} onPress={() => update({ remove: [m.id] }).catch(() => {})} style={{ paddingLeft: 12 }}><Icon name="close" color={theme.sub} size={16} /></Pressable> : null}
             </View>
           );
         })}
@@ -717,7 +717,7 @@ function GroupSettingsForm({ theme, room, onOpenBot, onDeleted }: { theme: Theme
           {(state?.bots ?? []).filter((b) => !(room.members ?? []).includes(b.id)).map((b) => <Pressable key={b.id} onPress={() => { setAdding(false); update({ add: [b.id] }).catch(() => {}); }} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
             <Avatar bot={b} size={22} ring={theme.card} /><Text style={{ flex: 1, color: theme.text, marginLeft: 10 }}>{b.name}</Text><Text style={{ color: theme.sub, fontSize: 12 }}>添加</Text></Pressable>)}
           <Pressable onPress={() => setAdding(false)} style={{ paddingVertical: 8 }}><Text style={{ color: theme.sub }}>取消</Text></Pressable>
-        </> : (state?.bots ?? []).some((b) => !(room.members ?? []).includes(b.id)) ? <Pressable onPress={() => setAdding(true)} style={{ paddingVertical: 8 }}><Text style={{ color: theme.sub }}>＋ 添加成员</Text></Pressable> : null}
+        </> : (state?.bots ?? []).some((b) => !(room.members ?? []).includes(b.id)) ? <Pressable onPress={() => setAdding(true)} style={{ paddingVertical: 8 }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><Icon name="plus" color={theme.sub} size={16} /><Text style={{ color: theme.sub }}>添加成员</Text></View></Pressable> : null}
         <Text style={{ color: theme.sub, fontSize: 12, marginTop: 6 }}>{members.length < 2 ? '请先添加一个 Bot：群聊至少要两个。' : admin ? `${admin.name} 主持这个群：可以用 @名字 点名成员、修改群设置、在群里发言。` : '还没有管理员。管理员可以用 @名字 点名成员、修改群设置、在群里发言。'}</Text>
       </View>
       <Label theme={theme}>侧栏</Label>

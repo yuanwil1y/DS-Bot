@@ -2,6 +2,7 @@
 // folder menu (folder-menu.js), with the same rows, labels and saves.
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { Icon } from './ui';
 import type { Bot, BotState, Model, PermissionCatalog, Reasoning } from '../api/types';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
@@ -15,7 +16,7 @@ export function Trigger({ theme, title, sub, onPress, danger }: { theme: Theme; 
         <Text style={{ color: danger ? theme.danger : theme.text, fontSize: 16, fontWeight: '600' }} numberOfLines={1}>{title}</Text>
         {sub ? <Text style={{ color: theme.sub, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{sub}</Text> : null}
       </View>
-      <Text style={{ color: theme.sub }}>⌄</Text>
+      <Icon name="chevron-down" color={theme.sub} size={16} />
     </Pressable>
   );
 }
@@ -33,15 +34,16 @@ function Pop({ theme, visible, onClose, children }: { theme: Theme; visible: boo
 }
 const GroupHead = ({ theme, children }: { theme: Theme; children: string }) => <Text style={{ color: theme.sub, fontSize: 12, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 4 }}>{children}</Text>;
 const Sep = ({ theme }: { theme: Theme }) => <View style={{ height: 1, backgroundColor: theme.sep, marginHorizontal: 14, marginVertical: 4 }} />;
-function Item({ theme, label, sub, hint, on, onPress, disabled }: { theme: Theme; label: string; sub?: string; hint?: string; on?: boolean; onPress?(): void; disabled?: boolean }) {
+function Item({ theme, label, sub, hint, on, onPress, disabled, back, fwd }: { theme: Theme; label: string; sub?: string; hint?: string; on?: boolean; onPress?(): void; disabled?: boolean; back?: boolean; fwd?: boolean }) {
   return (
     <Pressable disabled={disabled || !onPress} onPress={onPress} android_ripple={{ color: theme.fill }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 12 }}>
+      {back ? <View style={{ marginRight: 6 }}><Icon name="back" color={theme.text} size={16} /></View> : null}
       <View style={{ flex: 1 }}>
         <Text style={{ color: disabled ? theme.faint : theme.text, fontSize: 16 }}>{label}</Text>
         {sub ? <Text style={{ color: theme.sub, fontSize: 11, marginTop: 2 }} numberOfLines={1}>{sub}</Text> : null}
       </View>
       {hint ? <Text style={{ color: theme.sub, fontSize: 12, marginLeft: 8 }}>{hint}</Text> : null}
-      <Text style={{ color: theme.text, width: 22, textAlign: 'right' }}>{on ? '✓' : ''}</Text>
+      <View style={{ width: 22, alignItems: 'flex-end' }}>{on ? <Icon name="check" color={theme.text} size={16} /> : null}{fwd ? <Icon name="chevron" color={theme.sub} size={14} /> : null}</View>
     </Pressable>
   );
 }
@@ -170,7 +172,7 @@ export function FolderField({ theme, value, group, team, disabled, onPick }: { t
           </>
         ) : view === 'type' ? (
           <>
-            <Item theme={theme} label="‹ 后退" onPress={() => setView('list')} />
+            <Item theme={theme} label="后退" back onPress={() => setView('list')} />
             <TextInput autoFocus value={draft} onChangeText={setDraft} placeholder="文件夹的完整路径" placeholderTextColor={theme.faint} autoCapitalize="none" autoCorrect={false}
               onSubmitEditing={() => draft.trim() && choose(draft.trim())}
               style={{ color: theme.text, fontSize: 15, marginHorizontal: 18, marginVertical: 6, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.sep }} />
@@ -178,10 +180,10 @@ export function FolderField({ theme, value, group, team, disabled, onPick }: { t
           </>
         ) : listing ? (
           <>
-            <Item theme={theme} label="‹ 后退" onPress={() => setView('list')} />
+            <Item theme={theme} label="后退" back onPress={() => setView('list')} />
             <Text style={{ color: theme.sub, fontSize: 11, paddingHorizontal: 18, paddingBottom: 4 }}>{listing.path}</Text>
             {parent ? <Item theme={theme} label="上一级" onPress={() => browse(parent.path)} /> : null}
-            {inside.map((e) => <Item key={e.path} theme={theme} label={`${e.name}  ›`} onPress={() => browse(e.path)} />)}
+            {inside.map((e) => <Item key={e.path} theme={theme} label={e.name} fwd onPress={() => browse(e.path)} />)}
             {!inside.length ? <Item theme={theme} label="里面没有文件夹。" disabled /> : null}
             {listing.truncated ? <Text style={{ color: theme.sub, fontSize: 11, paddingHorizontal: 18 }}>还有一些文件夹没有显示。</Text> : null}
             <Sep theme={theme} />

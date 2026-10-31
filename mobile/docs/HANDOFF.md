@@ -181,3 +181,11 @@
 - 删除「外观自测」「功能自测」及全部相关代码（featureTest.tsx、appearanceTest.tsx、demo.json、各页动作注册、App.tsx 两个 runner、batch0913/0914 测试）。
 - 新增「短自测（测试用）」约 1 分钟，只测 0.9.12 未录到的 7 项：关于秒开、用量 12 个月 x 轴、自定义范围选择器开/关、新建计划键盘弹起时「什么时候」可见、能力临时技能 selftest-temp 双击删除、密钥 SELFTEST_TEMP 增/展开/删、超长消息折叠/显示全部/收起。每状态约 2.5 秒，失败跳过，finally 清理临时数据，结束恢复原页面。
 - 测试：test/batch0915.test.mts。正式发布前删除短自测。
+
+## 0.9.14 (vc34) — 设置页按钮/图标对齐网页 0.2.4
+- `ui.tsx` 新增网页同款 `Soft`（.bt-soft 36/14/0 16；sm 28/12/0 12；`send`=.bt-send；`icon`=.bt-with-icon）、`Actions`（.bt-actions 左对齐 gap 8；`end`=右对齐）、`Select`（.bt-select 34/r8/1px 边框 + 下箭头）。高度都是 minHeight，粗体系统字体会撑高不截断。`Icon name="chevron-down"` = chevron 旋转 90°。关于页保留自己的 Soft，外观不变。
+- 能力页：h3「共享能力」→ 卡片外左对齐「添加能力」→ 表单 → 列表卡片（空时「还没有保存能力」）。表单按钮 取消/添加能力 都是 soft-sm，左对齐。
+- 连接器：token 链接 + 取消 + 连接 同一行左对齐（.bt-connector-form-row）；浏览器「添加」是默认 soft，在右对齐的卡片底栏。密钥：去掉 marginLeft:-8 补偿，删除按钮改 Soft+trash 图标。
+- 定时任务：表单改成网页的一张 .bt-set-card（发给 select 58% / 名字 / 要做什么 / 什么时候 + 右对齐 取消·创建任务 小按钮）；「新建任务」= soft-sm + Plus 图标；Bot 设置里的新建任务行用 Plus 图标。
+- 文字字符图标全换 SVG：⌄ › ‹ ▾ ▸ ✕ × ⋯ ✓ ＋（Pickers/Panel/BtwCard/Cards/NewChatSheet/SettingsSheet/ChatScreen/ToolPages Choice）。⌘（添加 DSH Agent）网页用 FishLogo，本地没有该 SVG，先留空图标位。
+- 截图：docs/appearance-shots/verify-0914/（web-cap.png 为网页参照）。

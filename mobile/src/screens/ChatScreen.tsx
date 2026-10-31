@@ -5,7 +5,7 @@ import { SIDE, parseSideLine, sideHostText, sideQuery } from '../api/side';
 import { VOICE } from '../api/voice';
 import { useDictation } from '../hooks/useDictation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
   cardsFor, insertMention, mentionCandidates, mentionQuery,
   addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
@@ -19,6 +19,7 @@ import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
 import { Boundary } from '../errors';
+import { leaveVisit, loadSeen, unreadOf, type Visit } from '../visits';
 import { AnsweredView, ShownView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
@@ -157,6 +158,28 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const fresh = release.base === null ? 0 : replies - release.base;
   const showDown = unpinned && fresh > 0 && !release.dismissed;
   const listRef = useRef<FlatList<ChatRow>>(null);
+  // index.js beginVisit/endVisit + cells.js NewDivider + header.js "N 条新消息 ↑".
+  const [visit, setVisit] = useState<Visit | null>(null);
+  useEffect(() => {
+    let live = true; const entered = Date.now();
+    const made: any = bot ?? room;
+    loadSeen(id).then((seen) => { if (live) setVisit({ seen: seen ?? (made?.createdBy && Number.isFinite(made?.createdAt) ? made.createdAt : null), entered }); });
+    const sub = AppState.addEventListener('change', (st) => { if (st !== 'active') leaveVisit(id); });
+    return () => { live = false; sub.remove(); leaveVisit(id); };
+  }, [id]);
+  const unread = useMemo(() => unreadOf(list, visit), [list, visit]);
+  const dividerAt = unread.first === null ? -1 : data.findIndex((r) => r.key === unread.first);
+  const [above, setAbove] = useState({ seen: false, dismissed: false, out: false });
+  useEffect(() => { setAbove({ seen: false, dismissed: false, out: false }); }, [id, unread.first]);
+  const onViewable = useRef((_: any) => {});
+  onViewable.current = ({ viewableItems }: { viewableItems: { index: number | null }[] }) => {
+    if (dividerAt < 0) return;
+    const idx = viewableItems.map((v) => v.index ?? -1);
+    if (idx.includes(dividerAt)) setAbove((a) => (a.seen ? a : { ...a, seen: true, out: false }));
+    else if (idx.length && Math.max(...idx) < dividerAt) setAbove((a) => (a.out ? a : { ...a, out: true }));
+  };
+  const viewableCb = useRef((info: any) => onViewable.current(info)).current;
+  const showUp = dividerAt >= 0 && above.out && !above.seen && !above.dismissed;
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
@@ -171,6 +194,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           ref={listRef}
           onScroll={(e) => { const up = e.nativeEvent.contentOffset.y > 120; if (up !== unpinned) setUnpinned(up); }}
           scrollEventThrottle={100}
+          onViewableItemsChanged={viewableCb}
+          onScrollToIndexFailed={(e) => listRef.current?.scrollToOffset({ offset: e.averageItemLength * e.index, animated: true })}
           data={data}
           keyExtractor={(r) => r.key}
           style={{ flex: 1, marginTop: 62 }}
@@ -196,7 +221,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
               onReply={(act, vals) => client!.viewReply(cards.sessionId, cards.view!.id, act, vals).then(after)} onDismiss={() => client!.dismissView(cards.sessionId).then(after)} /> : null}
             {cards.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={byId[a.botId]?.name ?? 'Bot'} onError={onErr} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(after)} />)}
           </View></Boundary>}
-          renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{(({ item, index }: { item: ChatRow; index: number }) => {
+          renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{p.item.key === unread.first ? <NewDivider theme={theme} /> : null}{(({ item, index }: { item: ChatRow; index: number }) => {
             if (item.kind === 'event') {
               const ev = item.data?.event;
               if (ev === 'working' || ev === 'approval') return <Pressable onPress={onDetails} style={{ flexDirection: 'row', alignSelf: 'center', alignItems: 'center', marginVertical: 6 }}>{item.botId && byId[item.botId] ? <Avatar bot={byId[item.botId]} size={16} /> : null}<Text style={{ color: theme.sub, fontSize: 13, marginLeft: 5 }}>{item.text}</Text></Pressable>;
@@ -248,6 +273,14 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
         <View style={{ width: 46 }} />
       </View>
 
+      {showUp ? (
+        <View style={{ position: 'absolute', top: 62 + 8, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 34, borderRadius: 17, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
+          <Pressable onPress={() => { setAbove((a) => ({ ...a, seen: true })); listRef.current?.scrollToIndex({ index: dividerAt, viewPosition: 0.8, animated: true }); }} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
+            <Text style={{ color: theme.text, fontSize: 13 }}>↑ {unread.count === 1 ? '1 条新消息' : unread.count > 0 ? `${unread.count} 条新消息` : '新消息'}</Text>
+          </Pressable>
+          <Pressable onPress={() => setAbove((a) => ({ ...a, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Text style={{ color: theme.sub, fontSize: 13 }}>✕</Text></Pressable>
+        </View>
+      ) : null}
       {showDown ? (
         <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 34, borderRadius: 17, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder, marginBottom: 8 }}>
           <Pressable onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
@@ -314,4 +347,13 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '定时任务', onPress: onSchedule }]} />
     </KeyboardAvoidingView>
   );
+}
+
+// cells.js NewDivider: a line with 新 before the first row since the last visit.
+function NewDivider({ theme }: { theme: Theme }) {
+  return <View accessibilityRole="none" accessibilityLabel="新消息" style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
+    <View style={{ flex: 1, height: 1, backgroundColor: theme.danger, opacity: 0.5 }} />
+    <Text style={{ color: theme.danger, fontSize: 12, fontWeight: '500', marginHorizontal: 8 }}>新</Text>
+    <View style={{ flex: 1, height: 1, backgroundColor: theme.danger, opacity: 0.5 }} />
+  </View>;
 }

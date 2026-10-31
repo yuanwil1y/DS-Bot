@@ -153,3 +153,9 @@
   - 原因：(1) 图标 SVG 用的是 currentColor，Android 上 SvgXml 没有解析，描边成了黑色，深色主题下看不见；(2) 圆的填充等于页面背景，描边用的 line 只有文字色 8% 透明度，几乎看不出。
   - 修复：Icon 把 currentColor 直接替换成实色，所有图标都生效；新增 `roundFill`（文字色混入背景，深色 8%、浅色 4%）和 `roundBorder`（深色 30%、浅色 25%）；图标用 text 色，大小 22dp。颜色依据 Grok 参考图：#1d1d1d 背景、填充 #2c2c2e、圈 #4b4b4d、白色图标。
   - 测试 test/batch0911.test.mts：4 套主题 × 深浅色，图标对比度 ≥4.5:1，圈对比度 ≥1.5:1。
+
+## 0.9.10 (versionCode 30) — 返回箭头空白修复
+- 真因：icons.gen.ts 中多数图标（back/chevron/mic/more…）把 fill/stroke 写在根 `<svg>` 上，依赖继承；react-native-svg 在 Android Sheet(Modal) 内继承失效 → 空白。✕/plus/search/send 把 stroke 写在 `<path>` 上，因此正常。证据：0.9.9 Sheet 内 ✕ 可见、ChatScreen(非 Modal) 返回箭头可见、0.9.10 Connectors(Sheet) 箭头空白。
+- 修复：新增 src/components/iconXml.ts，把根 paint 属性下放到每个 shape 并替换 currentColor；Icon 使用 iconXml(xml,color)。
+- 回归测试：test/batch0912.test.mts（32 个图标 XML 合法、无 currentColor、每个 shape 有可见 paint）。
+- 渲染验证：docs/appearance-shots/icon-render/header-buttons.png（Chrome 渲染同一 XML，8 主题×模式）。原生模拟器无 KVM 权限未验证。

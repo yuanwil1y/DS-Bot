@@ -4,6 +4,7 @@ import { BackHandler, Modal, Pressable, ScrollView, Switch, Text, View, type Vie
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
 import { SvgXml } from 'react-native-svg';
+import { iconXml } from './iconXml';
 import { ICONS } from './icons.gen';
 
 // The web's own icons (icons.gen.ts, generated from ds-bot icons.js), drawn at the web's size
@@ -13,8 +14,7 @@ export function Icon({ name, color, size }: { name: string; color: string; size?
   if (!xml) return <Text style={{ color, fontSize: size ?? 16 }}>{name}</Text>;
   const own = Number(/width="([\d.]+)"/.exec(xml)?.[1] ?? 16);
   const s = size ?? own;
-  // Inline the color: SvgXml does not reliably resolve currentColor on Android (0.9.10 invisible chevron).
-  return <SvgXml xml={xml.replace(/currentColor/g, color)} width={s} height={s} color={color} />;
+  return <SvgXml xml={iconXml(xml, color)} width={s} height={s} color={color} />;
 }
 
 export function RoundButton({ theme, icon, onPress, size = 36, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {

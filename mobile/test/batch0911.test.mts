@@ -12,5 +12,5 @@ for (const id of THEME_IDS) for (const dark of [false, true]) {
   assert.ok(icon >= 4.5); assert.ok(ring >= 1.5); n++;
 }
 const ui = readFileSync(new URL('../src/components/ui.tsx', import.meta.url), 'utf8');
-assert.match(ui, /xml\.replace\(\/currentColor\/g, color\)/); n++; console.log('✓ Icon inlines currentColor');
+assert.match(ui, /iconXml\(xml, color\)/); n++; console.log('✓ Icon inlines currentColor');
 console.log(`batch0911: ${n} passed`);

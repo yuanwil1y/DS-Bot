@@ -165,3 +165,13 @@
 - 实现：src/featureTest.tsx（useFT 动作注册 + 脚本 runFeatureTest）；App.tsx FeatureTestRunner 保存/恢复页面栈与设置。
 - 不改服务器：表单只打开/取消，无效 JSON 只显示错误，删除只第一次点（4 秒复原），聊天用本地演示数据，剪贴板复原。
 - 正式发布前删除：featureTest.tsx、各 useFT 调用、设置行、App.tsx runner。测试：test/batch0913.test.mts。
+
+## 0.9.12 (vc32) — 0.9.11 录屏问题按网页 0.2.4 修正
+- 关于：登录后即预取 update-check（同网页 index.js 启动 fresh:false），进页立即有数据；DeepSeek Harness 行同网页条件 `dsh?.current`（取决于服务器是否返回 dsh）。src/api/aboutModel.ts prefetchUpdate/aboutCache。
+- 用量 12 个月横轴：标签不截断（同 .bt-us-ticks span nowrap），显示「11月」。
+- 用量自定义：SpanPicker 同 .bt-us-pick（≤640px 两个月竖排、每月 ≤252px、弹层铺满宽度、圆角 18、阴影、底部分隔线）。
+- 定时任务表单：网页 schedules.js 有 autoFocus，保留；根改为 KeyboardAvoidingView，键盘不再挡「什么时候」。
+- 连接器：GitHub 图标块（网页 connectors.js 同一 SVG 路径）。密钥空状态：「添加密钥」左对齐、上间距 12（.bt-actions）。
+- 自测 LONG_TEXT 520 行 ≈ 23 300 字，超过 FOLD_HUGE 20 000，能演示折叠。
+- 左侧灰条：系统（HyperOS 侧边栏手柄）叠层，盖在系统对话框之上，非 app。
+- 视觉验证：react-native-web 渲染（/tmp/rnw 临时工具）→ docs/appearance-shots/verify-0912/（v-* 深/浅，cmp-* 网页|app）。测试：test/batch0914.test.mts。

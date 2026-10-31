@@ -3,7 +3,7 @@
 // The host has list / create / delete only, so there is no edit or pause here either.
 import React, { useEffect, useState } from 'react';
 import { useFT } from '../featureTest'; // TEST-ONLY
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
 import { NARROW, clockText, localText, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
@@ -189,7 +189,9 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
     ...rooms.map((r) => ({ id: r.id, avatar: <GroupAvatar members={(r.members ?? []).map((m) => bots.find((b) => b.id === m)!).filter(Boolean)} size={18} />, name: r.name, tasks: view.tasks.filter((t) => !t.botId && t.roomId === r.id) })),
   ].filter((g) => g.tasks.length > 0) : [];
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+    // schedules.js autofocuses the title too; edge-to-edge Android does not resize for the
+    // keyboard, so the page pads itself and 什么时候 scrolls into reach above it.
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
       <PageHeader theme={theme} title="定时任务" onBack={onBack} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {view === null ? <Text style={{ color: theme.sub }}>加载中…</Text>
@@ -212,7 +214,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
             </>
           )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 

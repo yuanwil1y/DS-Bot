@@ -57,3 +57,11 @@ export function dshHint(d: any, shown: boolean): string {
   if (shown) return `DSH ${d.verified} 可以更新`;
   return `版本 ${d.current}`;
 }
+
+// index.js: the web asks update-check (fresh: false) as soon as it starts and keeps the
+// answer, so About shows the version, Star and links on entry. The phone does the same
+// on connect; About reads this copy first.
+export const aboutCache: { update: any; stars: number | null } = { update: null, stars: null };
+export function prefetchUpdate(c: { updateCheck(fresh?: boolean): Promise<any> }) {
+  return c.updateCheck(false).then((u) => { if (u) aboutCache.update = u; return u; }, () => null);
+}

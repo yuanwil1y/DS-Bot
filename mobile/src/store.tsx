@@ -1,4 +1,5 @@
 // App-wide connection state: client, live feed, bot state, unread/working.
+import { prefetchUpdate } from './api/aboutModel';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
@@ -106,6 +107,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     feed.current?.stop();
     clientRef.current = c;
     setClient(c);
+    void prefetchUpdate(c);
     const st = await c.state();
     setState(st);
     loadPreviews(c, st);

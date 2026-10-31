@@ -43,7 +43,7 @@ export function SecretsPage({ theme }: { theme: Theme }) {
         onValue={(value) => run(client!.secretSet({ name: s.name, value }))} onDelete={() => run(client!.secretDelete(s.name))} />)}
       {adding ? <AddSecret theme={theme} onSave={(p) => run(client!.secretSet({ ...p, scope: 'all' }))} onDone={() => setAdding(false)} /> : null}
     </Group>
-    {adding ? null : <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}><Soft theme={theme} title="添加密钥" onPress={() => setAdding(true)} /></View>}
+    {adding ? null : <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, marginLeft: -8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="添加密钥" onPress={() => setAdding(true)} /></View>}
   </>;
 }
 
@@ -111,7 +111,7 @@ function ScopeEditor({ theme, secret, bots, onSave }: { theme: Theme; secret: Se
         <Avatar bot={b} size={20} badge={false} /><Text style={{ fontSize: 12, color: on ? theme.text : theme.sub }}>{b.name}</Text>{on ? <Icon name="check" color={theme.text} size={13} /> : null}
       </Pressable>;
     })}</View> : null}
-    <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}><Soft theme={theme} title="保存权限" disabled={same} onPress={() => onSave(mode === 'all' ? 'all' : picked)} /></View>
+    <View style={{ flexDirection: 'row', justifyContent: 'flex-start', marginTop: 12, marginLeft: -8 }}>{/* secret-card.js .bt-actions under the card, left */}<Soft theme={theme} title="保存权限" disabled={same} onPress={() => onSave(mode === 'all' ? 'all' : picked)} /></View>
   </View>;
 }
 

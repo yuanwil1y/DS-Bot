@@ -14,7 +14,7 @@ import { NA_MOBILE } from '../components/Menu';
 import { useStore } from '../store';
 import { loadLastError, clearLastError } from '../errors';
 import { APP_VERSION } from '../version';
-import { failureLabel, issueUrl, starCount, whenText, WHAT_MAX, botHint, dshHint } from '../api/aboutModel';
+import { failureLabel, issueUrl, starCount, whenText, WHAT_MAX, botHint, dshHint, aboutCache, prefetchUpdate } from '../api/aboutModel';
 import type { Theme } from '../theme';
 
 const show = (m: string) => ToastAndroid.show(m, ToastAndroid.SHORT);
@@ -30,18 +30,18 @@ export function Soft({ theme, title, onPress, disabled, primary, danger }: { the
 
 export function AboutPage({ theme, onFeedback }: { theme: Theme; onFeedback(): void }) {
   const { client } = useStore();
-  const [update, setUpdate] = useState<any>({});
-  const [stars, setStars] = useState<number | null>(null);
+  const [update, setUpdate] = useState<any>(aboutCache.update ?? {});
+  const [stars, setStars] = useState<number | null>(aboutCache.stars);
   const [checking, setChecking] = useState(false);
   useEffect(() => {
     let live = true;
-    client?.repoStars().then((n) => { if (live && Number.isInteger(n)) setStars(n); }, () => {});
-    client?.updateCheck(false).then((u) => { if (live && u) setUpdate(u); }, () => {});
+    client?.repoStars().then((n) => { if (live && Number.isInteger(n)) { aboutCache.stars = n; setStars(n); } }, () => {});
+    if (client) void prefetchUpdate(client).then((u) => { if (live && u) setUpdate(u); });
     return () => { live = false; };
   }, [client]);
   const check = () => {
     setChecking(true);
-    client!.updateCheck(true).then((u) => setUpdate(u ?? {}), (e) => show(errText(e))).finally(() => setChecking(false));
+    client!.updateCheck(true).then((u) => { if (u) aboutCache.update = u; setUpdate(u ?? {}); }, (e) => show(errText(e))).finally(() => setChecking(false));
   };
   useFT('about.check', () => check()); // TEST-ONLY
   const phase = update.phase ?? 'idle';

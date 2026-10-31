@@ -25,6 +25,7 @@ export function UsagePage({ theme, focusId, onFocus }: { theme: Theme; focusId: 
   const [rangeId, setRangeId] = useState('7d');
   const [span, setSpan] = useState<{ from: string; to: string } | null>(null);
   const [picking, setPicking] = useState(false);
+  const [topH, setTopH] = useState(34);
   const [by, setBy] = useState<'bot' | 'model'>('bot');
   const focus = focusOf(focusId);
   // TEST-ONLY feature walkthrough actions.
@@ -121,13 +122,14 @@ export function UsagePage({ theme, focusId, onFocus }: { theme: Theme; focusId: 
     </>;
   }
   return <View style={{ gap: 14, paddingBottom: 4, marginTop: 8 }}>
-    <View style={{ gap: 8 }}>
+    <View style={{ gap: 8 }} onLayout={(e) => setTopH(e.nativeEvent.layout.height)}>
       <Tabs theme={theme} value={rangeId} options={rangeOptions} onChange={chooseRange} />
       {view.scanning ? <Text style={{ color: theme.sub, fontSize: 12 }}>还在读取较早的聊天记录，数字可能还会变大。</Text> : null}
-      {picking ? <SpanPicker theme={theme} span={span} today={today} first={first} active={activeDays} onPick={(from, to) => { setSpan({ from, to }); setRangeId('custom'); setPicking(false); }} /> : null}
     </View>
     {error ? <Text style={{ color: theme.danger, fontSize: 13 }}>{error}</Text> : null}
     {body}
+    {/* Laid over the page (not inside the tabs row) so Android still delivers its taps. */}
+    {picking ? <SpanPicker theme={theme} top={topH} span={span} today={today} first={first} active={activeDays} onPick={(from, to) => { setSpan({ from, to }); setRangeId('custom'); setPicking(false); }} /> : null}
   </View>;
 }
 
@@ -205,8 +207,10 @@ function Chart({ theme, range, columns, series, tipSeries, by, onBy, onPick }: {
         </View>
       </View>
       <View style={{ flexDirection: 'row', marginLeft: 40, marginTop: 6 }}>
-        {columns.map((c, at) => <Text key={c.key} numberOfLines={1} style={{ flex: 1, minWidth: 0, textAlign: 'center', fontSize: 11, lineHeight: 14, overflow: 'visible', color: at === count - 1 && range.ends !== false ? theme.text : theme.faint, fontWeight: at === count - 1 && range.ends !== false ? '500' : '400' }}>
-          {((range.from ? at : count - 1 - at) % range.stride === 0) ? c.tick : ''}</Text>)}
+        {/* .bt-us-ticks span: white-space nowrap, no ellipsis; a label wider than its column spills past it, centred. */}
+        {columns.map((c, at) => <View key={c.key} style={{ flex: 1, minWidth: 0, alignItems: 'center', overflow: 'visible' }}>
+          <View style={{ width: 64, alignItems: 'center' }}><Text style={{ textAlign: 'center', fontSize: 11, lineHeight: 14, color: at === count - 1 && range.ends !== false ? theme.text : theme.faint, fontWeight: at === count - 1 && range.ends !== false ? '500' : '400' }}>
+          {((range.from ? at : count - 1 - at) % range.stride === 0) ? c.tick : ''}</Text></View></View>)}
       </View>
       {tip ? <View style={{ marginTop: 10, padding: 10, borderRadius: 12, backgroundColor: theme.cardHi, gap: 4 }}>
         <Text style={{ color: theme.text, fontSize: 12, fontWeight: '600' }}>{tip.title}</Text>
@@ -310,12 +314,13 @@ const monthOf = (ms: number) => Date.UTC(new Date(ms).getUTCFullYear(), new Date
 const addMonths = (ms: number, n: number) => Date.UTC(new Date(ms).getUTCFullYear(), new Date(ms).getUTCMonth() + n, 1);
 
 // usage-page.js SpanPicker: two taps pick the ends; shortcuts; days with usage carry a dot.
-// The phone shows one month at a time (the web shows two side by side).
-function SpanPicker({ theme, span, today, first, active, onPick }: { theme: Theme; span: { from: string; to: string } | null; today: string; first: string; active: Set<string>; onPick(from: string, to: string): void }) {
+// Two months (right-1, right) as on the web; at ≤640px the web's .bt-us-month is
+// min(252px,100%) and .bt-us-pick-months wraps, so the two months stack in the popover.
+function SpanPicker({ theme, top, span, today, first, active, onPick }: { theme: Theme; top: number; span: { from: string; to: string } | null; today: string; first: string; active: Set<string>; onPick(from: string, to: string): void }) {
   const todayMs = hourMs(today);
   const thisMonth = monthOf(todayMs);
   const oldest = Math.min(monthOf(hourMs(first)), addMonths(thisMonth, -12));
-  const [shown, setShown] = useState(() => Math.max(oldest, monthOf(hourMs(span?.to ?? today))));
+  const [right, setRight] = useState(() => Math.max(addMonths(oldest, 1), monthOf(hourMs(span?.to ?? today))));
   const [anchor, setAnchor] = useState<string | null>(null);
   const [low, high] = anchor ? [anchor, anchor] : span ? [span.from, span.to] : [null, null];
   const press = (key: string) => {
@@ -328,37 +333,43 @@ function SpanPicker({ theme, span, today, first, active, onPick }: { theme: Them
     ['last', '上个月', dayKey(addMonths(thisMonth, -1)), dayKey(thisMonth - DAY_MS)],
     ['year', '今年', `${today.slice(0, 4)}-01-01`, today],
   ];
-  const length = new Date(addMonths(shown, 1) - DAY_MS).getUTCDate();
-  const lead = (new Date(shown).getUTCDay() + 6) % 7;
-  const cells: React.ReactNode[] = Array.from({ length: lead }, (_, i) => <View key={`b${i}`} style={{ width: `${100 / 7}%`, height: 36 }} />);
-  for (let day = 1; day <= length; day += 1) {
-    const ms = shown + (day - 1) * DAY_MS; const key = dayKey(ms);
-    const inside = low !== null && key >= low && key <= high!;
-    const end = key === low || key === high;
-    cells.push(<Pressable key={key} disabled={ms > todayMs} onPress={() => press(key)} accessibilityLabel={dayLong(ms)} style={{ width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center', opacity: ms > todayMs ? 0.35 : 1, backgroundColor: inside && !end ? theme.hover : 'transparent' }}>
-      <View style={{ width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: end ? theme.accent : 'transparent', borderWidth: key === today && !end ? 1 : 0, borderColor: theme.border }}>
-        <Text style={{ fontSize: 13, color: end ? theme.accentText : theme.text }}>{day}</Text>
-      </View>
-      {active.has(key) ? <View style={{ position: 'absolute', bottom: 3, width: 4, height: 4, borderRadius: 2, backgroundColor: end ? theme.accentText : theme.accent }} /> : null}
-    </Pressable>);
-  }
+  const month = (start: number, side: 'left' | 'right') => {
+    const length = new Date(addMonths(start, 1) - DAY_MS).getUTCDate();
+    const lead = (new Date(start).getUTCDay() + 6) % 7;
+    const cells: React.ReactNode[] = Array.from({ length: lead }, (_, i) => <View key={`b${i}`} style={{ width: `${100 / 7}%`, height: 36 }} />);
+    for (let day = 1; day <= length; day += 1) {
+      const ms = start + (day - 1) * DAY_MS; const key = dayKey(ms);
+      const inside = low !== null && key >= low && key <= high!;
+      const end = key === low || key === high;
+      cells.push(<Pressable key={key} disabled={ms > todayMs} onPress={() => press(key)} accessibilityLabel={dayLong(ms)} style={{ width: `${100 / 7}%`, height: 36, alignItems: 'center', justifyContent: 'center', opacity: ms > todayMs ? 0.35 : 1 }}>
+        {inside ? <View style={{ position: 'absolute', top: 4, bottom: 4, left: key === low ? '50%' : 0, right: key === high ? '50%' : 0, backgroundColor: theme.hover }} /> : null}
+        <View style={{ width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: end ? theme.accent : 'transparent' }}>
+          <Text style={{ fontSize: 12, color: end ? theme.accentText : key === today ? theme.accent : theme.text, fontWeight: key === today && !end ? '600' : '400' }}>{day}</Text>
+        </View>
+        {active.has(key) ? <View style={{ position: 'absolute', bottom: 6, width: 3, height: 3, borderRadius: 1.5, backgroundColor: end ? theme.accentText : theme.faint }} /> : null}
+      </Pressable>);
+    }
+    const nav = side === 'left'
+      ? <Pressable accessibilityLabel="上个月" disabled={start <= oldest} onPress={() => setRight(addMonths(right, -1))} hitSlop={8} style={{ position: 'absolute', left: 0, top: 0, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', opacity: start <= oldest ? 0.3 : 1 }}><Icon name="back" color={theme.sub} /></Pressable>
+      : <Pressable accessibilityLabel="下个月" disabled={start >= thisMonth} onPress={() => setRight(addMonths(right, 1))} hitSlop={8} style={{ position: 'absolute', right: 0, top: 0, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', opacity: start >= thisMonth ? 0.3 : 1 }}><Icon name="chevron" color={theme.sub} /></Pressable>;
+    return <View key={start} style={{ width: '100%', maxWidth: 252 }}>
+      <View style={{ height: 28, marginBottom: 4, alignItems: 'center', justifyContent: 'center' }}>{nav}<Text style={{ color: theme.text, fontSize: 13, lineHeight: 18, fontWeight: '600' }}>{yearMonth(start)}</Text></View>
+      <View style={{ flexDirection: 'row' }}>{['一', '二', '三', '四', '五', '六', '日'].map((w) => <Text key={w} style={{ width: `${100 / 7}%`, height: 24, lineHeight: 24, textAlign: 'center', fontSize: 11, color: theme.faint }}>{w}</Text>)}</View>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{cells}</View>
+    </View>;
+  };
   const count = low === null ? 0 : Math.round((hourMs(high!) - hourMs(low)) / DAY_MS) + 1;
-  return <View style={{ padding: 12, borderRadius: 16, borderWidth: 1, borderColor: theme.line, backgroundColor: theme.card, gap: 10 }}>
-    <View style={{ flexDirection: 'row', gap: 8 }}>
-      {shortcuts.map(([id, label, from, to]) => <Pressable key={id} onPress={() => onPick(from, to)} style={{ height: 28, paddingHorizontal: 12, borderRadius: 999, justifyContent: 'center', backgroundColor: span?.from === from && span?.to === to ? theme.active : theme.hover }}>
-        <Text style={{ fontSize: 12, color: theme.text }}>{label}</Text>
+  // .bt-us-pick: a popover under the tabs (top 100% + 8px), radius 18, .5px line, card fill, shadow. Shrink-to-fit of two 252px months + 28px gap exceeds 100%, so on a phone it fills the width.
+  return <View style={{ position: 'absolute', top: top + 8, left: 0, right: 0, paddingTop: 14, paddingHorizontal: 16, paddingBottom: 12, borderRadius: 18, borderWidth: 0.5, borderColor: theme.line, backgroundColor: theme.card, elevation: 12, shadowColor: '#000', shadowOpacity: 0.32, shadowRadius: 25, shadowOffset: { width: 0, height: 22 }, zIndex: 4 }}>
+    <View style={{ flexDirection: 'row', gap: 6, marginBottom: 12 }}>
+      {shortcuts.map(([id, label, from, to]) => <Pressable key={id} onPress={() => onPick(from, to)} style={{ height: 26, paddingHorizontal: 11, borderRadius: 999, justifyContent: 'center', backgroundColor: span?.from === from && span?.to === to ? theme.active : theme.hover }}>
+        <Text style={{ fontSize: 12, color: span?.from === from && span?.to === to ? theme.accent : theme.sub }}>{label}</Text>
       </Pressable>)}
     </View>
-    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <Pressable accessibilityLabel="往前一个月" disabled={shown <= oldest} onPress={() => setShown(addMonths(shown, -1))} hitSlop={8} style={{ opacity: shown <= oldest ? 0.3 : 1, padding: 4 }}><Icon name="back" color={theme.text} /></Pressable>
-      <Text style={{ flex: 1, textAlign: 'center', color: theme.text, fontSize: 13, fontWeight: '600' }}>{yearMonth(shown)}</Text>
-      <Pressable accessibilityLabel="往后一个月" disabled={shown >= thisMonth} onPress={() => setShown(addMonths(shown, 1))} hitSlop={8} style={{ opacity: shown >= thisMonth ? 0.3 : 1, padding: 4 }}><Icon name="chevron" color={theme.text} /></Pressable>
-    </View>
-    <View style={{ flexDirection: 'row' }}>{['一', '二', '三', '四', '五', '六', '日'].map((w) => <Text key={w} style={{ width: `${100 / 7}%`, textAlign: 'center', fontSize: 11, color: theme.faint }}>{w}</Text>)}</View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{cells}</View>
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-      <Text style={{ fontSize: 12, color: theme.sub }}>{anchor ? '选择结束日期' : '选择开始日期'}</Text>
-      {low === null ? null : <Text style={{ fontSize: 12, color: theme.sub }}><Text style={{ fontWeight: '600', color: theme.text }}>{spanText(low, high!)}</Text>{` · ${daysText(count)}`}</Text>}
+    <View style={{ gap: 8 }}>{month(addMonths(right, -1), 'left')}{month(right, 'right')}</View>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16, marginTop: 8, paddingTop: 10, borderTopWidth: 1, borderTopColor: theme.line }}>
+      <Text style={{ fontSize: 12, color: theme.faint }}>{anchor ? '选择结束日期' : '选择开始日期'}</Text>
+      {low === null ? null : <Text style={{ fontSize: 12, color: theme.faint }}><Text style={{ fontWeight: '500', color: theme.text }}>{spanText(low, high!)}</Text>{` · ${daysText(count)}`}</Text>}
     </View>
   </View>;
 }

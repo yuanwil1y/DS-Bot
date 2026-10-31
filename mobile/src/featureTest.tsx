@@ -40,8 +40,8 @@ export async function act(name: string, ...args: any[]): Promise<any> {
   try { return await f(...args); } catch (e: any) { ftLog(`失败：${name} ${e?.message ?? e}`); return undefined; }
 }
 
-// A long Bot reply (past FOLD_HUGE, 20 000 chars) so 显示全部 / 收起 can be shown in the demo chat.
-export const LONG_TEXT = Array.from({ length: 420 }, (_, i) => `第 ${i + 1} 行：这是功能自测用的长消息，用来演示「显示全部 · N 字」折叠和「收起」。`).join('\n');
+// A long Bot reply (past FOLD_HUGE, 20 000 chars: 520 lines ≈ 23 300) so 显示全部 / 收起 can be shown in the demo chat.
+export const LONG_TEXT = Array.from({ length: 520 }, (_, i) => `第 ${i + 1} 行：这是功能自测用的长消息，用来演示「显示全部 · N 字」折叠和「收起」。`).join('\n');
 
 /** Bottom step label. Rendered by the root view AND inside every Modal (Sheet, Menu, pickers), since
  * an Android Modal draws over the root. */

@@ -1,7 +1,9 @@
 // Inline cards like the DS Bot web UI: question (ask_user), view (show_view), approval.
 // Labels follow the web UI's zh dictionary.
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, Switch, Text, TextInput, ToastAndroid, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { SvgChart, chartCsv } from './ChartSvg';
 import { asText, choiceValue, inputDefault, resolve, viewInputs, viewScope } from '../vendor/deepview/views';
 import type { Approval, Bot, QOption, Question, SecretRequest, ViewCard } from '../api';
 import { Avatar } from './Avatar';
@@ -211,32 +213,36 @@ function Table({ theme, head, rows, num, rowHead }: { theme: Theme; head: string
     <View style={{ flexGrow: 1 }}><View style={{ flexDirection: 'row', borderBottomWidth: 0.5, borderBottomColor: theme.fillBorder }}>{head.map((s, j) => cell(s, j, true))}</View>
       {rows.map((r, i) => <View key={i} style={{ flexDirection: 'row', borderTopWidth: i ? 0.5 : 0, borderTopColor: theme.sep }}>{r.map((s, j) => cell(s, j, !!rowHead && j === 0))}</View>)}</View></ScrollView>;
 }
-// chart.js draws SVG; the phone draws the same data as bars, and the table chart.js offers
-// in its ⋯ menu (以表格查看) one tap away.
+// chart.js ported to react-native-svg (ChartSvg); the ⋯ menu's 以表格查看 and 复制数据 sit
+// in the head, 下载图片 is web-only.
 function Chart({ n, c }: { n: any; c: Ctx }) {
   const { theme, lookup } = c;
   const [asTable, setAsTable] = useState(false);
+  const [hidden, setHidden] = useState<number[]>([]);
+  const [width, setWidth] = useState(0);
+  const [menu, setMenu] = useState(false);
   const categories = (Array.isArray(n.categories) ? n.categories : []).map(asText);
   const series = (Array.isArray(n.series) ? n.series : []).map((s: any, i: number) => ({ name: typeof s?.name === 'string' ? s.name : '', color: PALETTE[i % PALETTE.length],
     values: categories.map((_: any, at: number) => { const v = Number(resolve(Array.isArray(s?.values) ? s.values[at] : undefined, lookup, 0)); return Number.isFinite(v) ? v : 0; }) }));
   const unit = typeof n.unit === 'string' ? n.unit : '';
-  const donut = n.kind === 'donut';
-  const all = series.flatMap((s: any) => (donut ? [] : s.values)).map(Math.abs);
-  const total = donut ? (series[0]?.values ?? []).reduce((a: number, v: number) => a + Math.max(0, v), 0) : 0;
-  const max = Math.max(1e-9, ...all);
+  const data = { kind: typeof n.kind === 'string' ? n.kind : 'bar', categories, series, unit };
+  const shown = series.map((_: any, i: number) => !hidden.includes(i));
+  const toggle = (i: number) => { if (hidden.includes(i)) setHidden(hidden.filter((x) => x !== i)); else if (shown.filter(Boolean).length > 1) setHidden([...hidden, i]); };
   const heads = series.map((s: any, i: number) => s.name || (series.length === 1 ? unit || '值' : `系列 ${i + 1}`));
-  return <View style={{ gap: 8 }}>
+  const caption = typeof n.caption === 'string' && n.caption !== '' ? n.caption : '';
+  const copy = () => { setMenu(false); Clipboard.setStringAsync(chartCsv(data)).then(() => ToastAndroid.show('已复制', ToastAndroid.SHORT)); };
+  return <View style={{ gap: 8 }} onLayout={(e) => setWidth(Math.round(e.nativeEvent.layout.width))}>
     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-      <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>{n.title ? <Text style={{ color: theme.text, fontSize: 13, fontWeight: '500' }}>{n.title}</Text> : null}
-        {series.length > 1 && !asTable ? series.map((s: any, i: number) => <Text key={i} style={{ color: theme.sub, fontSize: 12 }}><Text style={{ color: s.color }}>● </Text>{heads[i]}</Text>) : null}</View>
-      <Pressable onPress={() => setAsTable((v) => !v)} hitSlop={8}><Text style={{ color: theme.sub, fontSize: 12 }}>{asTable ? '以图表查看' : '以表格查看'}</Text></Pressable>
+      <View style={{ flex: 1 }}>{n.title ? <Text style={{ color: theme.text, fontSize: 13, fontWeight: '500' }}>{n.title}</Text> : null}</View>
+      <Pressable onPress={() => setMenu((v) => !v)} hitSlop={8}><Text style={{ color: theme.sub, fontSize: 16 }}>⋯</Text></Pressable>
     </View>
+    {menu ? <View style={{ alignSelf: 'flex-end', backgroundColor: theme.card, borderWidth: 0.5, borderColor: theme.fillBorder, borderRadius: 10, paddingVertical: 4 }}>
+      {[[asTable ? '以图表查看' : '以表格查看', () => { setMenu(false); setAsTable((v) => !v); }], ['复制数据', copy], ['下载图片 · 移动端暂未实现', null]].map(([label, fn]: any) =>
+        <Pressable key={label} disabled={!fn} onPress={fn} style={{ paddingHorizontal: 14, paddingVertical: 8 }}><Text style={{ color: fn ? theme.text : theme.faint, fontSize: 13 }}>{label}</Text></Pressable>)}
+    </View> : null}
     {asTable ? <Table theme={theme} rowHead head={['', ...heads]} num={[false, ...heads.map(() => true)]} rows={categories.map((label: string, at: number) => [label, ...series.map((s: any) => chartUnit(s.values[at], series.length === 1 && !s.name ? '' : unit))])} />
-      : categories.map((label: string, at: number) => <View key={at} style={{ flexDirection: 'row', alignItems: 'center' }}>
-        <Text numberOfLines={1} style={{ width: 80, color: theme.sub, fontSize: 11 }}>{label}</Text>
-        <View style={{ flex: 1, gap: 2 }}>{(donut ? series.slice(0, 1) : series).map((s: any, i: number) => { const v = s.values[at]; const w = donut ? (total > 0 ? Math.max(0, v) / total : 0) : Math.abs(v) / max; return (
-          <View key={i} style={{ flexDirection: 'row', alignItems: 'center' }}><View style={{ width: `${Math.max(1, w * 80)}%`, height: 10, borderRadius: 3, backgroundColor: donut ? PALETTE[at % PALETTE.length] : s.color }} />
-            <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 4 }}>{donut ? `${Math.round(w * 100)}%` : chartUnit(v, unit)}</Text></View>); })}</View></View>)}
+      : width > 0 ? <SvgChart data={data} theme={theme} palette={PALETTE} width={width} shown={shown} onToggle={toggle} /> : null}
+    {caption ? <Text style={{ color: theme.sub, fontSize: 12 }}>{caption}</Text> : null}
   </View>;
 }
 function NumberLike({ n, c }: { n: any; c: Ctx }) {

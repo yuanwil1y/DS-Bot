@@ -20,6 +20,8 @@ import { Avatar, GroupAvatar } from '../components/Avatar';
 import { botState } from '../avatar/motion';
 import { needsCount } from '../api/cards';
 import { Markdown } from '../components/Markdown';
+import { FoldMarkdown, FoldPlain } from '../components/Fold';
+import { FOLD_AT, FOLD_HUGE, stripLongNote } from '../api/fold';
 import { Boundary } from '../errors';
 import { leaveVisit, loadSeen, unreadOf, type Visit } from '../visits';
 import { AnsweredView, ShownView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
@@ -281,7 +283,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 {!item.pending && !item.failed && item.text ? <CopyAction theme={theme} text={item.text} /> : null}
                 <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ marginLeft: 6, flexShrink: 1, maxWidth: col ? userMax(col) : '70%', opacity: item.pending && !item.failed ? 0.65 : 1 }}>
                   <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
-                    <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{item.text}</Text>
+                    <FoldPlain theme={theme} text={item.text} ink={theme.userText} render={(x) => <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{x}</Text>} />
                   </View>
                   {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
                 </Pressable>
@@ -297,7 +299,12 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const lead = !!room; // cells.js: group rows carry the speaker's avatar (data-lead)
             const name = item.name ?? speaker?.name ?? 'Bot';
             const when = item.time ? new Date(item.time).toTimeString().slice(0, 5) : '';
-            const md = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
+            // cells.js: a Bot's reply in its own chat folds past FOLD_HUGE, a group post past FOLD_AT;
+            // a long post that went as a file shows its start and reads the rest with file-text.
+            const wh = item.data?.whole;
+            const md = <FoldMarkdown theme={theme} text={room ? stripLongNote(item.text) : item.text} streaming={item.streaming} limit={room ? FOLD_AT : FOLD_HUGE}
+              whole={wh ? { length: wh.length, load: () => client!.fileText(wh.file) } : undefined}
+              render={(x) => <Markdown text={x + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />} />;
             const think = look.thinking && item.data?.reasoning ? <View style={{ marginBottom: 12 }}><ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /></View> : null;
             const body = md;
             const mkey = `${sessionId}:${item.key}`;

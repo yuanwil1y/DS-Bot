@@ -71,3 +71,12 @@
 - 消息「下载」：0.9.5 已做成分享 .md 文件。
 - earlier：网页用它往前翻历史，app 用 chat/room-chat 的 cursor 翻页，效果等价。
 - 群里的长消息「显示全文」（file-text）、Bot 间对话记录（exchange/exchange-text）、已保留的私密 Bot（private-release）：app 都没做，接口都有。
+
+## 10-31 21:30 0.9.6 功能对齐第一批
+- 占位标注：模型、切换经典 Agent 模式改标「移动端暂未实现」；连接器、能力、浏览器、密钥、群用量改标「移动端尚未开发」；反馈和关于已做成页面。
+- 关于页：对照 web about 页（版本、手机应用版本、Star 数、检查更新、更新说明、源代码、发布说明、报告问题）。手机上不能安装更新，所以「更新」按钮标「移动端暂未实现」。
+- 长消息：对照 fold.js（FOLD_AT 1500 字/25 行，私聊 Bot 回复用 FOLD_HUGE 20000，见 cells.js:269）；群消息带 `whole` 时用 file-text 取全文。
+- 私密 Bot：对照 settings.js:203，「删除后仍受保护」列表，解除保护调用 private-release。
+- 头像：state 改用 `avatars:'ref'`，再用 avatar 按编号取图，在客户端缓存。
+- 反馈/诊断：对照 web 反馈页，用 diagnostics、diagnostics-log、diagnostics-clear；GitHub issue 链接长度限制和网页一致。
+- memory-edit：网页没有编辑记忆的界面，不做。

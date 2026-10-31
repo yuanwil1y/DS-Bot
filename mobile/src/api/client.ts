@@ -1,4 +1,5 @@
 import type { AuthStrategy, Connection } from './auth';
+import { APP_VERSION } from '../version';
 import type { ApiResult, BotState, ChatPage, Hello, Notice } from './types';
 
 export class ApiCallError extends Error {
@@ -12,7 +13,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.9.3', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: APP_VERSION, platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;
@@ -51,7 +52,33 @@ export class BotClient {
     return body.value;
   }
 
-  state() { return this.call<BotState>('state'); }
+  // Photos by reference (host mobile.js slimAvatars + `avatar`): state carries a 16-hex
+  // imageRef per photo; each image is read once and kept here, so a state refresh does not
+  // send every Bot's photo again.
+  avatarCache = new Map<string, string>();
+  async state() {
+    const st = await this.call<BotState>('state', { avatars: 'ref' });
+    const bots: any[] = (st as any)?.bots ?? [];
+    await Promise.all(bots.map(async (b) => {
+      const ref = b?.avatar?.imageRef;
+      if (typeof ref !== 'string') return;
+      if (!this.avatarCache.has(ref)) {
+        const r = await this.avatar(b.id).catch(() => null);
+        if (r?.ref && typeof r.image === 'string') this.avatarCache.set(r.ref, r.image);
+      }
+      const image = this.avatarCache.get(ref);
+      if (image) b.avatar = { ...b.avatar, image };
+    }));
+    return st;
+  }
+  avatar(botId: string) { return this.call<{ botId: string; ref: string | null; image: string | null }>('avatar', { botId }); }
+  fileText(file: unknown) { return this.call<{ text: string; whole: boolean }>('file-text', { file }); }
+  repoStars() { return this.call<any>('repo-stars', {}); }
+  updateCheck(fresh = false) { return this.call<any>('update-check', { fresh }); }
+  diagnostics(payload: object) { return this.call<any>('diagnostics', payload); }
+  diagnosticsLog() { return this.call<string>('diagnostics-log', {}); }
+  diagnosticsClear() { return this.call<boolean>('diagnostics-clear', {}); }
+  privateRelease(id: string) { return this.call<BotState>('private-release', { id }); }
   chat(botId: string, cursor?: string) { return this.call<ChatPage>('chat', cursor ? { botId, cursor } : { botId }); }
   roomChat(roomId: string, cursor?: string) { return this.call<{ roomId: string; items: any[]; cursor: string | null; running?: boolean; speaking?: unknown }>('room-chat', cursor ? { roomId, cursor } : { roomId }); }
   usage(botId: string) { return this.call<any>('usage-summary', { botId, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }

@@ -7,14 +7,16 @@ import { Group, Row, Sheet } from '../components/ui';
 import { AppearanceGroup, MotionGroup } from '../components/Appearance';
 import { FolderField } from '../components/Pickers';
 import { View } from 'react-native';
-import { NA, NA_MOBILE } from '../components/Menu';
+import { NA_MOBILE, NA_TODO } from '../components/Menu';
+import { AboutPage, FeedbackPage, KeptPrivateSection } from './AboutFeedback';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
 import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
-export const APP_VERSION = '0.9.3';
+import { APP_VERSION } from '../version';
+export { APP_VERSION };
 
 export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void }) {
   const { client, status, state, disconnect, refresh } = useStore();
@@ -30,6 +32,8 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   const setMain = (p: Record<string, unknown>) => client!.call('set-main', p).then(refresh, (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT));
   const openSettings = (t: ChatTarget) => { onClose(); onOpenSettings?.(t); };
   const prefs = usePrefs();
+  const [page, setPage] = useState<null | 'about' | 'feedback'>(null);
+  useEffect(() => { if (!visible) setPage(null); }, [visible]);
   const [lastErr, setLastErr] = useState<LastError | null>(null);
   useEffect(() => { if (visible) loadLastError().then(setLastErr); }, [visible]);
   const host = client?.conn.baseUrl.replace(/^https?:\/\//, '') ?? '';
@@ -37,6 +41,10 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   const label = (v: string) => (v === 'auto' ? t.auto : v === 'zh' ? '简体中文' : v === 'en' ? 'English' : v === 'dark' ? t.dark : t.light);
   return (
     <Sheet theme={theme} visible={visible} onClose={onClose}>
+      {page ? <>
+        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={page === 'about' ? '‹ 关于 DS Bot' : '‹ 反馈'} chevron={false} onPress={() => setPage(null)} /></Group>
+        {page === 'about' ? <AboutPage theme={theme} onFeedback={() => setPage('feedback')} /> : <FeedbackPage theme={theme} />}
+      </> : <>
       <Group theme={theme} style={{ marginTop: 4 }}>
         <Row theme={theme} label={t.appName} caption={host} value={status === 'open' ? t.online : t.offline} />
         <Row theme={theme} label={t.plugin} value={client?.hello?.plugin?.version ?? '—'} />
@@ -60,12 +68,16 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       <Group theme={theme} title={`Bot · ${bots.length}`}>
         {bots.map((b) => <Row key={b.id} theme={theme} label={b.name} value={[b.role, mainIds.includes(b.id) ? '主 Bot' : '', b.hidden && !mainIds.includes(b.id) ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'bot', id: b.id })} />)}
       </Group>
+      <KeptPrivateSection theme={theme} />
       <MotionGroup theme={theme} />
       <Group theme={theme} title={`群聊 · ${rooms.length}`}>
         {rooms.length === 0 ? <Row theme={theme} label="还没有群聊。" caption="在群聊里，几个 Bot 和你一起做一件事。" /> : rooms.map((r) => <Row key={r.id} theme={theme} label={r.name} value={[`${(r.members ?? []).length} 位成员`, r.admin && byId[r.admin] ? `★ ${byId[r.admin].name}` : '', r.hidden ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'room', id: r.id })} />)}
       </Group>
       <Group theme={theme} title="设置页面">
-        {['模型', '连接器', '能力', '浏览器', '密钥', '反馈', '关于 DS Bot'].map((p) => <Row key={p} theme={theme} label={p} value={NA} chevron={false} />)}
+        <Row theme={theme} label="模型" value={NA_MOBILE} chevron={false} />
+        {['连接器', '能力', '浏览器', '密钥'].map((p) => <Row key={p} theme={theme} label={p} value={NA_TODO} chevron={false} />)}
+        <Row theme={theme} label="反馈" onPress={() => setPage('feedback')} />
+        <Row theme={theme} label="关于 DS Bot" onPress={() => setPage('about')} />
       </Group>
       <AppearanceGroup theme={theme} />
       <Group theme={theme} title="模式">
@@ -84,6 +96,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       <Group theme={theme} title="测试">
         <Row theme={theme} label="外观自动测试（测试用）" caption="自动切换各外观组合，便于录屏对照网页；仅本机临时生效，结束或停止后恢复" onPress={() => { onClose(); startAppearanceTest(); }} />
       </Group>
+      </>}
     </Sheet>
   );
 }

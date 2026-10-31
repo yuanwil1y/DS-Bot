@@ -75,7 +75,7 @@ export function rows(m: ChatModel): ChatRow[] {
 }
 
 // ---- Group chat (room-chat pages; items keyed by id, live rows replaced in place).
-export type RoomItem = { id: string; kind: 'user' | 'bot' | 'event' | string; text?: string; time?: number; botId?: string; name?: string; color?: string; event?: string; live?: boolean; code?: string; names?: string[]; count?: number };
+export type RoomItem = { id: string; kind: 'user' | 'bot' | 'event' | string; text?: string; time?: number; botId?: string; name?: string; color?: string; event?: string; live?: boolean; code?: string; names?: string[]; count?: number; whole?: { length: number; file: unknown } };
 export type RoomModel = { items: RoomItem[]; pending: Pending[]; running?: boolean; speaking?: string[] };
 export const emptyRoom = (): RoomModel => ({ items: [], pending: [] });
 /** Server sends `speaking` as one botId string (room-chat, room-progress), sometimes an array or nothing. */
@@ -101,7 +101,7 @@ export function withRoomPage(m: RoomModel, page: { items: RoomItem[]; running?: 
 export function roomRows(m: RoomModel): ChatRow[] {
   const out: ChatRow[] = m.items.filter((i) => i.kind === 'event' || i.text).map((i) => (i.kind === 'event'
     ? { key: i.id, kind: 'event', text: eventLabel(i), time: i.time, name: i.name, botId: i.botId, data: { event: i.event } }
-    : { key: i.id, kind: i.kind, text: i.text ?? '', time: i.time, name: i.name, botId: i.botId, streaming: i.live }));
+    : { key: i.id, kind: i.kind, text: i.text ?? '', time: i.time, name: i.name, botId: i.botId, streaming: i.live, ...(i.whole ? { data: { whole: i.whole } } : {}) }));
   for (const p of m.pending) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   return out;
 }

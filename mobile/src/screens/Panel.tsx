@@ -10,7 +10,7 @@ import { botState } from '../avatar/motion';
 import { needsCount } from '../api/cards';
 import { Icon, PillButton, RoundButton } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
-import { Menu, NA, NA_MOBILE } from '../components/Menu';
+import { Menu, NA, NA_MOBILE, NA_TODO } from '../components/Menu';
 import { FolderField, ModelField, modelLine, PermissionPicker, presetName } from '../components/Pickers';
 import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';
@@ -280,7 +280,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                 <Label theme={theme}>用量</Label>
                 <View style={{ flexDirection: 'row' }}>
                   <Text style={{ flex: 1, color: theme.text }}>{name}</Text>
-                  <Text style={{ color: usage ? theme.text : theme.faint }}>{usage || NA}</Text>
+                  <Text style={{ color: usage ? theme.text : theme.faint }}>{usage || (room ? NA_TODO : NA)}</Text>
                 </View>
               </>
             ) : null}

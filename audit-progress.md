@@ -39,3 +39,4 @@
 - 2026-10-31 20:26 0.9.4: user bubble width = dsh .userStack (0.702, independent of width setting), always-visible copy action left of sent user bubbles (dsh MessageIconActions, 1s check), web flow gaps (4/16/28, thinking +12); versionCode 21; prerelease mobile-mvp-0.9.4
 - 流式失败排查：根因 run-local.sh PLUGIN=/tmp/rb2/ds-bot 路径失效，mock 未启动；补启 mock 后流式通过（0.9.3/0.9.4）
 - 2026-10-31 21:10 按功能复核（只做调查）：更正标注——连接器/能力/密钥/反馈/关于/浏览器/群用量都有接口，属于 app 未做；模型页和经典 Agent 模式应标「移动端暂未实现」；39 个未用接口已逐个对应到功能（详见 web-parity-audit.md 末尾）
+- 10-31 21:30 0.9.6：功能对齐第一批（1–5、7）完成，第 6 项按网页没有界面不做；45 项测试通过；预发布 mobile-mvp-0.9.6。

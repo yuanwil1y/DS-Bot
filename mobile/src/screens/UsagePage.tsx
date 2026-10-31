@@ -1,7 +1,6 @@
 // Settings → 用量: a port of ds-bot 0.2.4 usage-page.js (UsagePage) over the `usage`
 // endpoint and usage-data.js. Hover becomes tap; the 53-week heat map scrolls sideways.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Avatar, GroupAvatar, Mark } from '../components/Avatar';
@@ -28,8 +27,6 @@ export function UsagePage({ theme, focusId, onFocus }: { theme: Theme; focusId: 
   const [topH, setTopH] = useState(34);
   const [by, setBy] = useState<'bot' | 'model'>('bot');
   const focus = focusOf(focusId);
-  // TEST-ONLY self-test action.
-  useFT('usage.range', (id: string) => { if (id === 'custom') setPicking((o) => !o); else { setRangeId(id); setPicking(false); } });
   useEffect(() => {
     let stopped = false; let timer: any;
     const load = async () => {
@@ -346,7 +343,7 @@ function SpanPicker({ theme, top, span, today, first, active, onPick }: { theme:
     const nav = side === 'left'
       ? <Pressable accessibilityLabel="上个月" disabled={start <= oldest} onPress={() => setRight(addMonths(right, -1))} hitSlop={8} style={{ position: 'absolute', left: 0, top: 0, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', opacity: start <= oldest ? 0.3 : 1 }}><Icon name="back" color={theme.sub} /></Pressable>
       : <Pressable accessibilityLabel="下个月" disabled={start >= thisMonth} onPress={() => setRight(addMonths(right, 1))} hitSlop={8} style={{ position: 'absolute', right: 0, top: 0, width: 28, height: 28, alignItems: 'center', justifyContent: 'center', opacity: start >= thisMonth ? 0.3 : 1 }}><Icon name="chevron" color={theme.sub} /></Pressable>;
-    return <View key={start} style={{ width: '100%', maxWidth: 252 }}>
+    return <View key={start} style={{ width: '100%' }}>
       <View style={{ height: 28, marginBottom: 4, alignItems: 'center', justifyContent: 'center' }}>{nav}<Text style={{ color: theme.text, fontSize: 13, lineHeight: 18, fontWeight: '600' }}>{yearMonth(start)}</Text></View>
       <View style={{ flexDirection: 'row' }}>{['一', '二', '三', '四', '五', '六', '日'].map((w) => <Text key={w} style={{ width: `${100 / 7}%`, height: 24, lineHeight: 24, textAlign: 'center', fontSize: 11, color: theme.faint }}>{w}</Text>)}</View>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>{cells}</View>

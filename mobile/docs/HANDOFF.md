@@ -18,7 +18,7 @@
 - **用户确认过、故意保留的差异（不要再当成没对齐去改）**：
   - 用量页顶部汇总：网页是两行两列，app 是一个大数字加下面三个小数字。用户 2026-10-31 看过对比后说「那样挺好」，保留 app 现在的排法。
   - 首页按 Grok 布局，账号菜单从左上头像向下弹（网页是从侧栏底部向上弹）。
-- **现有测试**：app 内只有一个「短自测（测试用）」（账户设置 → 测试，约 1 分钟）；仓库里是 test/*.test.mts（用 mock DSH 跑）。**短自测在正式发布前必须删除**（src/selfTest.tsx、各 useFT 调用、设置行、App.tsx SelfTestRunner、test/batch0915）。
+- **现有测试**：app 内只有一个「短自测（测试用）」（账户设置 → 测试，约 1 分钟）；仓库里是 test/*.test.mts（用 mock DSH 跑）。**短自测在正式发布前必须删除**（src/selfTest.tsx、各 useFT 调用、设置行、App.tsx SelfTestRunner、test/batch0916）。
 - **用户要求慢工细活**：每做完一项先汇报进度；开始新的工作前必须等用户明确说「做」。汇报用中文，要简短。
 
 ## 2. 技术栈与目录结构
@@ -180,7 +180,7 @@
 ## 0.9.13 (vc33) — 只留一个短自测
 - 删除「外观自测」「功能自测」及全部相关代码（featureTest.tsx、appearanceTest.tsx、demo.json、各页动作注册、App.tsx 两个 runner、batch0913/0914 测试）。
 - 新增「短自测（测试用）」约 1 分钟，只测 0.9.12 未录到的 7 项：关于秒开、用量 12 个月 x 轴、自定义范围选择器开/关、新建计划键盘弹起时「什么时候」可见、能力临时技能 selftest-temp 双击删除、密钥 SELFTEST_TEMP 增/展开/删、超长消息折叠/显示全部/收起。每状态约 2.5 秒，失败跳过，finally 清理临时数据，结束恢复原页面。
-- 测试：test/batch0915.test.mts。正式发布前删除短自测。
+- 测试：test/batch0916.test.mts。正式发布前删除短自测。
 
 ## 0.9.14 (vc34) — 设置页按钮/图标对齐网页 0.2.4
 - `ui.tsx` 新增网页同款 `Soft`（.bt-soft 36/14/0 16；sm 28/12/0 12；`send`=.bt-send；`icon`=.bt-with-icon）、`Actions`（.bt-actions 左对齐 gap 8；`end`=右对齐）、`Select`（.bt-select 34/r8/1px 边框 + 下箭头）。高度都是 minHeight，粗体系统字体会撑高不截断。`Icon name="chevron-down"` = chevron 旋转 90°。关于页保留自己的 Soft，外观不变。
@@ -196,3 +196,11 @@
 - 替换：添加 DSH Agent ⌘→fish；面板 ◫→side、▤→memory；定时任务 🕘→clock；设置页面各行补网页 PAGE_ICONS（模型 sliders/连接器·浏览器 connector/能力 plug/用量 gauge/密钥 key/反馈 feedback/关于 info）；学习卡 ✏️/🧠→pencil/memory；记忆已更新 🧠→memory；密钥卡 🔑→key、🔒→lock；callout ⓘ→info（网页源码里找不到 callout 图标，近似）。
 - 间距：`Group` 新增 `inset`（标题左缩进，默认 22，关于/用量不变）；连接器/能力/浏览器/密钥 用 inset 4，标题·按钮·卡片同一左边；能力页 标题→按钮 10、按钮→卡片 12。
 - 截图：docs/appearance-shots/verify-0915/（web-*.png 为网页参照）。
+
+## 0.9.16 (vc36) — 真机反馈 4 处 + 移除 App 内自测
+- **App 内已没有任何测试代码**：删掉 src/selfTest.tsx、设置里「测试 / 短自测（测试用）」、App.tsx SelfTestRunner、各页 useFT 动作注册、步骤浮层 FTLabel、LONG_TEXT 长消息演示。之后验证靠用户真机截图（+ 本地 rnw 渲染、test/*.test.mts）。test/batch0916 守住「不再出现测试代码」。
+- 用量自定义日历：去掉月份 maxWidth 252，7 列铺满弹层，上/下月箭头在两侧边缘。
+- 密钥图标：网页 KeyIcon 的圆用 `a3.5…0 .01z` 画，偏左且在安卓上显得小；icons.extra.ts 重画为同形状居中（circle 6.5,10 r3.5 + 柄 10→17.5）。
+- TextInput 不再用固定 height：自定义强调色、密钥输入、新建会话搜索改 minHeight + paddingVertical + includeFontPadding:false + textAlignVertical:center（系统粗体/大字号不再被吞）。
+- 位置 → 总工作区：文件夹选择框和行合成一个 Group 子项（不再有分隔线），左右与行文字对齐 18；Pickers 的框底色改 theme.fill，卡片里不再「卡片套卡片」。
+- 截图：docs/appearance-shots/verify-0916/。

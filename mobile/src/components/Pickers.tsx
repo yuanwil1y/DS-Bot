@@ -11,7 +11,7 @@ const say = (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.
 
 export function Trigger({ theme, title, sub, onPress, danger }: { theme: Theme; title: string; sub?: string; onPress(): void; danger?: boolean }) {
   return (
-    <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 14, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 14, paddingVertical: 12 }}>
+    <Pressable onPress={onPress} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.fill, borderRadius: 14, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 14, paddingVertical: 12 }}>
       <View style={{ flex: 1 }}>
         <Text style={{ color: danger ? theme.danger : theme.text, fontSize: 16, fontWeight: '600' }} numberOfLines={1}>{title}</Text>
         {sub ? <Text style={{ color: theme.sub, fontSize: 12, marginTop: 2 }} numberOfLines={1}>{sub}</Text> : null}

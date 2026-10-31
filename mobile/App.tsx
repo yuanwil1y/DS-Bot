@@ -16,7 +16,6 @@ import { SchedulesScreen } from './src/screens/Schedules';
 import { AvatarEditorScreen } from './src/screens/AvatarEditor';
 import { SideChatScreen } from './src/screens/SideChat';
 import { VoiceModeScreen } from './src/screens/VoiceMode';
-import { FTLabel, act, ftLog, runSelfTest, stSet, stopSelfTest, useSelfTest } from './src/selfTest'; // TEST-ONLY
 import { backOne, type NavRoute } from './src/nav';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
@@ -67,8 +66,6 @@ function Root() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       {body}
-      {/* TEST-ONLY: short self-test runner + label; remove before a formal release. */}
-      <SelfTestRunner stack={stack} setStack={setStack} settingsOpen={settings} setSettings={(on) => { setSettingsStart(undefined); setSettings(on); }} />
       {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t, fromSheet: true })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
     </SafeAreaView>
@@ -84,38 +81,3 @@ export default function App() {
   return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><TeamPrefsProvider><View style={{ flex: 1 }}><Keyed /></View></TeamPrefsProvider></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
 }
 
-// TEST-ONLY short self-test (see src/selfTest.tsx). Remove before a formal release.
-function SelfTestRunner({ stack, setStack, settingsOpen, setSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; settingsOpen: boolean; setSettings(on: boolean): void }) {
-  const test = useSelfTest();
-  const { client, state, refresh } = useStore();
-  const latest = useRef(state); latest.current = state;
-  useEffect(() => {
-    if (!test.running || !client) return;
-    const saved = stack;
-    const hadSettings = settingsOpen;
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    setSettings(false);
-    (async () => {
-      const st = latest.current;
-      const mainId = (st as any)?.mainBotId ?? st?.bots?.[0]?.id ?? '';
-      try {
-        await wait(800);
-        await runSelfTest({
-          client, mainId, refresh: async () => { await refresh(); await wait(300); },
-          has: (kind, name) => (((latest.current as any)?.[kind === 'capability' ? 'capabilities' : 'secrets'] ?? []) as any[]).some((x) => x.name === name),
-          setStack: (r) => setStack(r as Route[]),
-          openSettings: async (page) => { setSettings(true); await wait(700); await act('settings.page', page); },
-          closeSettings: () => setSettings(false),
-        });
-        stSet({ label: '测试完成，正在恢复…' });
-      } catch (e: any) {
-        if (String(e?.message) !== 'stopped') ftLog(`中止：${e?.message ?? e}`);
-      }
-      stSet({ long: false }); setStack(saved); setSettings(hadSettings);
-      await wait(1500);
-      stopSelfTest();
-    })();
-    return undefined;
-  }, [test.running]);
-  return test.running ? <FTLabel onStop={stopSelfTest} /> : null;
-}

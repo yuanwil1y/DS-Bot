@@ -31,7 +31,6 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 import { useTeamPrefs } from '../teamPrefs';
-import { LONG_TEXT, ftLog, useFT, useSelfTest } from '../selfTest'; // TEST-ONLY
 import { MessageTools, ReactionChips, toggleReaction, useReactions } from '../components/MessageTools';
 import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
@@ -144,12 +143,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const onErr = (e: any) => setErr(String(e?.message ?? e));
   const after = () => { refresh(); load(); };
   const mq = room ? mentionQuery(text) : null;
-  // TEST-ONLY (src/selfTest.tsx): a local long Bot reply appended to the Main Bot chat, never sent.
-  const stLong = useSelfTest().long && !!bot && bot.id === ((state as any)?.mainBotId ?? state?.bots?.[0]?.id);
-  const longAt = useMemo(() => Date.now(), [stLong]);
-  const list = useMemo(() => (bot ? rows(stLong ? withHistory(model, [{ kind: 'bot', text: LONG_TEXT, time: longAt, seq: 9e9, turn: 9e9 } as any]) : model) : roomRows(rmodel)), [bot, model, rmodel, stLong, longAt]);
+  const list = useMemo(() => (bot ? rows(model) : roomRows(rmodel)), [bot, model, rmodel]);
   const data = useMemo(() => [...list].reverse(), [list]);
-  useFT('chat.long', () => { const i = data.findIndex((x) => x.text === LONG_TEXT); if (i >= 0) listRef.current?.scrollToIndex({ index: i, viewPosition: 0.5, animated: true }); else ftLog('跳过：没有长消息'); }); // TEST-ONLY
   async function share() {
     setMenu(false);
     const md = list.filter((r) => !r.pending).map((r) => `**${r.kind === 'user' ? t.you : r.name ?? bot?.name ?? ''}**\n\n${r.text}`).join('\n\n---\n\n');

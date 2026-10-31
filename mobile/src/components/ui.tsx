@@ -1,6 +1,5 @@
 // Grok-style primitives: round icon buttons, pills, grouped rounded rows, sheets.
 import React from 'react';
-import { FTLabel } from '../selfTest'; // TEST-ONLY
 import { BackHandler, Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
@@ -129,7 +128,6 @@ export function Sheet({ theme, visible, onClose, children, right, title, onBack,
           </View>
           <ScrollView ref={scroll} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 40 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
         </View>
-        <FTLabel />
       </View>
     </Modal>
   );

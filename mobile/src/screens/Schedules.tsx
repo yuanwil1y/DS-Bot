@@ -2,14 +2,13 @@
 // BotSchedules (Bot 设置里的「定时任务」), ScheduleSummary (详情面板那一行) and TaskForm.
 // The host has list / create / delete only, so there is no edit or pause here either.
 import React, { useEffect, useRef, useState } from 'react';
-import { useFT } from '../selfTest'; // TEST-ONLY
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
 import { NARROW, clockText, localText, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
 export { timingText };
 import { Avatar, GroupAvatar } from '../components/Avatar';
-import { Actions, Icon, PageHeader, PillButton, RoundButton, Select, Soft } from '../components/ui';
+import { Actions, Icon, PageHeader, Select, Soft } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -180,10 +179,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
   const { client, state } = useStore();
   const view = useSchedules(client);
   const [adding, setAdding] = useState(Boolean(start));
-  useFT('sched.add', (on: boolean) => setAdding(on)); // TEST-ONLY (form is cancelled, never created)
-  useFT('sched.available', () => !!view?.available); // TEST-ONLY
   const scroll = useRef<any>(null);
-  useFT('sched.end', () => scroll.current?.scrollToEnd({ animated: true })); // TEST-ONLY: keyboard stays up
   const bots = state?.bots ?? []; const rooms = state?.rooms ?? [];
   const groups = view?.available ? [
     ...bots.map((b) => ({ id: b.id, avatar: <Avatar bot={b} size={18} />, name: b.name, tasks: view.tasks.filter((t) => t.botId === b.id) })),

@@ -110,7 +110,7 @@ function AccentPicker({ theme, accent, onPick, disabled }: { theme: Theme; accen
             if (timer.current) clearTimeout(timer.current);
             if (isHex(v)) timer.current = setTimeout(() => { timer.current = null; onPick(v.toLowerCase()); }, 350);
           }}
-          style={{ color: theme.text, fontSize: 15, borderWidth: 1, borderColor: theme.border, borderRadius: 8, paddingHorizontal: 10, height: 36, minWidth: 110, fontFamily: 'monospace' }} />
+          style={{ color: theme.text, fontSize: 15, borderWidth: 1, borderColor: theme.border, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, minHeight: 40, minWidth: 120, includeFontPadding: false, textAlignVertical: 'center', fontFamily: 'monospace' }} />
       </View>
     </View>
   );

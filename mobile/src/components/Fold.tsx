@@ -1,5 +1,4 @@
 // fold.js useFold + the .bt-fold control (显示全部 · N 字 / 收起) under a message.
-import { useFT } from '../selfTest'; // TEST-ONLY
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { foldView, type Folded, type Limit, type Whole } from '../api/fold';
@@ -33,7 +32,6 @@ export function FoldControl({ theme, f, ink }: { theme: Theme; f: Folded & { tog
 /** A Bot's text, folded as cells.js Bubble does; `whole` reads a long group post via file-text. */
 export function FoldMarkdown({ theme, text, streaming, limit, whole, render }: { theme: Theme; text: string; streaming?: boolean; limit?: Limit; whole?: Whole; render(text: string): React.ReactNode }) {
   const f = useFold(text, { limit, whole, live: streaming });
-  useFT(f.more || f.less ? 'fold.toggle' : 'fold.none', () => f.toggle()); // TEST-ONLY
   return <>{render(f.shown)}<FoldControl theme={theme} f={f} /></>;
 }
 /** The user's text (user-message.js: plain, FOLD_AT). */

@@ -126,7 +126,7 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
           ) : null}
           {mode === 'group' && admin && picked.length < 1 ? <Text style={{ color: theme.sub, margin: 6, marginTop: 10 }}>{t.addOneMore}</Text> : null}
           <View style={{ backgroundColor: theme.card, borderRadius: 24, marginTop: 16, paddingHorizontal: 16 }}>
-            <TextInput value={q} onChangeText={setQ} placeholder={t.search} placeholderTextColor={theme.sub} style={{ color: theme.text, fontSize: 17, height: 48 }} />
+            <TextInput value={q} onChangeText={setQ} placeholder={t.search} placeholderTextColor={theme.sub} style={{ color: theme.text, fontSize: 17, minHeight: 48, paddingVertical: 8, includeFontPadding: false, textAlignVertical: "center" }} />
           </View>
           {mode === 'chat' && !readOnly ? (
             <Group theme={theme}>

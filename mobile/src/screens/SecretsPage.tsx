@@ -1,7 +1,6 @@
 // Settings → 密钥: a port of ds-bot 0.2.4 secret-card.js SecretsPage (SecretRow, ScopeEditor,
 // PurposeEditor, ValueEditor, AddSecret). Values go out in secret-set and never come back.
 import React, { useEffect, useState } from 'react';
-import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Pressable, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { Avatar } from '../components/Avatar';
 import { Group, Icon, Soft } from '../components/ui';
@@ -28,7 +27,6 @@ export function SecretsPage({ theme }: { theme: Theme }) {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const secrets: SecretView[] = (state as any)?.secrets ?? [];
-  useFT('secrets.expand', (name: string | null) => { if (name && !secrets.some((x) => x.name === name)) { ftLog(`跳过：没有密钥 ${name}`); return; } setOpen(name); }); // TEST-ONLY
   const run = (p: Promise<unknown>) => p.then(() => { refresh(); return true; }, (e: any) => { ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT); return false; });
   return <>
     <Text style={{ marginTop: 8, marginBottom: 4, paddingHorizontal: 4, fontSize: 12, lineHeight: 17, color: theme.sub }}>
@@ -48,7 +46,7 @@ export function SecretsPage({ theme }: { theme: Theme }) {
 function Input({ theme, value, onChange, placeholder, label, masked, upper, mono }: { theme: Theme; value: string; onChange(v: string): void; placeholder?: string; label?: string; masked?: boolean; upper?: boolean; mono?: boolean }) {
   return <TextInput value={value} onChangeText={(v) => onChange(upper ? v.toUpperCase() : v)} placeholder={placeholder} placeholderTextColor={theme.faint} accessibilityLabel={label ?? placeholder}
     secureTextEntry={masked} autoCapitalize={upper ? 'characters' : 'none'} autoCorrect={false} spellCheck={false} autoComplete="off"
-    style={{ flex: 1, height: 36, paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.border, color: theme.text, fontSize: 14, fontFamily: masked || mono ? MONO : undefined }} />;
+    style={{ flex: 1, minHeight: 40, paddingVertical: 6, includeFontPadding: false, textAlignVertical: "center", paddingHorizontal: 10, borderRadius: 10, borderWidth: 1, borderColor: theme.border, color: theme.text, fontSize: 14, fontFamily: masked || mono ? MONO : undefined }} />;
 }
 const Label = ({ theme, text }: { theme: Theme; text: string }) => <Text style={{ fontSize: 12, lineHeight: 16, fontWeight: '600', color: theme.sub }}>{text}</Text>;
 const Hint = ({ theme, text, flex }: { theme: Theme; text: string; flex?: boolean }) => <Text style={{ fontSize: 12, lineHeight: 16, color: theme.faint, ...(flex ? { flex: 1 } : {}) }}>{text}</Text>;

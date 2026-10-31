@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { Avatar } from '../components/Avatar';
 import { SvgXml } from 'react-native-svg';
-import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Group, Soft, Actions, Icon } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
@@ -142,7 +141,6 @@ export function CapabilitiesPage({ theme }: { theme: Theme }) {
   useEffect(() => { if (!confirming) return undefined; const t = setTimeout(() => setConfirming(''), 4000); return () => clearTimeout(t); }, [confirming]);
   const run = (f: () => Promise<unknown>) => void f().then(() => refresh()).catch(fail);
   const remove = (item: any) => { if (confirming !== item.name) { setConfirming(item.name); return; } setConfirming(''); run(() => client!.capabilityDelete(item.name)); };
-  useFT('cap.delete', (name: string) => { const it = items.find((i) => i.name === name); if (it) remove(it); else ftLog(`跳过：没有能力 ${name}`); }); // TEST-ONLY: the self-test's own temp skill only
   return (
     <>
       {/* capability-settings.js: h3 共享能力 → .bt-actions (left, no card) → form → .bt-set-card list */}

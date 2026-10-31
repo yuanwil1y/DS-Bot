@@ -18,7 +18,6 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-import { startSelfTest, useFT } from '../selfTest'; // TEST-ONLY
 import { APP_VERSION } from '../version';
 export { APP_VERSION };
 
@@ -39,7 +38,6 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
   const prefs = usePrefs();
   const [page, setPage] = useState<null | 'about' | 'feedback' | 'usage' | 'secrets' | 'connectors' | 'capabilities' | 'browser'>(null);
   const [usageFocus, setUsageFocus] = useState<string | null>(null);
-  useFT('settings.page', (p: typeof page) => setPage(p)); // TEST-ONLY
   useEffect(() => { if (page !== 'usage') setUsageFocus(null); }, [page]);
   // team-actions.js openConnectors(): the account menu opens settings straight on 连接器.
   useEffect(() => { setPage(visible ? startPage ?? null : null); }, [visible, startPage]);
@@ -110,17 +108,13 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
         {lastErr ? <Text selectable style={{ color: '#ff6b6b', fontSize: 12, padding: 12 }}>{`[${lastErr.where}] ${lastErr.message}\n${lastErr.stack ?? ''}`.slice(0, 1200)}{'\n（点上面一行清除）'}</Text> : null}
       </Group>
       <Text style={{ color: theme.faint, textAlign: 'center', marginTop: 24 }}>{t.appVersion} {APP_VERSION}</Text>
-      {/* TEST-ONLY: short self-test for screen recording; remove before a formal release. */}
-      <Group theme={theme} title="测试">
-        <Row theme={theme} label="短自测（测试用）" caption="约 1 分钟：关于、用量横轴与日历、能力删除、密钥展开、新建任务键盘、长消息折叠；临时技能/密钥用完即删，结束后恢复" onPress={() => { onClose(); startSelfTest(); }} />
-      </Group>
       </>}
     </Sheet>
   );
 }
 
 // settings.js LocationsSection: the team workspace (数据位置 is the desktop app's only).
-function Locations({ theme }: { theme: Theme }) {
+export function Locations({ theme }: { theme: Theme }) {
   const { client } = useStore();
   const [team, setTeam] = useState<string | null>(null);
   const [moving, setMoving] = useState(false);
@@ -131,7 +125,10 @@ function Locations({ theme }: { theme: Theme }) {
     return client!.call<any>('team-workspace', { path }).then((a) => setTeam(a?.team ?? path)).finally(() => setMoving(false));
   };
   return <Group theme={theme} title="位置">
-    <Row theme={theme} label="总工作区" caption="没有单独设置文件夹的 Bot 在这里工作。" chevron={false} />
-    {team === null ? null : <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}><FolderField theme={theme} team value={team} disabled={moving} onPick={pick} /></View>}
+    {/* One item: the folder field belongs to the 总工作区 row (no divider between them). */}
+    <View>
+      <Row theme={theme} label="总工作区" caption="没有单独设置文件夹的 Bot 在这里工作。" chevron={false} />
+      {team === null ? null : <View style={{ paddingHorizontal: 18, paddingBottom: 16, marginTop: -4 }}><FolderField theme={theme} team value={team} disabled={moving} onPick={pick} /></View>}
+    </View>
   </Group>;
 }

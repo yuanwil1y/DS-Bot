@@ -18,6 +18,27 @@ export async function loadLastError(): Promise<LastError | null> {
 }
 export function clearLastError() { last = null; SecureStore.deleteItemAsync(KEY).catch(() => {}); }
 
+let fatalErr: unknown = null;
+const fatalSubs = new Set<() => void>();
+export function useFatal() {
+  return React.useSyncExternalStore((f) => { fatalSubs.add(f); return () => { fatalSubs.delete(f); }; }, () => fatalErr);
+}
+export function FatalScreen({ error, where = '启动' }: { error: unknown; where?: string }) {
+  const e = error as any;
+  return (
+    <View style={{ flex: 1, backgroundColor: '#000', justifyContent: 'center', padding: 24 }}>
+      <Text style={{ color: '#fff', fontSize: 18, fontWeight: '600', marginBottom: 10 }}>DS Bot {where}出错</Text>
+      <Text selectable style={{ color: '#ff6b6b', fontSize: 14, marginBottom: 8 }}>{String(e?.message ?? e)}</Text>
+      <Text selectable style={{ color: '#999', fontSize: 11 }}>{String(e?.stack ?? '').slice(0, 1500)}</Text>
+    </View>
+  );
+}
+/** Root wrapper: a fatal JS error anywhere shows FatalScreen instead of closing the app. */
+export function FatalGate({ children }: { children: React.ReactNode }) {
+  const err = useFatal();
+  return err ? <FatalScreen error={err} where="运行" /> : <>{children}</>;
+}
+
 let installed = false;
 export function installGlobalHandler() {
   const EU = (globalThis as any).ErrorUtils;
@@ -26,9 +47,10 @@ export function installGlobalHandler() {
   const prev = EU.getGlobalHandler?.();
   EU.setGlobalHandler((e: unknown, fatal?: boolean) => {
     recordError(fatal ? 'fatal' : 'js', e);
-    // Fatal errors still go to RN's default handler (it would close the app); boundaries catch render errors first.
+    // Fatal errors no longer reach RN's default handler (which closes the app in release):
+    // the root shows them on FatalScreen instead.
     if (!fatal) return;
-    prev?.(e, fatal);
+    if (fatalSubs.size) { fatalErr = e; fatalSubs.forEach((f) => f()); } else prev?.(e, fatal);
   });
 }
 

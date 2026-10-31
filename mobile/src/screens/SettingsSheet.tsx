@@ -21,6 +21,7 @@ import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
 import { APP_VERSION } from '../version';
 export { APP_VERSION };
 
+const TITLES = { about: '关于 DS Bot', feedback: '反馈', usage: '用量', secrets: '密钥', connectors: '连接器', capabilities: '能力', browser: '浏览器' } as const;
 export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPage }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void; startPage?: 'connectors' }) {
   const { client, status, state, disconnect, refresh } = useStore();
   // settings.js MainBotsSection / BotsPage / GroupsPage.
@@ -45,10 +46,10 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
   const host = client?.conn.baseUrl.replace(/^https?:\/\//, '') ?? '';
   const cycle = <T extends string>(v: T, all: T[]) => all[(all.indexOf(v) + 1) % all.length];
   const label = (v: string) => (v === 'auto' ? t.auto : v === 'zh' ? '简体中文' : v === 'en' ? 'English' : v === 'dark' ? t.dark : t.light);
+  const back = () => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null));
   return (
-    <Sheet theme={theme} visible={visible} onClose={onClose}>
+    <Sheet theme={theme} visible={visible} onClose={onClose} title={page ? TITLES[page] : undefined} onBack={page ? back : undefined} backLabel={page === 'usage' && usageFocus ? '全部用量' : '返回设置'}>
       {page ? <>
-        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={`‹ ${({ about: '关于 DS Bot', feedback: '反馈', usage: '用量', secrets: '密钥', connectors: '连接器', capabilities: '能力', browser: '浏览器' } as const)[page]}`} chevron={false} onPress={() => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null))} /></Group>
         {page === 'about' ? <AboutPage theme={theme} onFeedback={() => setPage('feedback')} />
           : page === 'usage' ? <UsagePage theme={theme} focusId={usageFocus} onFocus={setUsageFocus} />
           : page === 'secrets' ? <SecretsPage theme={theme} />

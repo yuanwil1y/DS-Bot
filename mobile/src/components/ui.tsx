@@ -1,6 +1,6 @@
 // Grok-style primitives: round icon buttons, pills, grouped rounded rows, sheets.
 import React from 'react';
-import { Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
+import { BackHandler, Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
 import { SvgXml } from 'react-native-svg';
@@ -65,14 +65,34 @@ export function ToggleRow({ theme, label, value, onChange }: { theme: Theme; lab
 }
 
 /** Full-height sheet with a round close button (Grok settings style). */
-export function Sheet({ theme, visible, onClose, children, right }: { theme: Theme; visible: boolean; onClose(): void; children: React.ReactNode; right?: React.ReactNode }) {
+const HEAD: ViewStyle = { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 12 };
+const TITLE = { fontSize: 18, fontWeight: '400' as const, marginLeft: 18 };
+/** Secondary-page header (Grok style): one row, back chevron (36 + hitSlop ≈ 48dp), title, optional trailing. */
+export function PageHeader({ theme, title, onBack, backLabel = '返回', right, sub }: { theme: Theme; title: string; onBack(): void; backLabel?: string; right?: React.ReactNode; sub?: string }) {
+  // Hardware / gesture back = this header's back (one level: e.g. 全部记忆 → 摘要, 单个用量 → 全部用量).
+  const latest = React.useRef(onBack); latest.current = onBack;
+  React.useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { latest.current(); return true; }); return () => sub.remove(); }, []);
+  return (
+    <View style={HEAD}>
+      <RoundButton theme={theme} icon="back" onPress={onBack} label={backLabel} size={48} />
+      <Text numberOfLines={1} style={[TITLE, { flexShrink: 1, color: theme.text }]}>{title}</Text>
+      <Text numberOfLines={1} style={{ flex: 1, color: theme.sub, marginLeft: 8 }}>{sub ?? ''}</Text>
+      {right}
+    </View>
+  );
+}
+
+/** Bottom sheet. Root: ✕ closes. Sub-page (onBack set): one header row — back chevron + title, no ✕;
+ * Android back goes up one level (settings.js .bt-settings-head: back button + h2 page title). */
+export function Sheet({ theme, visible, onClose, children, right, title, onBack, backLabel }: { theme: Theme; visible: boolean; onClose(): void; children: React.ReactNode; right?: React.ReactNode; title?: string; onBack?: () => void; backLabel?: string }) {
   const ins = useSafeAreaInsets();
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose} statusBarTranslucent>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onBack ?? onClose} statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', paddingTop: ins.top + 8 }}>
         <View style={{ flex: 1, backgroundColor: theme.bg, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: 'hidden' }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 16 }}>
-            <RoundButton theme={theme} icon="close" onPress={onClose} />
+          <View style={HEAD}>
+            {onBack ? <RoundButton theme={theme} icon="back" onPress={onBack} label={backLabel ?? '返回'} size={48} /> : <RoundButton theme={theme} icon="close" onPress={onClose} label="关闭" size={48} />}
+            <Text numberOfLines={1} style={[TITLE, { flex: 1, color: theme.text }]}>{title ?? ''}</Text>
             {right}
           </View>
           <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 40 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>

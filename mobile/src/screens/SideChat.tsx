@@ -5,7 +5,7 @@ import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } fr
 import type { Bot } from '../api';
 import { SIDE, sideChatsOf, sideFailure, sideHostText, sideTitle, withPending, type SideEntry } from '../api/side';
 import { Markdown } from '../components/Markdown';
-import { RoundButton } from '../components/ui';
+import { RoundButton, PageHeader } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -126,11 +126,8 @@ export function SideChatScreen({ theme, bot, chatId, onBack }: { theme: Theme; b
 
   return (
     <KeyboardAvoidingView behavior="height" style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回" />
-        <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 18, fontWeight: '600', marginHorizontal: 8 }}>{sideTitle(chat ?? (pending[0] ? { id: '', botId: '', entries: pending } : undefined))}</Text>
-        <RoundButton theme={theme} icon="close" onPress={close} label={SIDE.close} />
-      </View>
+      <PageHeader theme={theme} onBack={onBack} title={sideTitle(chat ?? (pending[0] ? { id: '', botId: '', entries: pending } : undefined))}
+        right={<RoundButton theme={theme} icon="close" onPress={close} label={SIDE.close} size={48} />} />
       <Text style={{ color: theme.sub, fontSize: 12, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 8, borderBottomWidth: 0.5, borderBottomColor: theme.sep }}>{SIDE.note}</Text>
       <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: 18 }} keyboardShouldPersistTaps="handled">
         {entries.map((e) => <Entry key={e.id.startsWith('pending:') ? e.id : e.id} theme={theme} entry={e} cancelled={!!cancelled[e.id]} onCancel={() => cancelEntry(e)} />)}

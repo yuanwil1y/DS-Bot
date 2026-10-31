@@ -102,7 +102,7 @@
 - 0.9.8：功能对齐最后一批（表格 11–13）：设置→浏览器（browser-settings.js，update-bot browserGrants）；设置→连接器（connectors.js，GitHub token 连接/断开/重试，账号菜单「连接器」直达）；设置→能力（capability-settings.js）。「移动端尚未开发」清零。
 - 0.9.9：定时任务的日期时间改用 Android 系统选择器，对应网页 schedules.js 的原生 `<input type="datetime-local">`（一次性）和 `<input type="time">`（每天/每周）。
 
-## 5. 当前状态（0.9.9）
+## 5. 当前状态（0.9.10）
 **已完成**（细节见 `web-parity-audit.md`）：
 - 首页、账号菜单、私聊（流式、活动行、思考、复制、工具条、事件行→Bot 间对话弹窗）、群聊（工作条、事件、暂停/继续、停止、显示全文）。
 - 卡片：问题、视图、审批、密钥请求、学习提案、图表、来源。
@@ -139,3 +139,9 @@
    - 网页参考截图在 `docs/appearance-shots/web/`（用 `variants.mjs` 在 mock 演示数据上生成）。手机截图在 `phone/`，对比拼图在 `compare/`（c01–c19）。
    - 网页侧用 Playwright 打开本地 DSH（token URL），量 DOM 的数值，和 app 对比。
    - 审计文档：`docs/web-parity-audit.md`（逐项对照表，末尾有 10-31 的更正）、`../audit-progress.md`（时间线）、`docs/appearance-prefs-spec.md`（外观规格）。
+
+### 0.9.10 — 二级页头统一（按 Grok 参考图）
+- 统一页头：48dp 描边圆形按钮（左 18dp、上 16dp）+ 同行 18sp 常规字重标题（间距 18dp），无框。组件：`ui.tsx` 的 `PageHeader` / `Sheet` 头部（共用 HEAD/TITLE 样式）。
+- 设置根页只显示 ✕；子页（连接器/能力/浏览器/用量/密钥/反馈/关于 DS Bot）只显示返回 + 标题；用量详情返回「全部用量」。
+- 已改：SettingsSheet 子页、Bot/群聊设置、记忆、用量、定时任务、编辑 Bot 形象、Side chat（右侧保留结束 ✕）。
+- 系统返回键逐级返回（Sheet 走 onRequestClose，栈页面走 PageHeader 的 BackHandler）。

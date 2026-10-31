@@ -8,7 +8,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import type { AvatarEntry, Bot } from '../api';
 import { Mark } from '../components/Avatar';
-import { PillButton, RoundButton } from '../components/ui';
+import { PageHeader, PillButton, RoundButton } from '../components/ui';
 import { CHARACTER_COLORS, PICKER_SHAPES, hasShape, lookOf, ringXml, swatch, type Look } from '../avatar/mark';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
@@ -57,10 +57,7 @@ export function AvatarEditorScreen({ theme, bot, onBack }: { theme: Theme; bot: 
   };
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回设置" />
-        <Text style={{ flex: 1, color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 8 }}>编辑 Bot 形象</Text>
-      </View>
+      <PageHeader theme={theme} title="编辑 Bot 形象" onBack={onBack} backLabel="返回设置" />
       <ScrollView contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         <View style={{ alignItems: 'center', marginBottom: 18 }}><Mark look={look} size={88} /></View>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>

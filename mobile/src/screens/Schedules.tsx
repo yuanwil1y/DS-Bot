@@ -8,7 +8,7 @@ import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api
 import { NARROW, clockText, localText, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
 export { timingText };
 import { Avatar, GroupAvatar } from '../components/Avatar';
-import { PillButton, RoundButton } from '../components/ui';
+import { PageHeader, PillButton, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
 
@@ -181,10 +181,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
   ].filter((g) => g.tasks.length > 0) : [];
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回" />
-        <Text style={{ flex: 1, color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 8 }}>定时任务</Text>
-      </View>
+      <PageHeader theme={theme} title="定时任务" onBack={onBack} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {view === null ? <Text style={{ color: theme.sub }}>加载中…</Text>
           : !view.available ? (

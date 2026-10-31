@@ -9,7 +9,7 @@ import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { botState } from '../avatar/motion';
 import { needsCount } from '../api/cards';
-import { Icon, PillButton, RoundButton } from '../components/ui';
+import { Icon, PageHeader, PillButton, RoundButton } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
 import { Menu, NA, NA_MOBILE } from '../components/Menu';
 import { FolderField, ModelField, modelLine, PermissionPicker, presetName } from '../components/Pickers';
@@ -346,11 +346,7 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar,
   const sw = (on: boolean, onChange: (v: boolean) => void, label: string, disabled?: boolean) => <Switch value={on} disabled={disabled} onValueChange={onChange} accessibilityLabel={label} />;
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回详情" />
-        <Text style={{ flex: 1, color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 8 }}>设置</Text>
-        <RoundButton theme={theme} icon="close" onPress={onClose} label="关闭" style={{ marginLeft: 8 }} />
-      </View>
+      <PageHeader theme={theme} title="设置" onBack={onBack} backLabel="返回详情" />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {b ? (
           <>
@@ -519,12 +515,8 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
   const num = (n: any) => Number(n ?? 0).toLocaleString('zh-CN');
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={page === 'entries' ? backToSummary : onBack} label={page === 'entries' ? '返回摘要' : '关闭记忆'} />
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>{page === 'entries' ? '全部记忆' : '记忆摘要'}</Text>
-        <Text style={{ flex: 1, color: theme.sub, marginLeft: 8 }} numberOfLines={1}>{page === 'summary' ? [name, status].filter(Boolean).join(' · ') : status}</Text>
-        <RoundButton theme={theme} icon="more" onPress={() => setOpts(true)} label="记忆选项" />
-      </View>
+      <PageHeader theme={theme} title={page === 'entries' ? '全部记忆' : '记忆摘要'} onBack={page === 'entries' ? backToSummary : onBack} backLabel={page === 'entries' ? '返回摘要' : '关闭记忆'}
+        sub={page === 'summary' ? [name, status].filter(Boolean).join(' · ') : status} right={<RoundButton theme={theme} icon="more" onPress={() => setOpts(true)} label="记忆选项" />} />
       <ScrollView contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
         {err ? <Text style={{ color: theme.danger, marginBottom: 10 }}>{err}</Text> : null}
         {view === null ? (err ? null : <ActivityIndicator color={theme.sub} style={{ marginTop: 30 }} />) : page === 'entries' ? (
@@ -592,10 +584,7 @@ export function UsageScreen({ theme, onBack }: { theme: Theme; onBack(): void })
   const [focus, setFocus] = useState<any>(null);
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={() => (focus ? setFocus(null) : onBack())} label="返回" />
-        <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>用量</Text>
-      </View>
+      <PageHeader theme={theme} title="用量" onBack={() => (focus ? setFocus(null) : onBack())} backLabel={focus ? '全部用量' : '返回'} />
       <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 40 }}><UsagePage theme={theme} focusId={focus} onFocus={setFocus} /></ScrollView>
     </View>
   );

@@ -3,8 +3,9 @@
 // The host has list / create / delete only, so there is no edit or pause here either.
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
-import { NARROW, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
+import { NARROW, clockText, localText, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
 export { timingText };
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { PillButton, RoundButton } from '../components/ui';
@@ -17,6 +18,19 @@ const OFF_HINT = '在 Harness 设置的插件页启用「自动化任务」。';
 // One view shared by every surface; each asks again when it mounts (web useSchedules).
 let shared: ScheduleView | null = null;
 const listeners = new Set<(v: ScheduleView) => void>();
+// schedules.js uses native <input type="datetime-local"> (once) and <input type="time"> (daily/weekly), no min/max:
+// on Android those are the system date + time pickers.
+function pickAt(at: string, set: (v: string) => void) {
+  let base: Date; try { base = new Date(parseLocal(at)); } catch { base = new Date(); }
+  DateTimePickerAndroid.open({ value: base, mode: 'date', onChange: (e, d) => {
+    if (e.type !== 'set' || !d) return;
+    DateTimePickerAndroid.open({ value: d, mode: 'time', is24Hour: true, onChange: (e2, t) => { if (e2.type === 'set' && t) set(localText(t)); } });
+  } });
+}
+function pickTime(time: string, set: (v: string) => void) {
+  const [h, m] = time.split(':').map(Number); const v = new Date(); v.setHours(h || 0, m || 0, 0, 0);
+  DateTimePickerAndroid.open({ value: v, mode: 'time', is24Hour: true, onChange: (e, t) => { if (e.type === 'set' && t) set(clockText(t)); } });
+}
 export function publishSchedules(view: ScheduleView) { shared = view; for (const l of listeners) l(view); }
 export function useSchedules(client: BotClient | null | undefined) {
   const [view, setView] = useState<ScheduleView | null>(shared);
@@ -129,11 +143,11 @@ export function TaskForm({ theme, start, onDone, onCancel }: { theme: Theme; sta
       <View style={box}>
         <Text style={{ color: theme.sub }}>什么时候</Text>
         <Seg theme={theme} items={KINDS} value={kind} onChange={(v) => setKind(v as ScheduleWhen['kind'])} />
-        {kind === 'at' ? <TextInput accessibilityLabel="日期和时间" value={at} onChangeText={setAt} placeholder="YYYY-MM-DD HH:MM" placeholderTextColor={theme.faint} style={small} /> : null}
+        {kind === 'at' ? <Pressable accessibilityRole="button" accessibilityLabel="日期和时间" onPress={() => pickAt(at, setAt)} style={[small, { justifyContent: 'center' }]}><Text style={{ color: theme.text }}>{at}</Text></Pressable> : null}
         {kind === 'weekly' ? <View accessibilityLabel="星期" style={{ flexDirection: 'row', marginTop: 10, justifyContent: 'space-between' }}>
           {[1, 2, 3, 4, 5, 6, 7].map((d) => { const on = weekdays.includes(d); return <Pressable key={d} onPress={() => toggleDay(d)} style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: on ? theme.accent : theme.fillBorder, backgroundColor: on ? theme.accent : 'transparent', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: on ? theme.accentText : theme.sub }}>{NARROW[d]}</Text></Pressable>; })}
         </View> : null}
-        {kind === 'daily' || kind === 'weekly' ? <TextInput accessibilityLabel="时间" value={time} onChangeText={setTime} placeholder="HH:MM" placeholderTextColor={theme.faint} keyboardType="numbers-and-punctuation" style={[small, { width: 110 }]} /> : null}
+        {kind === 'daily' || kind === 'weekly' ? <Pressable accessibilityRole="button" accessibilityLabel="时间" onPress={() => pickTime(time, setTime)} style={[small, { width: 110, justifyContent: 'center' }]}><Text style={{ color: theme.text }}>{time}</Text></Pressable> : null}
         {kind === 'every' ? <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text style={{ color: theme.sub, marginTop: 8, marginRight: 8 }}>每</Text>
           <TextInput accessibilityLabel="数量" value={count} onChangeText={setCount} keyboardType="number-pad" style={[small, { width: 72, marginRight: 8 }]} />

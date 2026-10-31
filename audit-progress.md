@@ -43,3 +43,4 @@
 
 - 10-31 21:40 0.9.7：表格 8–10（Bot 间对话弹窗、密钥页、完整用量页）；batch097 8 项；APK versionCode 24；预发布 mobile-mvp-0.9.7。
 - 10-31 21:45 0.9.8：表格 11–13（浏览器授权、连接器、能力）；账号菜单连接器接入；「移动端尚未开发」清零；batch098 10 项；APK versionCode 25；预发布 mobile-mvp-0.9.8。13 项全部完成。
+- 10-31 21:50 0.9.9：定时任务日期/时间改系统选择器（对应网页 datetime-local / time）；batch099 3 项；APK versionCode 26；预发布 mobile-mvp-0.9.9；HANDOFF 全面更新，自测相关条目从已知问题移除。

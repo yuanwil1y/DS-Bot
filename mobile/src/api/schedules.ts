@@ -39,6 +39,8 @@ export function inAnHour() {
   const d = new Date(Date.now() + 3600_000); d.setMinutes(0, 0, 0);
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:00`;
 }
+export const clockText = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export const localText = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${clockText(d)}`;
 /** 'YYYY-MM-DD HH:MM' (local) → ISO, like the web's datetime-local input. */
 export function parseLocal(text: string): string {
   const m = /^\s*(\d{4})-(\d{1,2})-(\d{1,2})[ T](\d{1,2}):(\d{2})\s*$/.exec(text);

@@ -94,3 +94,8 @@
 - 设置→能力：capability-settings.js CapabilitiesPage（完整表单、JSON 校验报错、编辑预填、删除 4 秒内二次确认、未批准的本地命令 MCP 显示「允许」）。
 - 「移动端尚未开发」清零；13 项对齐表全部完成。
 - 剩下没对齐（DSH Agent 除外）：详情里的群用量（接口尚未实现）；模型服务商页、经典 Agent 模式、终端、文件树、HTML 节点、待处理浏览器接管卡、Harness 设置（移动端暂未实现）。
+
+## 10-31 21:50 0.9.9 日期和时间输入
+- 网页 schedules.js：一次性用 `<input type="datetime-local">`（默认下一个整点，无 min/max，空值报「请选择日期和时间」，提交 `{kind:'at', at: new Date(值).toISOString()}`）；每天/每周用 `<input type="time">`（默认 09:00，提交 `{kind, time, timeZone}`）。用量自选时段是自绘日历，不是 input。
+- app：两处改为 Android 系统选择器（日期→时间，24 小时制），默认值和提交格式不变。
+- 自测相关的问题不再列为问题。13 项对齐表全部完成。

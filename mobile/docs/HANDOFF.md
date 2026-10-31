@@ -98,88 +98,44 @@
 - 0.9.4：用户气泡宽度按 dsh `.userStack`；已发送的用户消息左侧加复制；轮与轮之间的间距同网页。
 - 0.9.5：账号菜单按 `.bt-menu` 重做；Bot 回复工具条（表情、回复、更多→复制/下载），私聊和群聊都有。
 - 0.9.6：功能对齐第一批（表格 1–5、7）：改正占位标注；关于页；长消息折叠（fold.js）和群里「显示全文」（file-text）；释放已保留的私密 Bot；头像按编号取并缓存；反馈/诊断页。第 6 项没做（见下）。
-- 0.9.8：功能对齐最后一批（表格 11–13）：设置→浏览器（browser-settings.js，update-bot 的 browserGrants）、设置→连接器（connectors.js，GitHub token 连接/断开/重试，首页账号菜单「连接器」直接打开此页）、设置→能力（capability-settings.js，新增/编辑/删除二次确认/允许）。「移动端尚未开发」清零。
-- 0.9.7：功能对齐第二批（表格 8–10）：Bot 间对话弹窗（exchange.js，私聊里的事件行打开）；设置→密钥页（secret-card.js SecretsPage）；设置→用量页做全（usage-page.js + usage-data.js 原样移植：汇总、图表、按 Bot/模型、热力图、自选时段、单个 Bot/模型的详情）。
+- 0.9.7：功能对齐第二批（表格 8–10）：Bot 间对话弹窗（exchange.js）；设置→密钥（secret-card.js SecretsPage）；设置→用量做全（usage-page.js + usage-data.js）。
+- 0.9.8：功能对齐最后一批（表格 11–13）：设置→浏览器（browser-settings.js，update-bot browserGrants）；设置→连接器（connectors.js，GitHub token 连接/断开/重试，账号菜单「连接器」直达）；设置→能力（capability-settings.js）。「移动端尚未开发」清零。
+- 0.9.9：定时任务的日期时间改用 Android 系统选择器，对应网页 schedules.js 的原生 `<input type="datetime-local">`（一次性）和 `<input type="time">`（每天/每周）。
 
-## 5. 当前状态
+## 5. 当前状态（0.9.9）
 **已完成**（细节见 `web-parity-audit.md`）：
-- 首页、账号菜单、私聊（流式、活动行、思考、复制、工具条）、群聊（工作条、事件、暂停/继续、停止）。
+- 首页、账号菜单、私聊（流式、活动行、思考、复制、工具条、事件行→Bot 间对话弹窗）、群聊（工作条、事件、暂停/继续、停止、显示全文）。
 - 卡片：问题、视图、审批、密钥请求、学习提案、图表、来源。
-- 记忆面板、定时任务、Bot 设置、群设置、新对话、侧边对话和 /btw、听写和语音、外观和动画、主 Bot 管理、总工作区、未读分隔线。
+- 记忆面板、定时任务（系统日期/时间选择器）、Bot 设置、群设置、新对话、侧边对话和 /btw、听写和语音、外观和动画、主 Bot 管理、总工作区、未读分隔线。
+- 设置：主 Bot、Bot、群聊、连接器、能力、浏览器、用量、密钥、反馈、关于。
 
-**和网页的差距**（接口都存在，按从易到难排）：
+**对齐表 13 项：全部完成**（第 6 项「直接编辑记忆」不做：网页 memory-panel.js 没有这个界面）。
+1 占位标注更正 · 2 关于页 · 3 群里显示全文 · 4 释放私密 Bot · 5 头像按编号 · 7 反馈/诊断 · 8 Bot 间对话弹窗 · 9 密钥 · 10 用量 · 11 浏览器授权 · 12 连接器 · 13 能力。
 
-| # | 功能 | 接口 | 工作量 |
-|---|---|---|---|
-| 1 | 改正错误的占位标注（见下） | — | 0.2 天 |
-| 2 | 关于页：版本、星数、检查更新提示 | 握手里的版本号、repo-stars、update-check | 0.3 天 |
-| 3 | 群里的长消息「显示全文」 | file-text | 0.3 天 |
-| 4 | 释放已保留的私密 Bot | private-release | 0.3 天 |
-| 5 | 头像按编号取，省流量 | state `avatars:'ref'` + avatar | 0.5 天 |
-| 6 | 直接编辑一条记忆 | memory-edit | 0.5 天 |
-| 7 | 反馈/诊断页 | diagnostics、diagnostics-log、diagnostics-clear | 0.5 天 |
-| 8 | 两个 Bot 之间的对话记录弹窗（点事件行打开） | exchange、exchange-text | 0.5–1 天 |
-| 9 | 密钥管理页 | state.secrets、secret-update、secret-delete | 1 天 |
-| 10 | 用量页做全（汇总、热力图、按模型、群） | usage | 1–1.5 天 |
-| 11 | 浏览器授权设置页 | update-bot | 1 天 |
-| 12 | 连接器页 | connector-connect、connector-disconnect、connector-retry | 1–1.5 天 |
-| 13 | 能力页（全局新增、编辑、删除、批准） | capability-save、capability-delete、capability-approve | 1.5–2 天 |
+**测试**（全新 DSH_HOME 跑）：batch099 3（纯函数，不需要主机）、batch098 10、batch097 8、batch096 14、settings 7、paihuo30 1、api 23。
 
-**0.9.6 状态**：表格 1–5、7 已完成（测试 `test/batch096.test.mts`，14 项；四套测试共 45 项）。第 6 项**不做**：网页 memory-panel.js 没有编辑记忆的界面（只有 memory-ask / memory-forget），按「不加网页没有的东西」处理。现在标「移动端尚未开发」（NA_TODO）的：连接器、能力、浏览器、密钥、群用量，对应表格 9–13；第 8 项（exchange 弹窗）也还没做。
+**代码要点**：
+- `src/api/toolsModel.ts` + `src/screens/ToolPages.tsx`：连接器/能力/浏览器三页；网页 select/checkbox 做成选项胶囊；「Description」网页 i18n 无中文，照显英文。
+- 连接器是 token 方式（不是 OAuth），只有「去 GitHub 生成 token」用系统浏览器打开。
+- 日期时间：`@react-native-community/datetimepicker` 的 `DateTimePickerAndroid`（先选日期再选时间，24 小时制）；默认值、无 min/max、提交格式（`new Date(本地时间).toISOString()`；每天/每周发 `HH:MM` + 时区）都同网页。用量自选时段网页用的是自绘日历，不是 input，app 已照做。
+- NA_TODO 已删除，`grep -rn 移动端尚未开发 src` 为 0。
 
-**0.9.7 状态**：表格 8–10 已完成（测试 `test/batch097.test.mts`，8 项；五套测试全过）。
-- 客户端：`usage()` 改调 `usage`（旧的 `usage-summary` 主机没有）；新增 `exchange`、`exchangeText`、`secretUpdate`、`secretDelete`，`secretSet` 也接受 {name, purpose, value, scope}。
-- 私聊 `rows()` 现在保留 `kind:'event'` 行（`eventData()` 给出前缀：群聊回复／叫停者／收到回复／收到消息）。
-- 详情里的群用量标「接口尚未实现」：网页 details-drawer 用的是 DSH 的 projectionsBySession，手机拿不到；全局用量页里能看到按群的数据。
-- （0.9.8 已做完）设置里的连接器、能力、浏览器（表格 11–13）。
-- 手机上的取舍：悬停改为点按显示提示；自选时段一次显示一个月。
+**还没对齐的（DSH Agent 除外）**：
+- 详情里的群用量：标「接口尚未实现」（网页用 DSH 的 projectionsBySession，手机拿不到；全局用量页里有按群的数据）。
+- 标「移动端暂未实现」：模型服务商页、切换经典 Agent 模式、终端、文件树、HTML 节点、待处理的浏览器接管卡、打开 Harness 设置。
+- 头像拖放/粘贴（桌面交互）不做。
 
-**0.9.8 状态**：表格 1–13 全部完成（第 6 项按网页没有界面不做）。测试 `test/batch098.test.mts` 10 项；六套测试全过（batch098 10、batch097 8、batch096 14、settings 7、paihuo30 1、api 23）。
-- 新文件：`src/api/toolsModel.ts`（三页的纯函数：siteValue、授权时限、parseMap、capability 载荷等）、`src/screens/ToolPages.tsx`（三个页面）。
-- 客户端新增：connectorConnect/Disconnect/Retry、capabilitySave/Delete/Approve。
-- 网页的连接器是 token 方式（不是 OAuth），手机上唯一跳浏览器的是「去 GitHub 生成 token」，用系统浏览器打开。
-- 网页 select / checkbox 在手机上做成可点的选项胶囊。「Description」网页 i18n 没有中文，照网页显示英文。
-- NA_TODO 常量已删除，`grep -rn 移动端尚未开发 src` 为 0。
-- **还没对齐的（DSH Agent 除外）**：群用量（详情里，需要 DSH projectionsBySession）标「接口尚未实现」；模型服务商页、切换经典 Agent 模式、终端、文件树、HTML 节点、浏览器接管卡（待处理）、打开 Harness 设置标「移动端暂未实现」；记忆编辑网页本身没有；头像拖放/粘贴不做；已知问题见下。
+**没用上的接口**：DSH Agent 6 个（不做）、桌面浏览器接管 5 个、模型服务商 providers* 5 个、升级主机（update-check 只读用于关于页）、earlier（用 chat cursor 翻页代替）。
 
-**（已在 0.9.6 改正）标错了、需要改的占位**：
-- 首页菜单「连接器」，以及设置页里的「连接器」「能力」「浏览器」「密钥」「反馈」「关于」：现在标「接口尚未实现」，但接口都有，应该做出来。
-- 群用量：`usage` 接口有按群的数据，也不该标「接口尚未实现」。
-- 「模型」页：只有桌面应用有，应改标「移动端暂未实现」。
-- 首页菜单「切换经典 Agent 模式」：应改标「移动端暂未实现」。
-
-**39 个没用上的接口怎么分**：
-- DSH Agent 6 个（不做）。
-- 桌面专用的浏览器接管 5 个。
-- 只有桌面应用用的模型服务商 5 个（providers*）。
-- 升级主机 3 个（update-check 可以只读，用来显示有没有更新）。
-- earlier 1 个：app 用 chat 的 cursor 翻页代替。
-- 剩下 19 个就是上表 2–13 项要用的。
-
-**没有接口、不用做的**：
-- 消息表情和回复：网页也只存在本地，app 已在本机实现。
-- 添加文件、引用对话：这是 DSH 外壳的功能。
-- 「打开 Harness 设置」、HTML 节点、浏览器求助卡（待处理）：已标「移动端暂未实现」。
+**没有接口、不用做的**：消息表情和回复（网页也只存本地，app 本机实现）；添加文件、引用对话（DSH 外壳功能）。
 
 **已知问题**：
-- 外观自测结束后不会重新打开设置面板。
-- 自测的浮层会挡住最后一条消息。
 - 「安静」档下点头像的效果无法在录屏里确认。
-- 定时任务里日期时间还是文本输入，时间格式和网页不完全一致。
-
-**0.9.5 等用户在手机上确认的**：
-1. 首页账号菜单：图标、省略号、提示列。
-2. 其他菜单的新样式：复制/定时任务、Panel 的更多/选项、首页长按。
-3. Bot 回复工具条的位置：气泡布局和平铺布局都看。
-4. 表情条和气泡下面的表情。
-5. 回复时插入的引用格式。
-6. 下载能否调起分享。
-7. 群聊里同样操作一遍。
 
 ## 6. 下一步建议（每一步都要先等用户说「做」）
-1. 等用户确认 0.9.8 的结果（浏览器、连接器、能力三页），修他反馈的问题。表格 13 项已全部完成。
-2. 以后每批做完：tsc + 全部测试（batch098/batch097/batch096/settings/paihuo30/api 六套，用新的 DSH_HOME） → 打 APK → 发预发布 → 用中文汇报。
-4. **验证方法**：
+1. 等用户确认 0.9.9（定时任务的日期/时间选择器），修他反馈的问题。
+2. 每批做完：tsc + 全部测试（batch099/batch098/batch097/batch096/settings/paihuo30/api，用新的 DSH_HOME） → 打 APK → 发预发布 → 用中文汇报。
+3. **验证方法**：
    - 网页参考截图在 `docs/appearance-shots/web/`（用 `variants.mjs` 在 mock 演示数据上生成）。手机截图在 `phone/`，对比拼图在 `compare/`（c01–c19）。
    - 网页侧用 Playwright 打开本地 DSH（token URL），量 DOM 的数值，和 app 对比。
    - 审计文档：`docs/web-parity-audit.md`（逐项对照表，末尾有 10-31 的更正）、`../audit-progress.md`（时间线）、`docs/appearance-prefs-spec.md`（外观规格）。

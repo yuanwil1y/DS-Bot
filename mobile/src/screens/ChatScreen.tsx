@@ -38,7 +38,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   });
   const toggleDictate = () => {
     if (dictation.listening) dictation.stop();
-    else void dictation.start({ continuous: true });
+    else void dictation.start({ continuous: false });
   };
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
@@ -232,24 +232,20 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           </Pressable>
           <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.sub} multiline
             style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 17, paddingVertical: 8, marginLeft: 10 }} />
+          <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
+            style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: dictation.listening ? '#ff3e51' : theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="mic" color={dictation.listening ? '#fff' : theme.sub} size={16} />
+          </Pressable>
           {text.trim() ? (
             <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
               <Icon name="send" color="#fff" size={20} />
             </Pressable>
-          ) : (
-            <>
-              <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
-                style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: dictation.listening ? '#ff3e51' : (bot ? theme.cardHi : '#4d6bfe'), alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name="mic" color={dictation.listening || !bot ? '#fff' : theme.sub} size={16} />
-              </Pressable>
-              {bot ? (
-                <Pressable onPress={onVoice} accessibilityLabel={VOICE.startVoice}
-                  style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
-                </Pressable>
-              ) : null}
-            </>
-          )}
+          ) : bot ? (
+            <Pressable onPress={onVoice} accessibilityLabel={VOICE.startVoice}
+              style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
 

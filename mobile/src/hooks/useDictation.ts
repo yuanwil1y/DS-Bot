@@ -36,6 +36,7 @@ export function useDictation(onText: (text: string, final: boolean) => void) {
     latest.current(transcript, !!ev.isFinal);
   });
   useSpeechRecognitionEvent('error', (ev) => {
+    setListening(false);
     const n = dictationErrorNote(ev.error);
     if (n) setNote(n);
   });

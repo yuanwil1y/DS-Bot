@@ -8,7 +8,7 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-export const APP_VERSION = '0.8.0';
+export const APP_VERSION = '0.8.1';
 
 export function SettingsSheet({ theme, visible, onClose }: { theme: Theme; visible: boolean; onClose(): void }) {
   const { client, status, state, disconnect } = useStore();

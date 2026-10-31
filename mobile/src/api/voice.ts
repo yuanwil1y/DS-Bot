@@ -37,6 +37,6 @@ export function plainSpeech(text: string): string {
 
 export function dictationErrorNote(code?: string): string {
   if (code === 'not-allowed' || code === 'service-not-allowed' || code === 'audio-capture') return VOICE.micBlocked;
-  if (code === 'aborted' || code === 'no-speech') return '';
+  if (code === 'aborted' || code === 'no-speech' || code === 'no-match' || code === 'speech-timeout') return '';
   return VOICE.couldntHear;
 }

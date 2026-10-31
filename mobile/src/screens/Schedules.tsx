@@ -198,7 +198,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
         {view === null ? <Text style={{ color: theme.sub }}>加载中…</Text>
           : !view.available ? (
             <View style={{ alignItems: 'center', padding: 28, backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.fillBorder }}>
-              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.fill, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20, color: theme.sub }}>🕘</Text></View>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.fill, alignItems: 'center', justifyContent: 'center' }}><Icon name="clock" color={theme.sub} size={20} /></View>
               <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600', marginTop: 10 }}>在 DSH 里打开「自动化任务」</Text>
               <Text style={{ color: theme.sub, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{OFF_HINT}</Text>
               <HarnessButton theme={theme} />
@@ -248,7 +248,7 @@ export function ScheduleSummary({ theme, botId, onOpen }: { theme: Theme; botId:
       {tasks.length === 0
         ? <Pressable onPress={() => onOpen(botId)}><Text style={{ color: theme.sub }}>{view?.available === false ? OFF_HINT : '还没有定时任务，去添加'}</Text></Pressable>
         : tasks.slice(0, 3).map((t) => <Pressable key={t.id} onPress={() => onOpen()} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
-          <Text style={{ color: theme.faint, marginRight: 8 }}>🕘</Text>
+          <View style={{ marginRight: 8 }}><Icon name="clock" color={theme.faint} size={15} /></View>
           <Text numberOfLines={1} style={{ flex: 1, color: theme.text, fontSize: 14 }}>{t.title}</Text>
           <Text style={{ color: theme.faint, fontSize: 12, marginLeft: 8 }}>{timingText(t)}</Text>
         </Pressable>)}

@@ -165,7 +165,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
             {sides.map((c) => (
               <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 200, height: 36, borderRadius: 18, paddingLeft: 12, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
                 <Pressable onPress={() => onSide(c.id)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 0 }} style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0, paddingVertical: 6 }}>
-                  <Text style={{ color: theme.sub, fontSize: 13, marginRight: 6 }}>◫</Text>
+                  <View style={{ marginRight: 6 }}><Icon name="side" color={theme.sub} size={15} /></View>
                   <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, flexShrink: 1 }}>{sideTitle(c)}</Text>
                 </Pressable>
                 <Pressable hitSlop={12} accessibilityLabel={SIDE.close} onPress={() => client!.sideClose(c.id).then(refresh, () => {})} style={{ paddingHorizontal: 12, height: 36, justifyContent: 'center' }}>
@@ -270,7 +270,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
               <>
                 <Label theme={theme}>记忆</Label>
                 <Pressable accessibilityLabel={`管理 ${name} 的记忆`} onPress={() => memId && onMemory(memId)} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 14, borderWidth: 1, borderColor: theme.fillBorder, paddingHorizontal: 14, paddingVertical: 12 }}>
-                  <Text style={{ color: theme.text, fontSize: 15 }}>▤  </Text>
+                  <View style={{ marginRight: 10 }}><Icon name="memory" color={theme.text} size={16} /></View>
                   <Text style={{ flex: 1, color: theme.text, fontSize: 15 }}>{memCount === null ? '加载中…' : memCount === 0 ? '还没有保存内容' : `${memCount} 条`}</Text>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}><Text style={{ color: theme.sub }}>管理</Text><Icon name="chevron" color={theme.sub} size={14} /></View>
                 </Pressable>
@@ -537,7 +537,7 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
             </View>))
         ) : count === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ fontSize: 28, color: theme.sub }}>▤</Text>
+            <Icon name="memory" color={theme.sub} size={28} />
             <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: 10 }}>{isRoom ? '这个群还没有记住任何内容' : `${name} 还没有记住任何内容`}</Text>
             <Text style={{ color: theme.sub, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{isRoom ? '群会记住工作需要的决定、规则和事实，只有群成员在这个群里会读。可以在下面告诉它，也可以在群里说。' : `Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 ${name}，也可以在对话里说。`}</Text>
           </View>

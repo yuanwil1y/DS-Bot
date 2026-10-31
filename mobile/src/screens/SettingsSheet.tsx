@@ -88,14 +88,14 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
         {rooms.length === 0 ? <Row theme={theme} label="还没有群聊。" caption="在群聊里，几个 Bot 和你一起做一件事。" /> : rooms.map((r) => <Row key={r.id} theme={theme} label={r.name} value={[`${(r.members ?? []).length} 位成员`, r.admin && byId[r.admin] ? `★ ${byId[r.admin].name}` : '', r.hidden ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'room', id: r.id })} />)}
       </Group>
       <Group theme={theme} title="设置页面">
-        <Row theme={theme} label="模型" value={NA_MOBILE} chevron={false} />
-        <Row theme={theme} label="连接器" onPress={() => setPage('connectors')} />
-        <Row theme={theme} label="能力" onPress={() => setPage('capabilities')} />
-        <Row theme={theme} label="浏览器" onPress={() => setPage('browser')} />
-        <Row theme={theme} label="用量" onPress={() => setPage('usage')} />
-        <Row theme={theme} label="密钥" onPress={() => setPage('secrets')} />
-        <Row theme={theme} label="反馈" onPress={() => setPage('feedback')} />
-        <Row theme={theme} label="关于 DS Bot" onPress={() => setPage('about')} />
+        <Row theme={theme} icon="sliders" label="模型" value={NA_MOBILE} chevron={false} />
+        <Row theme={theme} icon="connector" label="连接器" onPress={() => setPage('connectors')} />
+        <Row theme={theme} icon="plug" label="能力" onPress={() => setPage('capabilities')} />
+        <Row theme={theme} icon="connector" label="浏览器" onPress={() => setPage('browser')} />
+        <Row theme={theme} icon="gauge" label="用量" onPress={() => setPage('usage')} />
+        <Row theme={theme} icon="key" label="密钥" onPress={() => setPage('secrets')} />
+        <Row theme={theme} icon="feedback" label="反馈" onPress={() => setPage('feedback')} />
+        <Row theme={theme} icon="info" label="关于 DS Bot" onPress={() => setPage('about')} />
       </Group>
       <AppearanceGroup theme={theme} />
       <Group theme={theme} title="模式">

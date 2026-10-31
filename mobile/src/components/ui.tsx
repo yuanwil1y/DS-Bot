@@ -6,7 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
 import { SvgXml } from 'react-native-svg';
 import { iconXml } from './iconXml';
-import { ICONS } from './icons.gen';
+import { ICONS as GEN } from './icons.gen';
+import { EXTRA_ICONS, ICON_RATIO } from './icons.extra';
+const ICONS: Record<string, string> = { ...GEN, ...EXTRA_ICONS };
 
 // The web's own icons (icons.gen.ts, generated from ds-bot icons.js), drawn at the web's size
 // unless a size is given; currentColor becomes the passed color.
@@ -16,7 +18,7 @@ export function Icon({ name, color, size }: { name: string; color: string; size?
   if (!xml) return <Text style={{ color, fontSize: size ?? 16 }}>{name}</Text>;
   const own = Number(/width="([\d.]+)"/.exec(xml)?.[1] ?? 16);
   const s = size ?? own;
-  return <SvgXml xml={iconXml(xml, color)} width={s} height={s} color={color} />;
+  return <SvgXml xml={iconXml(xml, color)} width={s} height={s * (ICON_RATIO[name] ?? 1)} color={color} />;
 }
 
 export function RoundButton({ theme, icon, onPress, size = 36, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {
@@ -60,11 +62,12 @@ export function Select({ theme, value, onPress, label, style }: { theme: Theme; 
   );
 }
 
-export function Group({ theme, children, title, caption, style }: { theme: Theme; children: React.ReactNode; title?: string; caption?: string; style?: ViewStyle }) {
+/** `inset` = title's left inset: 22 (default, iOS-style lists) or 4 on settings sub-pages whose title, action row and card share one left edge. */
+export function Group({ theme, children, title, caption, style, inset = 22 }: { theme: Theme; children: React.ReactNode; title?: string; caption?: string; style?: ViewStyle; inset?: number }) {
   const items = React.Children.toArray(children).filter(Boolean);
   return (
     <View style={[{ marginTop: 20 }, style]}>
-      {title ? <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 22, marginBottom: 8 }}>{title}</Text> : null}
+      {title ? <Text style={{ color: theme.sub, fontSize: 14, marginLeft: inset, marginBottom: 8 }}>{title}</Text> : null}
       <View style={{ backgroundColor: theme.card, borderRadius: 20, borderWidth: 1, borderColor: theme.border, overflow: 'hidden' }}>
         {items.map((c, i) => <View key={i}>{i > 0 ? <View style={{ height: 1, backgroundColor: theme.sep, marginLeft: 18 }} /> : null}{c}</View>)}
       </View>
@@ -76,7 +79,7 @@ export function Group({ theme, children, title, caption, style }: { theme: Theme
 export function Row({ theme, icon, label, value, caption, onPress, chevron = !!onPress, right, danger }: { theme: Theme; icon?: string; label: string; value?: string; caption?: string; onPress?: () => void; chevron?: boolean; right?: React.ReactNode; danger?: boolean }) {
   return (
     <Pressable disabled={!onPress} onPress={onPress} android_ripple={onPress ? { color: theme.cardHi } : undefined} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, minHeight: 58, paddingVertical: 12 }}>
-      {icon !== undefined ? <View style={{ width: 28, marginRight: 10, alignItems: 'center' }}>{ICONS[icon] ? <Icon name={icon} color={theme.text} size={18} /> : <Text style={{ color: theme.text, fontSize: 18 }}>{icon}</Text>}</View> : null}
+      {icon !== undefined ? <View style={{ width: 28, marginRight: 10, alignItems: 'center' }}>{ICONS[icon] ? <Icon name={icon} color={theme.text} size={icon === 'fish' ? 16 : 18} /> : <Text style={{ color: theme.text, fontSize: 18 }}>{icon}</Text>}</View> : null}
       <View style={{ flex: 1 }}>
         <Text style={{ color: danger ? theme.danger : theme.text, fontSize: 17 }}>{label}</Text>
         {caption ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 3 }} numberOfLines={3}>{caption}</Text> : null}

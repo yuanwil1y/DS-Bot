@@ -133,7 +133,7 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
               {w && !exact ? <Row theme={theme} icon="plus" label={`新建 Bot「${q.trim()}」`} onPress={() => { setName(q.trim()); setMode('bot'); }} /> : null}
               <Row theme={theme} icon="plus" label={t.createBot} onPress={() => { setName(q.trim()); setMode('bot'); }} />
               <Row theme={theme} icon="people" label={t.createGroup} onPress={() => setMode('group')} />
-              <Row theme={theme} icon="" label="添加 DSH Agent" value="移动端暂未实现" />
+              <Row theme={theme} icon="fish" label="添加 DSH Agent" value="移动端暂未实现" />
             </Group>
           ) : null}
           <Group theme={theme}>

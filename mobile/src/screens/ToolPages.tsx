@@ -69,7 +69,7 @@ export function ConnectorsPage({ theme }: { theme: Theme }) {
   const run = async (f: () => Promise<unknown>) => { setError(''); try { await f(); await refresh(); return true; } catch (e: any) { setError(e?.message ?? String(e)); return false; } };
   const connect = async (id: string) => { setBusy(true); const ok = await run(() => client!.connectorConnect(id, token)); setBusy(false); if (ok) { setToken(''); setOpen(''); } };
   return (
-    <Group theme={theme} title="连接器">
+    <Group theme={theme} inset={4} title="连接器">
       {list.length === 0 ? <Hint theme={theme} text="暂无连接器" /> : list.map((c) => (
         <View key={c.id}>
           <Item theme={theme} name={c.name} status={connectorStatus(c)} lead={<ConnectorMark theme={theme} id={c.id} />}>
@@ -146,10 +146,10 @@ export function CapabilitiesPage({ theme }: { theme: Theme }) {
   return (
     <>
       {/* capability-settings.js: h3 共享能力 → .bt-actions (left, no card) → form → .bt-set-card list */}
-      <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 22, marginTop: 20, marginBottom: 8 }}>共享能力</Text>
-      <Actions><Soft theme={theme} title="添加能力" onPress={() => setDraft(blank())} /></Actions>
+      <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 4, marginTop: 20, marginBottom: 10 }}>共享能力</Text>
+      <Actions style={{ marginBottom: 12 }}><Soft theme={theme} title="添加能力" onPress={() => setDraft(blank())} /></Actions>
       {draft ? <CapabilityForm theme={theme} draft={draft} setDraft={(f) => setDraft((d) => (d ? f(d) : d))} items={items} onClose={() => setDraft(null)} /> : null}
-      <Group theme={theme} style={{ marginTop: 0 }}>
+      <Group theme={theme} style={{ marginTop: draft ? 12 : 0 }}>
         {items.length === 0 ? <Hint theme={theme} text="还没有保存能力" /> : items.map((item) => (
           <Item key={item.name} theme={theme} name={item.name} status={capabilitySecondary(item)}>
             {item.kind === 'mcp' && item.transport === 'stdio' && !item.approved ? <Soft theme={theme} title="允许" onPress={() => run(() => client!.capabilityApprove(item.name))} /> : null}
@@ -182,8 +182,8 @@ export function BrowserPage({ theme }: { theme: Theme }) {
   };
   return (
     <>
-      <Group theme={theme} title="浏览器权限"><Text style={{ color: theme.sub, fontSize: 13, lineHeight: 19, padding: 16 }}>{NOTE}</Text></Group>
-      <Group theme={theme} title="已允许的操作">
+      <Group theme={theme} inset={4} title="浏览器权限"><Text style={{ color: theme.sub, fontSize: 13, lineHeight: 19, padding: 16 }}>{NOTE}</Text></Group>
+      <Group theme={theme} inset={4} title="已允许的操作">
         {grants.length === 0 ? <Hint theme={theme} text="还没有允许的操作。" /> : grants.map(({ bot, grant, index }) => (
           <Item key={`${bot.id}:${index}`} theme={theme} lead={<View style={{ marginRight: 10 }}><Avatar bot={bot} size={28} badge={false} /></View>}
             name={`${bot.name} · ${grant.site === '*' ? '所有网站' : grant.site}`} status={[grantKinds(grant).join(' '), grantTime(grant)].join(' · ')}>
@@ -191,7 +191,7 @@ export function BrowserPage({ theme }: { theme: Theme }) {
           </Item>
         ))}
       </Group>
-      <Group theme={theme} title="允许操作">
+      <Group theme={theme} inset={4} title="允许操作">
         <Choices theme={theme} label="Bot">{bots.map((b) => <Choice key={b.id} theme={theme} label={b.name} on={chosen?.id === b.id} onPress={() => setBotId(b.id)} />)}</Choices>
         <Field theme={theme} label="网站" value={site} onChange={setSite} placeholder="example.com — 留空表示所有网站" />
         <Choices theme={theme} label="操作">{ACTIONS.map(([k, l]) => <Choice key={k} theme={theme} label={l} on={kinds.includes(k)} onPress={() => setKinds((ks) => (ks.includes(k) ? ks.filter((x) => x !== k) : [...ks, k]))} />)}</Choices>

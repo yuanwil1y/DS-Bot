@@ -189,3 +189,10 @@
 - 定时任务：表单改成网页的一张 .bt-set-card（发给 select 58% / 名字 / 要做什么 / 什么时候 + 右对齐 取消·创建任务 小按钮）；「新建任务」= soft-sm + Plus 图标；Bot 设置里的新建任务行用 Plus 图标。
 - 文字字符图标全换 SVG：⌄ › ‹ ▾ ▸ ✕ × ⋯ ✓ ＋（Pickers/Panel/BtwCard/Cards/NewChatSheet/SettingsSheet/ChatScreen/ToolPages Choice）。⌘（添加 DSH Agent）网页用 FishLogo，本地没有该 SVG，先留空图标位。
 - 截图：docs/appearance-shots/verify-0914/（web-cap.png 为网页参照）。
+
+## 0.9.15 (vc35) — 图标全部取自网页官方源 + 设置子页间距
+- 规则：**功能/控件/行为与网页 1:1，但不照抄网页在手机上未优化的布局缺陷**（贴边、重叠、挤在一起）。
+- `src/components/icons.extra.ts`（手抄官方源，不被 icons 脚本覆盖）：`fish` = DSH `packages/client/ui-primitives/src/FishLogo.tsx` 的 FISH_LOGO_PATH（viewBox 23.16×17.04，size=宽，`ICON_RATIO`），网页经 ds-bot `src/client/dsh-primitives.js` 再导出、`new-chat.js:101` 以 size 16 用在「添加 DSH Agent」；`memory/side/pencil/info/sliders/plug` = ds-bot `src/client/icons.js`；`feedback` = `feedback.js` FeedbackIcon；`lock` = `secret-card.js` LockIcon。
+- 替换：添加 DSH Agent ⌘→fish；面板 ◫→side、▤→memory；定时任务 🕘→clock；设置页面各行补网页 PAGE_ICONS（模型 sliders/连接器·浏览器 connector/能力 plug/用量 gauge/密钥 key/反馈 feedback/关于 info）；学习卡 ✏️/🧠→pencil/memory；记忆已更新 🧠→memory；密钥卡 🔑→key、🔒→lock；callout ⓘ→info（网页源码里找不到 callout 图标，近似）。
+- 间距：`Group` 新增 `inset`（标题左缩进，默认 22，关于/用量不变）；连接器/能力/浏览器/密钥 用 inset 4，标题·按钮·卡片同一左边；能力页 标题→按钮 10、按钮→卡片 12。
+- 截图：docs/appearance-shots/verify-0915/（web-*.png 为网页参照）。

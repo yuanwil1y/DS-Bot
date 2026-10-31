@@ -1,3 +1,4 @@
+import { Icon } from './ui';
 // learning-card.js ProposalCard: a skill or AGENTS.md change the Bot wants to keep.
 import { useMemo, useRef, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
@@ -66,7 +67,7 @@ export function LearningCard({ theme, proposal, onAnswer }: { theme: Theme; prop
   return (
     <View style={{ backgroundColor: theme.card, borderRadius: 18, borderWidth: 1, borderColor: theme.fillBorder, padding: 14, marginVertical: 6, opacity: busy ? 0.7 : 1 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <Text style={{ fontSize: 18, marginRight: 10 }}>{agents ? '✏️' : '🧠'}</Text>
+        <View style={{ marginRight: 10 }}><Icon name={agents ? 'pencil' : 'memory'} color={theme.text} size={18} /></View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600' }}>{agents ? 'AGENTS.md 更新' : proposal.name}</Text>
           {!agents ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 2 }}>{update ? '技能更新' : '新技能'}</Text> : null}

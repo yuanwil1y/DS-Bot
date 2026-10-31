@@ -162,7 +162,7 @@ function Node({ n, c }: { n: any; c: Ctx }): React.ReactElement | null {
     case 'callout': {
       const tone = resolve(n.tone, lookup); const col = TONE[tone] ?? BLUE;
       return <View style={{ flexDirection: 'row', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: col + '14' }}>
-        <Text style={{ color: col, fontSize: 14, marginRight: 8 }}>ⓘ</Text>
+        <View style={{ marginRight: 8, marginTop: 2 }}><Icon name="info" color={col} size={15} /></View>
         <View style={{ flex: 1 }}><Markdown text={asText(resolve(n.text, lookup, ''))} color={theme.text} codeBg={theme.code} size={14} /></View></View>;
     }
     case 'progress': {
@@ -393,14 +393,14 @@ export function SecretCard({ theme, bot, bots, request, saved, onSet, onAllow, o
   return (
     <View style={{ backgroundColor: theme.card, borderRadius: 18, borderWidth: 1, borderColor: theme.fillBorder, padding: 14, marginVertical: 6 }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-        <View style={{ marginRight: 10 }}><Avatar bot={bot} size={28} /><Text style={{ position: 'absolute', right: -4, bottom: -4, fontSize: 11 }}>🔒</Text></View>
+        <View style={{ marginRight: 10 }}><Avatar bot={bot} size={28} /><View style={{ position: 'absolute', right: -4, bottom: -4, backgroundColor: theme.card, borderRadius: 8, padding: 1 }}><Icon name="lock" color={theme.sub} size={12} /></View></View>
         <View style={{ flex: 1 }}>
           <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', lineHeight: 22 }}>{request.kind === 'allow' ? `允许 ${bot.name} 使用 ${request.name}？` : `${bot.name} 需要一个密钥`}</Text>
           <Text style={{ color: theme.sub, fontSize: 14, marginTop: 4 }}><Text style={{ fontFamily: 'monospace' }}>{request.name}</Text>{request.purpose ? ` · ${request.purpose}` : ''}</Text>
         </View>
         {busy ? null : <Pressable onPress={cancel} accessibilityLabel="取消请求" hitSlop={10} style={{ marginLeft: 8 }}><Icon name="close" color={theme.sub} size={16} /></Pressable>}
       </View>
-      {request.kind === 'allow' ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 10 }}>🔑 已保存，可用范围：{scopeLabel(saved?.scope, bots)}</Text> : null}
+      {request.kind === 'allow' ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 10 }}><Icon name="key" color={theme.sub} size={13} /> 已保存，可用范围：{scopeLabel(saved?.scope, bots)}</Text> : null}
       {filling ? <View style={{ marginTop: 10, gap: 8 }}>
         <TextInput value={value} onChangeText={setValue} onSubmitEditing={save} secureTextEntry autoFocus={replacing} autoCorrect={false} autoCapitalize="none" autoComplete="off" importantForAutofill="no"
           accessibilityLabel={`${request.name} 的值`} placeholder="粘贴或输入密钥" placeholderTextColor={theme.faint}

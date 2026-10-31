@@ -366,7 +366,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           {bot ? <Avatar bot={bot} size={24} ring={theme.bg} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={24} ring={theme.bg} />}
           <View style={{ marginLeft: 8, flexShrink: 1 }}>
             <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{name}</Text>
-            {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}>🧠 记忆已更新</Text> : null}
+            {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}><Icon name="memory" color={theme.sub} size={11} /> 记忆已更新</Text> : null}
             {sub ? <Text numberOfLines={1} style={{ color: status !== 'open' ? '#f5a623' : theme.sub, fontSize: 11 }}>{sub}</Text> : null}
           </View>
         </Pressable>

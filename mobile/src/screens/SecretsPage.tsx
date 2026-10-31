@@ -34,7 +34,7 @@ export function SecretsPage({ theme }: { theme: Theme }) {
     <Text style={{ marginTop: 8, marginBottom: 4, paddingHorizontal: 4, fontSize: 12, lineHeight: 17, color: theme.sub }}>
       你的 Bot 请求过的密钥。Bot 永远看不到值：它们在 shell 里通过 <Text style={{ fontFamily: MONO, fontSize: 11.5 }}>$DSH_SECRET_NAME</Text> 使用，而且发给模型之前，每个值都会被替换成 <Text style={{ fontFamily: MONO, fontSize: 11.5 }}>[secret:NAME]</Text>。
     </Text>
-    <Group theme={theme} title={`密钥 · ${secrets.length}`}>
+    <Group theme={theme} inset={4} title={`密钥 · ${secrets.length}`}>
       {secrets.length === 0 && !adding ? <Text style={{ padding: 12, fontSize: 12, color: theme.faint }}>还没有密钥。Bot 需要时，会在对话里弹出一张卡片。</Text> : null}
       {secrets.map((s) => <SecretRow key={s.name} theme={theme} secret={s} open={open === s.name} onToggle={() => setOpen(open === s.name ? null : s.name)}
         onScope={(scope) => run(client!.secretUpdate(s.name, { scope }))} onPurpose={(purpose) => run(client!.secretUpdate(s.name, { purpose }))}

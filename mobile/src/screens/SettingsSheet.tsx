@@ -11,6 +11,7 @@ import { FolderField } from '../components/Pickers';
 import { View } from 'react-native';
 import { NA_MOBILE } from '../components/Menu';
 import { BrowserPage, CapabilitiesPage, ConnectorsPage } from './ToolPages';
+import { sheetBack } from '../nav';
 import { AboutPage, FeedbackPage, KeptPrivateSection } from './AboutFeedback';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
@@ -46,7 +47,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
   const host = client?.conn.baseUrl.replace(/^https?:\/\//, '') ?? '';
   const cycle = <T extends string>(v: T, all: T[]) => all[(all.indexOf(v) + 1) % all.length];
   const label = (v: string) => (v === 'auto' ? t.auto : v === 'zh' ? '简体中文' : v === 'en' ? 'English' : v === 'dark' ? t.dark : t.light);
-  const back = () => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null));
+  const back = () => { const n = sheetBack({ page, usageFocus }); if (n === 'close') onClose(); else { setUsageFocus(n.usageFocus); setPage(n.page as typeof page); } };
   return (
     <Sheet theme={theme} visible={visible} onClose={onClose} title={page ? TITLES[page] : undefined} onBack={page ? back : undefined} backLabel={page === 'usage' && usageFocus ? '全部用量' : '返回设置'}>
       {page ? <>

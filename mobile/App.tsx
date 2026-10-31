@@ -18,9 +18,10 @@ import { SideChatScreen } from './src/screens/SideChat';
 import { VoiceModeScreen } from './src/screens/VoiceMode';
 import { STEPS, pokeAll, stopAppearanceTest, testSet, useAppearanceTest } from './src/appearanceTest'; // TEST-ONLY
 import { Pressable, Text } from 'react-native';
+import { backOne, type NavRoute } from './src/nav';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
-type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage' | 'schedules' | 'avatar' | 'side' | 'voice'; target: ChatTarget; memId?: string; start?: string; chatId?: string };
+type Route = NavRoute<ChatTarget>;
 
 function Root() {
   const theme = useTheme();
@@ -30,11 +31,16 @@ function Root() {
   const [settingsStart, setSettingsStart] = useState<'connectors' | undefined>(undefined);
   const [newChat, setNewChat] = useState<'chat' | 'group' | null>(null);
   const push = (r: Route) => setStack((s) => [...s, r]);
-  const pop = () => setStack((s) => s.slice(0, -1));
+  const stackRef = useRef(stack); stackRef.current = stack;
+  // One level up; a screen opened from the settings sheet returns to the sheet (web: "Back to Bots").
+  const pop = () => { const r = backOne(stackRef.current); setStack(r.stack); if (r.reopenSheet) { setSettingsStart(undefined); setSettings(true); } };
+  // Registered ONCE at mount so it is the OLDEST handler: RN calls the newest first, so each screen's
+  // PageHeader handler (inner levels such as 全部记忆→摘要, 单项用量→全部用量) runs before this fallback.
+  // (0.9.10 bug: re-registering on every stack change made this the newest and skipped inner levels.)
   useEffect(() => {
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => { if (stack.length) { pop(); return true; } return false; });
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => { if (stackRef.current.length) { pop(); return true; } return false; });
     return () => sub.remove();
-  }, [stack.length]);
+  }, []);
   useEffect(() => { if (!client) setStack([]); }, [client]);
   const top = stack.at(-1);
   const bot = top?.target.kind === 'bot' ? state?.bots.find((b) => b.id === top.target.id) : undefined;
@@ -53,7 +59,7 @@ function Root() {
   else if (top && (bot || room) && top.name === 'panel') body = <PanelScreen key={'p' + top.target.id} theme={theme} bot={bot} room={room} onClose={pop}
     onSettings={() => push({ name: 'settings', target: top.target })} onMemory={(id) => push({ name: 'memory', target: top.target, memId: id })}
     onOpenBot={(id) => open({ kind: 'bot', id })} onChat={() => open(top.target)} onSchedules={(start) => schedules(start)} onSide={(chatId) => push({ name: 'side', target: top.target, chatId })} />;
-  else if (top && (bot || room) && top.name === 'settings') body = <BotSettingsScreen key={'s' + top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onClose={() => setStack((s) => s.slice(0, -2))}
+  else if (top && (bot || room) && top.name === 'settings') body = <BotSettingsScreen key={'s' + top.target.id} theme={theme} bot={bot} room={room} onBack={pop} backLabel={top.fromSheet ? (room ? '返回群聊' : '返回 Bot') : undefined} onClose={() => (top.fromSheet ? pop() : setStack((s) => s.slice(0, -2)))}
     onAvatar={() => push({ name: 'avatar', target: top.target })} onSchedules={(start) => schedules(start)}
     onMemory={(id) => push({ name: 'memory', target: top.target, memId: id })} onOpenBot={(id) => open({ kind: 'bot', id })} />;
   else if (top && (bot || room) && top.name === 'memory') body = <MemoryScreen key={'m' + top.target.id} theme={theme} id={top.memId ?? top.target.id} name={bot?.name ?? room?.name ?? ''} onBack={pop} />;
@@ -64,7 +70,7 @@ function Root() {
       {body}
       {/* TEST-ONLY: appearance self-test runner + overlay; remove before a real release. */}
       <AppearanceTestRunner stack={stack} setStack={setStack} closeSettings={() => setSettings(false)} settingsOpen={settings} reopenSettings={() => setSettings(true)} />
-      {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t })} /> : null}
+      {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t, fromSheet: true })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
     </SafeAreaView>
   );

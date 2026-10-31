@@ -145,3 +145,7 @@
 - 设置根页只显示 ✕；子页（连接器/能力/浏览器/用量/密钥/反馈/关于 DS Bot）只显示返回 + 标题；用量详情返回「全部用量」。
 - 已改：SettingsSheet 子页、Bot/群聊设置、记忆、用量、定时任务、编辑 Bot 形象、Side chat（右侧保留结束 ✕）。
 - 系统返回键逐级返回（Sheet 走 onRequestClose，栈页面走 PageHeader 的 BackHandler）。
+- 0.9.10 重做（versionCode 28，versionName 不变）：修返回键「一次退到底」。
+  - 原因 1：从设置页 Bot/群聊列表进入的 Bot/群聊设置，会先关掉设置面板再入栈，所以返回时直接回到首页，设置面板没了。现在这个路由带 `fromSheet`，返回时出栈并重开设置面板（对应网页 Back to Bots / Back to group chats）。
+  - 原因 2：App 的 BackHandler 每次栈变化都重新注册，成了最新注册的那个，抢在 PageHeader 前面执行，于是系统返回键跳过了「全部记忆→摘要」「单项用量→全部用量」这些内层。现在改为只在挂载时注册一次，作为兜底。
+  - 逻辑抽到 `src/nav.ts`（backOne / sheetBack / innerBack），测试见 test/batch0910.test.mts（6 项）。

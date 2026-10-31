@@ -319,7 +319,7 @@ function SCard({ theme, title, children }: { theme: Theme; title?: string; child
 const capStatus = (s: any) => (!s ? undefined : s.state === 'ready' ? '就绪' : s.state === 'needs-approval' ? '需要批准' : s.state === 'error' ? `连接失败：${s.error ?? ''}` : '正在连接…');
 
 // Gear page: bot-settings.js BotSettingsForm cards; group settings use GroupSettingsForm.
-export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar, onSchedules, onMemory, onOpenBot }: { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onClose(): void; onAvatar(): void; onSchedules(start?: string): void; onMemory?(id: string): void; onOpenBot?(id: string): void }) {
+export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar, onSchedules, onMemory, onOpenBot, backLabel }: { theme: Theme; bot?: Bot; room?: Room; onBack(): void; backLabel?: string; onClose(): void; onAvatar(): void; onSchedules(start?: string): void; onMemory?(id: string): void; onOpenBot?(id: string): void }) {
   const { client, state, refresh } = useStore();
   const [err, setErr] = useState('');
   const [confirming, setConfirming] = useState(false);
@@ -346,7 +346,7 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar,
   const sw = (on: boolean, onChange: (v: boolean) => void, label: string, disabled?: boolean) => <Switch value={on} disabled={disabled} onValueChange={onChange} accessibilityLabel={label} />;
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <PageHeader theme={theme} title="设置" onBack={onBack} backLabel="返回详情" />
+      <PageHeader theme={theme} title="设置" onBack={onBack} backLabel={backLabel ?? '返回详情'} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {b ? (
           <>

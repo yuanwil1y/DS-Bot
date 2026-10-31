@@ -5,6 +5,7 @@ import { FlashList } from '@shopify/flash-list';
 import { needsCount, type Bot, type Room } from '../api';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { RoundButton, StatusDot } from '../components/ui';
+import * as Clipboard from 'expo-clipboard';
 import { Menu } from '../components/Menu';
 import { useStore } from '../store';
 import { t } from '../i18n';
@@ -19,6 +20,8 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
   const [acct, setAcct] = useState(false);
+  // context-menu.js: 复制对话 ID copies the Bot's current session id (or the group id).
+  const [ctx, setCtx] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const bots = state?.bots ?? [];
   const main = bots.find((b) => b.id === state?.mainBotId) ?? bots[0];
@@ -86,7 +89,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refresh(); setRefreshing(false); }} />}
         ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40 }}>{t.noBots}</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => onOpen(item.target)} android_ripple={{ color: theme.card }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 13 }}>
+          <Pressable onPress={() => onOpen(item.target)} onLongPress={() => setCtx(item.bot ? item.bot.sessionId ?? item.bot.id : item.target.id)} android_ripple={{ color: theme.card }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 13 }}>
             {item.bot ? <Avatar bot={item.bot} size={52} working={item.working} star={item.main} ring={theme.bg} /> : <GroupAvatar members={item.members ?? []} size={52} working={item.working} ring={theme.bg} />}
             <View style={{ flex: 1, marginLeft: 16 }}>
               <Text numberOfLines={1} style={{ color: theme.text, fontSize: 18, fontWeight: '600' }}>{item.name}{item.pinned ? '  📌' : ''}</Text>
@@ -97,6 +100,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
           </Pressable>
         )}
       />
+      <Menu theme={theme} visible={ctx !== null} onClose={() => setCtx(null)} items={[{ label: '复制对话 ID', onPress: () => { Clipboard.setStringAsync(ctx ?? ''); setCtx(null); } }]} />
       <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={64} left={16} items={[
         { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务', onPress: onSchedules }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
       ]} />

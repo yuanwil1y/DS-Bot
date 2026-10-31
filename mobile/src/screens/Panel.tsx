@@ -7,6 +7,7 @@ import { shownMode } from '../api/cards';
 import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Icon, PillButton, RoundButton } from '../components/ui';
+import * as Clipboard from 'expo-clipboard';
 import { Menu, NA, NA_MOBILE } from '../components/Menu';
 import { FolderField, ModelField, modelLine, PermissionPicker, presetName } from '../components/Pickers';
 import { ToastAndroid } from 'react-native';
@@ -121,7 +122,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
   const name = bot?.name ?? room?.name ?? '';
   const sides = bot ? sideChatsOf(state, bot.id) : [];
   const newSide = () => { setMore(false); client!.sideNew(bot!.id).then((v) => { refresh(); onSide(v.chatId); }, (e: any) => ToastAndroid.show(sideHostText(String(e?.message ?? e)), ToastAndroid.SHORT)); };
-  // Copy conversation as Markdown: the phone hands it to the share sheet (copy is one of its targets).
+  // details-drawer.js share: copy the conversation as Markdown to the clipboard.
   const share = async () => {
     try {
       const page: any = bot ? await client!.chat(bot.id) : await client!.roomChat(room!.id);
@@ -130,7 +131,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
         if (it.kind === 'user' && it.text && !HEADER.test(it.text)) lines.push(`**你:** ${it.text.trim()}`);
         else if (it.kind === 'bot' && it.text) lines.push(`**${name}:** ${String(it.text).replace(HEADER, '').trim()}`);
       }
-      await Share.share({ message: lines.join('\n\n') });
+      await Clipboard.setStringAsync(lines.join('\n\n'));
       setCopied(true); setTimeout(() => setCopied(false), 1600);
     } catch {}
   };

@@ -13,6 +13,7 @@ import {
   latestMemoryChange, MEMORY_NOTICE_MS, noteMemoryNews,
 } from '../api';
 import { Menu } from '../components/Menu';
+import * as Clipboard from 'expo-clipboard';
 import { ActivityRow } from '../components/ActivityRow';
 import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
@@ -37,6 +38,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
+  // web cells.js / user-message.js: a message's Copy writes its text to the clipboard.
+  const [copyOf, setCopyOf] = useState<string | null>(null);
+  const copyText = (s: string) => { setCopyOf(null); Clipboard.setStringAsync(s).then(() => ToastAndroid.show('已复制', ToastAndroid.SHORT)).catch(() => {}); };
   const dictation = useDictation((chunk, final) => {
     if (final) setText((v) => (v ? (v.endsWith(' ') || v.endsWith('\n') ? v : v + ' ') : '') + chunk);
   });
@@ -207,7 +211,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const speaker = !me && room && item.botId ? byId[item.botId] : undefined;
             const showName = !!room && !me && (prev?.botId !== item.botId || prev?.kind === 'user');
             if (me) return (
-              <Pressable disabled={!item.failed} onPress={() => retry(item)} style={{ alignSelf: 'flex-end', maxWidth: '85%', marginVertical: 5, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
+              <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ alignSelf: 'flex-end', maxWidth: '85%', marginVertical: 5, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
                 <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 11 }}>
                   <Text selectable style={{ color: theme.text, fontSize: 17, lineHeight: 25 }}>{item.text}</Text>
                 </View>
@@ -215,7 +219,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
               </Pressable>
             );
             return (
-              <View style={{ marginVertical: 5 }}>
+              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginVertical: 5 }}>
                 {showName ? <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6, marginLeft: 4 }}>
                   {speaker ? <Avatar bot={speaker} size={20} /> : null}
                   <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{item.name ?? speaker?.name}</Text>
@@ -223,7 +227,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 <View style={{ backgroundColor: theme.bubbleBot, borderRadius: 22, paddingHorizontal: 16, paddingVertical: 12, alignSelf: 'stretch' }}>
                   <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={17} />
                 </View>
-              </View>
+              </Pressable>
             );
           })(p)}</Boundary>}
         />
@@ -305,6 +309,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
         </View>
       </View>
 
+      <Menu theme={theme} visible={copyOf !== null} onClose={() => setCopyOf(null)} bottom={80} items={[{ label: '复制', onPress: () => copyText(copyOf ?? '') }]} />
       <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '定时任务', onPress: onSchedule }]} />
     </KeyboardAvoidingView>
   );

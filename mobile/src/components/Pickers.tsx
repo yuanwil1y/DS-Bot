@@ -47,10 +47,13 @@ function Item({ theme, label, sub, hint, on, onPress, disabled }: { theme: Theme
 }
 
 // model-menu.js: groupModels / servedOf / the trigger's "provider · effort" line.
+// model-menu.js groupModels: by provider id; a shared display name gets "(id)".
 function groups(models: Model[]) {
-  const out: [string, Model[]][] = [];
-  for (const m of models) { const k = m.providerName ?? m.provider ?? ''; const g = out.find((x) => x[0] === k); if (g) g[1].push(m); else out.push([k, [m]]); }
-  return out;
+  const by = new Map<string, Model[]>();
+  for (const m of models) { const k = m.provider ?? m.providerName ?? m.ref.split('/')[0]; if (!by.has(k)) by.set(k, []); by.get(k)!.push(m); }
+  const names = new Map<string, number>();
+  for (const [k, list] of by) { const n = list[0].providerName ?? k; names.set(n, (names.get(n) ?? 0) + 1); }
+  return [...by].map(([k, list]) => { const n = list[0].providerName ?? k; return [names.get(n)! > 1 ? `${n} (${k})` : n, list] as [string, Model[]]; });
 }
 export function modelLine(bot: Bot, state: BotState | null, reasoning?: Reasoning | null) {
   const models = state?.models ?? [];

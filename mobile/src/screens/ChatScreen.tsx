@@ -1,27 +1,32 @@
 // Grok-style chat for a Bot's private chat or a group chat: floating header, cards, pill composer.
+import { BtwCard } from '../components/BtwCard';
+import { LearningCard } from '../components/LearningCard';
 import { SIDE, parseSideLine, sideHostText, sideQuery } from '../api/side';
 import { VOICE } from '../api/voice';
 import { useDictation } from '../hooks/useDictation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
-  cardsFor, insertMention, mentionCandidates, mentionQuery, roomWork,
+  cardsFor, insertMention, mentionCandidates, mentionQuery,
   addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
   type Bot, type ChatModel, type ChatRow, type Room, type RoomModel,
+  latestMemoryChange, MEMORY_NOTICE_MS, noteMemoryNews,
 } from '../api';
 import { Menu } from '../components/Menu';
+import { ActivityRow } from '../components/ActivityRow';
+import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
 import { Boundary } from '../errors';
-import { ApprovalCard, QuestionCard, SettledQuestion, ViewCardView } from '../components/Cards';
+import { AnsweredView, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 
-type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void };
+type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void; onOpenChat(t: { kind: 'bot' | 'room'; id: string }): void };
 
-export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, onSide, onVoice }: Props) {
+export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, onSide, onVoice, onOpenChat }: Props) {
   const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state, refresh } = useStore();
   const id = (bot?.id ?? room?.id)!;
   const sessionId = bot ? bot.sessionId ?? bot.id : room!.id;
@@ -38,7 +43,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   });
   const toggleDictate = () => {
     if (dictation.listening) dictation.stop();
-    else void dictation.start({ continuous: false });
+    else void dictation.start();
   };
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
@@ -109,7 +114,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
 
   const target = bot ? { kind: 'bot' as const, id: bot.id } : { kind: 'room' as const, id: room!.id };
   const cards = useMemo(() => cardsFor(state, target), [state, id]);
-  const work = useMemo(() => (room ? roomWork(state, room.id) : []), [state, id]);
+  const dock = useMemo(() => dockModel(id, byId, state?.rooms ?? [], state?.work), [state, id, byId]);
   const onErr = (e: any) => setErr(String(e?.message ?? e));
   const after = () => { refresh(); load(); };
   const mq = room ? mentionQuery(text) : null;
@@ -120,10 +125,35 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
     const md = list.filter((r) => !r.pending).map((r) => `**${r.kind === 'user' ? t.you : r.name ?? bot?.name ?? ''}**\n\n${r.text}`).join('\n\n---\n\n');
     Share.share({ message: md, title: bot?.name ?? room?.name }).catch(() => {});
   }
-  const busy = bot ? !!streaming[bot.id] || Object.keys(model.drafts).length > 0 : !!rmodel.running;
+  const botRunning = !!bot && (!!streaming[bot.id] || Object.keys(model.drafts).length > 0);
+  const runAt = useRef(0);
+  const running = bot ? botRunning : !!rmodel.running;
+  if (!running) runAt.current = 0; else if (runAt.current === 0) runAt.current = (bot && (state?.work as any)?.bots?.[bot.id]?.since) || Date.now();
   const members = room ? (room.members ?? []).map((m) => byId[m]).filter(Boolean) : [];
   const name = bot?.name ?? room?.name ?? '';
-  const sub = status !== 'open' ? t.offline : busy ? (rmodel.speaking?.length ? rmodel.speaking.map((s) => byId[s]?.name ?? s).join('、') + ' · ' : '') + t.working : '';
+  const sub = status !== 'open' ? t.offline : '';
+  // header.js useMemoryNotice: the pill says 记忆已更新 for 3.2 s after a change lands.
+  const memIds = bot ? [bot.id] : room ? [room.id, ...(room.members ?? [])] : [];
+  const news = noteMemoryNews(state?.memoryNews);
+  const seen = Math.max(0, ...memIds.map((m) => news[m]?.seen ?? 0));
+  const [memShown, setMemShown] = useState(false);
+  useEffect(() => {
+    const left = seen + MEMORY_NOTICE_MS - Date.now();
+    setMemShown(seen > 0 && left > 0);
+    if (seen === 0 || left <= 0) return undefined;
+    const timer = setTimeout(() => setMemShown(false), left);
+    return () => clearTimeout(timer);
+  }, [seen]);
+  const memChanged = latestMemoryChange(news, memIds);
+  const memoryNotice = memShown && memChanged !== null && state?.memory !== false;
+  // header.js NewMessagePills (down): replies that land while scrolled up.
+  const replies = list.reduce((n, r) => n + (r.kind !== 'user' && r.kind !== 'answer' && r.kind !== 'event' && !r.pending && !r.streaming ? 1 : 0), 0);
+  const [unpinned, setUnpinned] = useState(false);
+  const [release, setRelease] = useState<{ base: number | null; dismissed: boolean }>({ base: null, dismissed: false });
+  useEffect(() => { setRelease({ base: unpinned ? replies : null, dismissed: false }); }, [unpinned]);
+  const fresh = release.base === null ? 0 : replies - release.base;
+  const showDown = unpinned && fresh > 0 && !release.dismissed;
+  const listRef = useRef<FlatList<ChatRow>>(null);
 
   return (
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
@@ -135,6 +165,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       {loading ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
         <FlatList
           inverted
+          ref={listRef}
+          onScroll={(e) => { const up = e.nativeEvent.contentOffset.y > 120; if (up !== unpinned) setUnpinned(up); }}
+          scrollEventThrottle={100}
           data={data}
           keyExtractor={(r) => r.key}
           style={{ flex: 1, marginTop: 62 }}
@@ -142,11 +175,17 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           onEndReached={older}
           keyboardShouldPersistTaps="handled"
           ListHeaderComponent={<Boundary where="卡片" inline resetKey={state}><View>
-            {(rmodel.speaking ?? []).filter((b) => !list.some((r) => r.streaming && r.botId === b)).map((b) => (
+            {bot ? <ActivityRow theme={theme} bot={bot} visible={botRunning && !list.some((r) => r.streaming && r.text)} tool={(state?.work as any)?.bots?.[bot.id]} at={runAt.current} />
+              : <ActivityRow theme={theme} mark={<GroupAvatar members={members} size={28} ring={theme.bg} />} visible={!!rmodel.running && !(rmodel.speaking ?? []).length && !list.some((r) => r.streaming && r.text)} at={runAt.current} />}
+            {(rmodel.speaking ?? []).filter((b) => !list.some((r) => r.streaming && r.botId === b)).map((b) => { const w = (state?.work as any)?.bots?.[b]; return byId[b] ? (
               <View key={b} style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6, marginLeft: 4 }}>
-                {byId[b] ? <Avatar bot={byId[b]} size={20} working /> : null}
-                <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{`${byId[b]?.name ?? 'Bot'} 正在输入…`}</Text>
-              </View>))}
+                <Avatar bot={byId[b]} size={22} working />
+                <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{w?.tool ? `${byId[b].name} · ${workPhrase(w)}…` : `${byId[b].name} 正在输入…`}</Text>
+              </View>) : null; })}
+            {bot ? (((state as any)?.btwCards?.[bot.id] ?? []) as any[]).filter((c) => c?.partId === (bot.sessionId ?? bot.id)).map((c) => <BtwCard key={c.id} theme={theme} card={c} onDelete={() => client!.call<any>('btw-delete', { sessionId: c.partId, cardId: c.id }).then(async (r) => { await after(); return r; })} />) : null}
+            {bot ? (state?.learning?.[bot.id] ?? []).map((p: any) => <LearningCard key={p.id} theme={theme} proposal={p} onAnswer={(approve) => client!.learningAnswer(p.id, approve).then(after)} />) : null}
+            {bot ? (cards.secrets ?? []).map((r) => <SecretCard key={JSON.stringify([cards.sessionId, r.id, r.kind])} theme={theme} bot={bot} bots={state?.bots ?? []} request={r} saved={(state?.secrets ?? []).find((x) => x.name === r.name)}
+              onSet={(value, scope) => client!.secretSet({ requestId: r.id, value, scope }).then(after)} onAllow={() => client!.secretAllow(r.id).then(after)} onCancel={() => client!.secretCancel(r.id).then(after)} />) : null}
             {cards.question ? <QuestionCard key={cards.question.id} theme={theme} q={cards.question} onError={onErr}
               onAnswer={(a) => client!.answerQuestion(cards.sessionId, cards.question!.id, a).then(after)} onDismiss={() => client!.dismissQuestion(cards.sessionId).then(after)} /> : null}
             {cards.view ? <ViewCardView key={cards.view.id} theme={theme} v={cards.view} onError={onErr}
@@ -154,7 +193,14 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             {cards.approvals.map((a) => <ApprovalCard key={a.id} theme={theme} a={a} botName={byId[a.botId]?.name ?? 'Bot'} onError={onErr} onAnswer={(c) => client!.approvalAnswer(a.id, c).then(after)} />)}
           </View></Boundary>}
           renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{(({ item, index }: { item: ChatRow; index: number }) => {
-            if (item.kind === 'event') return <Text style={{ color: theme.sub, fontSize: 13, textAlign: 'center', marginVertical: 6 }}>{item.text}</Text>;
+            if (item.kind === 'event') {
+              const ev = item.data?.event;
+              if (ev === 'working' || ev === 'approval') return <Pressable onPress={onDetails} style={{ flexDirection: 'row', alignSelf: 'center', alignItems: 'center', marginVertical: 6 }}>{item.botId && byId[item.botId] ? <Avatar bot={byId[item.botId]} size={16} /> : null}<Text style={{ color: theme.sub, fontSize: 13, marginLeft: 5 }}>{item.text}</Text></Pressable>;
+              return <View style={{ alignItems: 'center', marginVertical: 6 }}><Text style={{ color: ev === 'failed' ? theme.danger : theme.sub, fontSize: 13, textAlign: 'center' }}>{item.text}</Text>
+                {ev === 'paused' && room?.paused?.length ? <Pressable onPress={() => client!.continueRoom(room.id).then(refresh).catch(onErr)} style={{ marginTop: 6, paddingHorizontal: 12, height: 28, borderRadius: 14, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: theme.text, fontSize: 13 }}>继续</Text></Pressable> : null}</View>;
+            }
+            if (item.kind === 'answer' && item.data?.views) return <View style={{ alignSelf: 'flex-end', width: '88%' }}><AnsweredView theme={theme} views={item.data.views} answers={item.data.answers} /></View>;
+            if (item.kind === 'answer' && item.data?.handoff) return <View style={{ alignSelf: 'flex-end', width: '88%' }}><SettledHandoff theme={theme} handoff={item.data.handoff} /></View>;
             if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;
             const me = item.kind === 'user' || item.kind === 'answer';
             const prev = data[index + 1];
@@ -186,22 +232,32 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       {/* Floating header: back, centered pill (opens details), more. */}
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 }}>
         <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} />
-        <Pressable onPress={onDetails} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', height: 46, borderRadius: 23, paddingLeft: 6, paddingRight: 16, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
+        <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', height: 46, borderRadius: 23, paddingLeft: 6, paddingRight: 16, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
           {bot ? <Avatar bot={bot} size={34} ring={theme.fill} /> : <GroupAvatar members={members} size={34} ring={theme.fill} />}
           <View style={{ marginLeft: 8, flexShrink: 1 }}>
             <Text numberOfLines={1} style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>{name}</Text>
+            {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}>🧠 记忆已更新</Text> : null}
             {sub ? <Text numberOfLines={1} style={{ color: status !== 'open' ? '#f5a623' : theme.sub, fontSize: 11 }}>{sub}</Text> : null}
           </View>
         </Pressable>
         <View style={{ width: 46 }} />
       </View>
 
-      {work.length ? (
-        <Pressable onPress={onDetails} style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 32, borderRadius: 16, paddingHorizontal: 12, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, marginBottom: 4, maxWidth: '90%' }}>
-          {work.slice(0, 3).map((w) => byId[w.botId] ? <Avatar key={w.botId} bot={byId[w.botId]} size={20} ring={theme.fill} /> : null)}
-          <Text numberOfLines={1} style={{ color: work.some((w) => w.state === 'ask') ? '#f0b84a' : theme.sub, fontSize: 13, marginLeft: 6, flexShrink: 1 }}>
-            {[work.filter((w) => w.state === 'ask').length ? `${work.filter((w) => w.state === 'ask').map((w) => byId[w.botId]?.name).join('、')} 等你批准` : '',
-              work.filter((w) => w.state === 'work').length ? `${work.filter((w) => w.state === 'work').map((w) => byId[w.botId]?.name).join('、')} 正在干活…` : ''].filter(Boolean).join(' · ')}
+      {showDown ? (
+        <View style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 34, borderRadius: 17, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder, marginBottom: 8 }}>
+          <Pressable onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
+            <Text style={{ color: theme.text, fontSize: 13 }}>↓ {fresh === 1 ? '1 条新消息' : `${fresh} 条新消息`}</Text>
+          </Pressable>
+          <Pressable onPress={() => setRelease((r) => ({ ...r, dismissed: true }))} accessibilityLabel="关闭新消息提示" hitSlop={8} style={{ paddingLeft: 4, paddingRight: 12, height: 34, justifyContent: 'center' }}><Text style={{ color: theme.sub, fontSize: 13 }}>✕</Text></Pressable>
+        </View>
+      ) : null}
+      {dock ? (
+        <Pressable onPress={() => (dock.open.details ? onDetails() : onOpenChat({ kind: 'room', id: dock.open.session! }))} style={{ alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 32, borderRadius: 16, paddingLeft: 6, paddingRight: 13, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, marginBottom: 8, maxWidth: '90%' }}>
+          {dock.faces.map((f, i) => byId[f.id] ? <View key={f.id} style={{ marginLeft: i ? -5 : 0 }}><Avatar bot={byId[f.id]} size={20} ring={theme.fill} />{f.ask ? <View style={{ position: 'absolute', right: -1, bottom: -1, width: 7, height: 7, borderRadius: 4, backgroundColor: '#e3a008' }} /> : null}</View> : null)}
+          <Text numberOfLines={1} style={{ fontSize: 13, marginLeft: 8, flexShrink: 1 }}>
+            {dock.waiting ? <Text style={{ color: '#f0b84a' }}>{dock.waiting}</Text> : null}
+            {dock.waiting && dock.doing ? <Text style={{ color: theme.faint }}>{' · '}</Text> : null}
+            {dock.doing ? <Text style={{ color: theme.sub }}>{dock.doing}</Text> : null}
           </Text>
         </Pressable>
       ) : null}
@@ -249,7 +305,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
         </View>
       </View>
 
-      <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '添加文件' }, { label: '引用对话' }, { label: '定时任务', onPress: onSchedule }]} />
+      <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '定时任务', onPress: onSchedule }]} />
     </KeyboardAvoidingView>
   );
 }

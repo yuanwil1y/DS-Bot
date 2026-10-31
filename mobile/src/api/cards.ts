@@ -1,9 +1,9 @@
 // Pure helpers for cards (question / view / approval), "needs you" items, member work,
 // group events and @mentions. Shared by the app and the Node test.
-import type { Approval, BotState, Notice, Question, ViewCard, WorkEntry } from './types';
+import type { Approval, BotState, Notice, Question, SecretRequest, ViewCard, WorkEntry } from './types';
 
 export type Target = { kind: 'bot' | 'room'; id: string };
-export type Cards = { sessionId: string; question?: Question; view?: ViewCard; approvals: Approval[] };
+export type Cards = { sessionId: string; question?: Question; view?: ViewCard; approvals: Approval[]; secrets?: SecretRequest[] };
 
 const sessionOf = (st: BotState, t: Target) => (t.kind === 'bot' ? st.bots.find((b) => b.id === t.id)?.sessionId ?? t.id : t.id);
 
@@ -13,8 +13,10 @@ export function cardsFor(st: BotState | null, t: Target): Cards {
   const sid = sessionOf(st, t);
   const question = st.questions?.[sid] ?? st.questions?.[t.id] ?? undefined;
   const view = st.views?.[sid] ?? st.views?.[t.id] ?? undefined;
-  const approvals = (st.work?.approvals ?? []).filter((a) => (t.kind === 'room' ? a.roomId === t.id : !a.roomId && a.botId === t.id));
-  return { sessionId: st.questions?.[sid] || st.views?.[sid] ? sid : t.id, question: question || undefined, view: view || undefined, approvals };
+  const approvals = (st.work?.approvals ?? []).filter((a) => t.kind === 'bot' && !a.roomId && a.botId === t.id);
+  // secret-card.js SecretDock: the Bot's pending request_secret cards, current part only.
+  const secrets = t.kind === 'bot' ? (st.secretRequests?.[t.id] ?? []).filter((r) => r.status === 'pending' && (!r.sessionId || r.sessionId === sid)) : [];
+  return { sessionId: st.questions?.[sid] || st.views?.[sid] ? sid : t.id, question: question || undefined, view: view || undefined, approvals, secrets };
 }
 
 export type Need = { key: string; kind: 'question' | 'view' | 'approval'; target: Target; botId: string; text: string; time?: number };
@@ -55,6 +57,13 @@ export function roomWork(st: BotState | null, roomId: string): MemberWork[] {
   return [...map.values()];
 }
 
+// web diagnostics.js failureLabel.
+const FAILURES: Record<string, string> = {
+  AUTH: 'API 密钥无效', QUOTA: '账户额度已用尽', ACCOUNT_QUOTA: '账户额度已用尽', RATE_LIMIT: '模型请求太频繁',
+  CONTEXT_WINDOW_EXCEEDED: '对话太长，超出模型上限', INVALID_REQUEST: '模型服务拒绝了请求', SERVER: '模型服务出错',
+  TIMEOUT: '模型响应超时', TRANSPORT: '连不上模型服务', SESSION: '它的群聊会话打不开', SESSION_RESET: '它的群聊会话打不开，下次会换一个新的',
+};
+export const failureLabel = (code?: string, text?: string) => (code && FAILURES[code]) || text || code || '未知错误';
 /** Web UI wording (zh) for a group event row. */
 export function eventLabel(e: { event?: string; name?: string; text?: string; count?: number; names?: string[]; code?: string }): string {
   const n = e.name ?? 'Bot';
@@ -63,12 +72,12 @@ export function eventLabel(e: { event?: string; name?: string; text?: string; co
     case 'approval': return `${n} 停下来等你批准`;
     case 'done': return `${n} 做完了`;
     case 'stopped': return `你停下了 ${n} 的工作`;
-    case 'failed': return `${n} 没能回答：${e.text || e.code || '出错'}`;
-    case 'missed': return `${n} 没有及时回答`;
-    case 'lookup': return e.text ? `${n} 查了自己的私聊：“${e.text}”` : `${n} 查了自己的私聊`;
-    case 'resumed': return `${n} 被重启打断，已接着做`;
-    case 'cut': return `${n} 又被重启打断，停下了`;
-    case 'admin-passed': return `${n} 没有回答也没有点名，用 @名字 叫一位成员`;
+    case 'failed': return `${n} 没能回答：${failureLabel(e.code, e.text)}`;
+    case 'missed': return `${n} 没有及时回应`;
+    case 'lookup': return e.text ? `${n} 在自己的对话里查找「${e.text}」` : `${n} 查看了自己的对话`;
+    case 'resumed': return `${n} 的工作被重启打断，已经接着做`;
+    case 'cut': return `${n} 的工作又被重启打断，已停下`;
+    case 'admin-passed': return `${n} 没有回答，也没有叫谁；用 @名字 叫一个成员来回答`;
     case 'paused': return `Bot 之间已接力 ${e.count ?? ''} 次，先停下了。还在等：${(e.names ?? []).join('、')}`;
     case 'schedule': return e.text ? `定时任务：${e.text}` : '定时任务';
     default: return e.text ?? e.event ?? '';

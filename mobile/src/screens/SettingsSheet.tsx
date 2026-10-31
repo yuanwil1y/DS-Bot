@@ -1,7 +1,8 @@
 // Account button -> settings sheet (Grok settings style).
 import React, { useEffect, useState } from 'react';
 import { clearLastError, loadLastError, type LastError } from '../errors';
-import { Text } from 'react-native';
+import { Text, ToastAndroid } from 'react-native';
+import type { ChatTarget } from './HomeScreen';
 import { Group, Row, Sheet } from '../components/ui';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
@@ -10,8 +11,19 @@ import type { Theme } from '../theme';
 
 export const APP_VERSION = '0.8.1';
 
-export function SettingsSheet({ theme, visible, onClose }: { theme: Theme; visible: boolean; onClose(): void }) {
-  const { client, status, state, disconnect } = useStore();
+export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void }) {
+  const { client, status, state, disconnect, refresh } = useStore();
+  // settings.js MainBotsSection / BotsPage / GroupsPage.
+  const bots = state?.bots ?? [];
+  const rooms = state?.rooms ?? [];
+  const byId = Object.fromEntries(bots.map((b) => [b.id, b]));
+  const mainIds: string[] = (state as any)?.mainBotIds ?? (state?.mainBotId ? [state.mainBotId] : []);
+  const mains = mainIds.map((id) => byId[id]).filter(Boolean);
+  const [first, ...others] = mains;
+  const candidates = bots.filter((b) => !mainIds.includes(b.id));
+  const [choosing, setChoosing] = useState<null | 'first' | 'add'>(null);
+  const setMain = (p: Record<string, unknown>) => client!.call('set-main', p).then(refresh, (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT));
+  const openSettings = (t: ChatTarget) => { onClose(); onOpenSettings?.(t); };
   const prefs = usePrefs();
   const [lastErr, setLastErr] = useState<LastError | null>(null);
   useEffect(() => { if (visible) loadLastError().then(setLastErr); }, [visible]);
@@ -28,6 +40,23 @@ export function SettingsSheet({ theme, visible, onClose }: { theme: Theme; visib
       <Group theme={theme}>
         <Row theme={theme} label={t.language} value={label(prefs.lang)} onPress={() => prefs.set({ lang: cycle<typeof prefs.lang>(prefs.lang, ['auto', 'zh', 'en']) })} />
         <Row theme={theme} label={t.theme} value={label(prefs.theme)} onPress={() => prefs.set({ theme: cycle<typeof prefs.theme>(prefs.theme, ['dark', 'light', 'auto']) })} />
+      </Group>
+      {!state?.readOnly ? <Group theme={theme} title="主 Bot">
+        <Row theme={theme} label="主 Bot" value={first?.name ?? '选择一个 Bot…'} caption={first ? `排在侧栏最上面。选另一个 Bot 就会把主 Bot 交给它，${first.name} 随之不再是主 Bot。` : undefined} onPress={() => setChoosing(choosing === 'first' ? null : 'first')} />
+        {choosing === 'first' ? bots.filter((b) => b.id !== first?.id).map((b) => <Row key={b.id} theme={theme} label={`  ${b.name}`} chevron={false} onPress={() => { setChoosing(null); setMain({ id: b.id, main: true, ...(first ? { replace: first.id } : {}) }); }} />) : null}
+        {others.map((b) => <React.Fragment key={b.id}>
+          <Row theme={theme} label={b.name} caption="也是主 Bot。" chevron={false} />
+          <Row theme={theme} label="  移到最前" chevron={false} onPress={() => setMain({ id: b.id, main: true, primary: true })} />
+          <Row theme={theme} label="  取消主 Bot" chevron={false} onPress={() => setMain({ id: b.id, main: false })} />
+        </React.Fragment>)}
+        {candidates.length ? <Row theme={theme} label="添加主 Bot" caption="主 Bot 可以创建和修改 Bot，并管理所有群聊。" onPress={() => setChoosing(choosing === 'add' ? null : 'add')} /> : null}
+        {choosing === 'add' ? candidates.map((b) => <Row key={b.id} theme={theme} label={`  ${b.name}`} chevron={false} onPress={() => { setChoosing(null); setMain({ id: b.id, main: true }); }} />) : null}
+      </Group> : null}
+      <Group theme={theme} title={`Bot · ${bots.length}`}>
+        {bots.map((b) => <Row key={b.id} theme={theme} label={b.name} value={[b.role, mainIds.includes(b.id) ? '主 Bot' : '', b.hidden && !mainIds.includes(b.id) ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'bot', id: b.id })} />)}
+      </Group>
+      <Group theme={theme} title={`群聊 · ${rooms.length}`}>
+        {rooms.length === 0 ? <Row theme={theme} label="还没有群聊。" caption="在群聊里，几个 Bot 和你一起做一件事。" /> : rooms.map((r) => <Row key={r.id} theme={theme} label={r.name} value={[`${(r.members ?? []).length} 位成员`, r.admin && byId[r.admin] ? `★ ${byId[r.admin].name}` : '', r.hidden ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'room', id: r.id })} />)}
       </Group>
       <Group theme={theme}>
         <Row theme={theme} label={t.disconnect} danger chevron={false} onPress={() => { onClose(); disconnect(); }} />

@@ -81,8 +81,14 @@ export class BotClient {
   dismissQuestion(sessionId: string) { return this.call<any>('dismiss-question', { sessionId }); }
   viewReply(sessionId: string, viewId: string, action: string, values: object) { return this.call<any>('view-reply', { sessionId, viewId, action, values }); }
   dismissView(sessionId: string) { return this.call<any>('dismiss-view', { sessionId }); }
+  // Values go out in these requests and never come back in a response.
+  learningAnswer(id: string, approve: boolean) { return this.call<any>('learning-answer', { id, approve }); }
+  secretSet(payload: { requestId: string; value: string; scope: 'all' | 'bot' }) { return this.call<any>('secret-set', payload); }
+  secretAllow(requestId: string) { return this.call<any>('secret-allow', { requestId }); }
+  secretCancel(requestId: string) { return this.call<any>('secret-cancel', { requestId }); }
   approvalAnswer(id: string, choice: 'allow' | 'reject') { return this.call<any>('approval-answer', { id, choice }); }
   stopMemberWork(roomId: string, botId: string) { return this.call<boolean>('stop-member-work', { roomId, botId }); }
+  continueRoom(roomId: string) { return this.call<boolean>('room-continue', { roomId }); }
   stopRoomWork(roomId: string) { return this.call<boolean>('stop-room-work', { roomId }); }
   roomProgress(roomId: string) { return this.call<{ callId: string; replies: unknown[]; speaking?: string | string[] }[]>('room-progress', { roomId }); }
   notices(boot?: string, since?: number) { return this.call<{ boot: string; seq: number; reset: boolean; notices: Notice[] }>('notices', { ...(boot ? { boot } : {}), ...(since != null ? { since } : {}) }); }

@@ -22,7 +22,9 @@ export type Bot = {
   createdAt?: number;
   private?: boolean;
 };
-export type Room = { id: string; name: string; named?: boolean; members?: string[]; admin?: string; mode?: string; notice?: string; preview?: string; createdAt?: number; workDir?: string; permission?: string; relayLimit?: number };
+export type Room = {
+  pinned?: boolean;
+  hidden?: boolean; id: string; name: string; named?: boolean; members?: string[]; admin?: string; mode?: string; notice?: string; preview?: string; createdAt?: number; workDir?: string; permission?: string; relayLimit?: number; paused?: string[] };
 export type Effort = { id: string; name: string; description?: string };
 export type Reasoning = { efforts: Effort[]; defaultEffort?: string };
 export type Model = { ref: string; name: string; provider?: string; providerName?: string; reasoning?: Reasoning; needsKey?: boolean };
@@ -39,13 +41,19 @@ export type BotState = {
   activity?: Record<string, unknown>;
   questions?: Record<string, Question>;
   views?: Record<string, ViewCard>;
+  learning?: Record<string, any[]>;
+  memoryNews?: Record<string, { at?: number }>;
+  memory?: boolean;
+  secretRequests?: Record<string, SecretRequest[]>;
+  secrets?: { name: string; scope: 'all' | string[]; purpose?: string }[];
   work?: Work;
   [k: string]: unknown;
 };
 export type Hello = { api: number | null; plugin?: { name: string; version: string }; boot: string; seq: number; revision: number; capabilities: string[]; readOnly?: boolean };
-export type ChatItem = { kind: 'user' | 'bot' | 'answer' | string; text?: string; time?: number; seq?: number; turn?: number; questions?: Question[]; answers?: { id: string; selected?: string[]; custom?: string }[] };
+export type ChatItem = { kind: 'user' | 'bot' | 'answer' | string; text?: string; time?: number; seq?: number; turn?: number; questions?: Question[]; answers?: any[]; views?: any[]; handoff?: { reason?: string; note?: string; outcome?: string } };
 export type QOption = { label: string; description?: string } | string;
 export type Question = { id: string; callId?: string; question: string; header?: string; detail?: string; options?: QOption[]; multiSelect?: boolean; allowCustom?: boolean; askedAt?: number };
+export type SecretRequest = { id: string; callId?: string; sessionId?: string; kind: 'fill' | 'allow'; name: string; purpose?: string; status: string; scope?: 'all' | string[] };
 export type ViewCard = { id: string; callId?: string; title?: string; view: any; askedAt?: number };
 export type Approval = { id: string; sessionId: string; botId: string; roomId?: string; tool: string; reason?: string; detail?: { text?: string; code?: string }; at?: number; answerable?: boolean };
 export type WorkEntry = { botId: string; since?: number; tool?: string; said?: string; note?: string };

@@ -61,8 +61,12 @@ export function applyFeed(m: ChatModel, sessionId: string, e: FeedEvent): ChatMo
 
 export function rows(m: ChatModel): ChatRow[] {
   const out: ChatRow[] = m.items
-    .filter((i) => i.text || (i.kind === 'answer' && i.questions?.length))
-    .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time, ...(i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } } : {}) }));
+    .filter((i) => i.text || (i.kind === 'answer' && (i.questions?.length || i.views?.length || i.handoff)))
+    // An answer to a question, a view or a browser handoff draws its settled card (widget-cell.js AnsweredReply).
+    .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time,
+      ...(i.kind === 'answer' && i.views?.length ? { data: { views: i.views, answers: i.answers ?? [] } }
+        : i.kind === 'answer' && i.handoff ? { data: { handoff: i.handoff } }
+          : i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } } : {}) }));
   for (const p of m.pending ?? []) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   for (const [id, text] of Object.entries(m.drafts)) out.push({ key: `d${id}`, kind: 'bot', text, streaming: true });
   return out;

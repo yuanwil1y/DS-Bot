@@ -2,7 +2,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import { BotClient, Feed, NativeCookieTokenAuth, type BotState, type Connection, type FeedEvent, type FeedStatus, type Notice } from './api';
+import { BotClient, Feed, noteMemoryNews, resetMemoryNews, NativeCookieTokenAuth, type BotState, type Connection, type FeedEvent, type FeedStatus, type Notice } from './api';
 
 const KEY = 'dsbot.connection.v1';
 type Listener = (e: FeedEvent) => void;
@@ -46,6 +46,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const clientRef = useRef<BotClient | null>(null);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Note memory news as each state lands, even while no chat shows it.
+  useEffect(() => { if (state) noteMemoryNews(state.memoryNews); }, [state]);
   const refresh = useCallback(async () => {
     const c = clientRef.current; if (!c) return;
     try { setState(await c.state()); } catch {}
@@ -119,7 +121,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const disconnect = useCallback(async () => {
     feed.current?.stop(); feed.current = null; clientRef.current = null;
-    setClient(null); setState(null); setPreviews({}); setUnread({}); setNotices([]); cursor.current = {};
+    resetMemoryNews(); setClient(null); setState(null); setPreviews({}); setUnread({}); setNotices([]); cursor.current = {};
     await SecureStore.deleteItemAsync(KEY);
   }, []);
 

@@ -21,7 +21,7 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
   const [note, setNote] = useState('');
   const turn = useRef(0);
   const waiting = useRef(false);
-  const sawStream = useRef(false);
+  const sentAt = useRef(0);
   const pulse = useRef(new Animated.Value(1)).current;
   const sessionId = bot.sessionId ?? bot.id;
   const dictationRef = useRef<{ stop(): void } | null>(null);
@@ -31,7 +31,6 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
     setSaid(spoken);
     setHeard('');
     waiting.current = false;
-    sawStream.current = false;
     if (!spoken) { setPhase('listening'); return; }
     setPhase('speaking');
     const own = turn.current;
@@ -49,7 +48,7 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
     setHeard(t);
     setPhase('thinking');
     waiting.current = true;
-    sawStream.current = false;
+    sentAt.current = replies.current;
     try { await client.send(sessionId, t); }
     catch { waiting.current = false; setPhase('listening'); }
   };
@@ -73,46 +72,28 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
     const timer = setTimeout(() => {
       if (turn.current !== own) return;
       void dictation.start({ continuous: false });
-    }, 280);
+    }, 250);
     return () => clearTimeout(timer);
   }, [phase, dictation.listening]);
 
   useEffect(() => { if (phase !== 'listening') dictation.stop(); }, [phase]);
 
-  // Track stream start/end for this bot after we submitted.
-  useEffect(() => {
-    if (phase !== 'thinking' || !waiting.current) return;
-    if (streaming[bot.id]) sawStream.current = true;
-  }, [phase, streaming[bot.id], bot.id]);
-
+  // web voice.js: speak the last reply once the turn has a new answer and the Bot is
+  // no longer running (turnOutline count changed && !running).
+  const [reply, setReply] = useState<{ n: number; text: string } | null>(null);
+  const replies = useRef(0);
   useEffect(() => subscribe((e) => {
-    if (!waiting.current) return;
     const d = e.data as any;
-    if (e.event === 'stream' && d?.botId === bot.id) {
-      if (d.phase !== 'end') sawStream.current = true;
-      else if (sawStream.current && d.phase === 'end') {
-        // Prefer the message event for text; if stream ends without it, fall through on next message.
-      }
-    }
     if (e.event === 'message' && d?.botId === bot.id && d?.item?.kind !== 'user' && d?.item?.text) {
-      if (waiting.current) speakReply(String(d.item.text));
+      replies.current += 1;
+      setReply({ n: replies.current, text: String(d.item.text) });
     }
   }), [bot.id, subscribe]);
-
-  // Fallback: stream ended and we never got a message event — pull chat once.
+  const running = !!streaming[bot.id];
   useEffect(() => {
-    if (phase !== 'thinking' || !waiting.current || !client) return;
-    if (streaming[bot.id] || !sawStream.current) return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      client.chat(bot.id).then((p) => {
-        if (cancelled || !waiting.current) return;
-        const last = [...p.items].reverse().find((x: any) => x.kind !== 'user' && x.text);
-        if (last?.text) speakReply(String(last.text));
-      }).catch(() => {});
-    }, 400);
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [phase, streaming[bot.id], client, bot.id]);
+    if (phase !== 'thinking' || running || !waiting.current || !reply || reply.n <= sentAt.current || !reply.text.trim()) return;
+    speakReply(reply.text);
+  }, [phase, running, reply]);
 
   useEffect(() => () => { turn.current += 1; dictation.stop(); void Speech.stop(); }, []);
 

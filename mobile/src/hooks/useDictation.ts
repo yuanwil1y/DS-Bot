@@ -36,7 +36,6 @@ export function useDictation(onText: (text: string, final: boolean) => void) {
     latest.current(transcript, !!ev.isFinal);
   });
   useSpeechRecognitionEvent('error', (ev) => {
-    setListening(false);
     const n = dictationErrorNote(ev.error);
     if (n) setNote(n);
   });
@@ -48,14 +47,10 @@ export function useDictation(onText: (text: string, final: boolean) => void) {
       const perm = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       if (!perm.granted) { setNote(VOICE.micBlocked); return false; }
       ExpoSpeechRecognitionModule.start({
-        lang: lang || 'zh-CN',
+        lang: lang || Intl.DateTimeFormat().resolvedOptions().locale || 'zh-CN',
         interimResults: true,
         continuous,
         addsPunctuation: false,
-        androidIntentOptions: {
-          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: continuous ? 1500 : 1200,
-          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: continuous ? 1000 : 800,
-        },
       });
       setListening(true);
       return true;

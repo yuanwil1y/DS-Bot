@@ -367,13 +367,13 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             <Icon name="mic" color={dictation.listening ? '#fff' : theme.sub} size={16} />
           </Pressable>
           {text.trim() ? (
-            <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="send" color="#fff" size={20} />
+            <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="send" color={theme.accentText} size={20} />
             </Pressable>
           ) : bot ? (
             <Pressable onPress={onVoice} accessibilityLabel={VOICE.startVoice}
-              style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
+              style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: theme.accentText, fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
             </Pressable>
           ) : null}
         </View>
@@ -388,8 +388,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
 // cells.js NewDivider: a line with 新 before the first row since the last visit.
 function NewDivider({ theme }: { theme: Theme }) {
   return <View accessibilityRole="none" accessibilityLabel="新消息" style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-    <View style={{ flex: 1, height: 1, backgroundColor: theme.danger, opacity: 0.5 }} />
-    <Text style={{ color: theme.danger, fontSize: 12, fontWeight: '500', marginHorizontal: 8 }}>新</Text>
-    <View style={{ flex: 1, height: 1, backgroundColor: theme.danger, opacity: 0.5 }} />
+    <View style={{ flex: 1, height: 1, backgroundColor: theme.accent, opacity: 0.2 }} />
+    <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '500', marginHorizontal: 8 }}>新</Text>
+    <View style={{ flex: 1, height: 1, backgroundColor: theme.accent, opacity: 0.2 }} />
   </View>;
 }

@@ -706,7 +706,7 @@ function GroupSettingsForm({ theme, room, onOpenBot, onDeleted }: { theme: Theme
                 <Text style={{ color: theme.text }}>全员统一</Text>
                 <Text style={{ color: theme.faint, fontSize: 12 }}>在这个群里代替各成员自己的权限。</Text>
               </View>
-              <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: shared ? '#4d6bfe' : theme.cardHi, justifyContent: 'center', paddingHorizontal: 3 }}>
+              <View style={{ width: 44, height: 26, borderRadius: 13, backgroundColor: shared ? theme.accent : theme.active, justifyContent: 'center', paddingHorizontal: 3 }}>
                 <View style={{ width: 20, height: 20, borderRadius: 10, backgroundColor: '#fff', alignSelf: shared ? 'flex-end' : 'flex-start' }} />
               </View>
             </Pressable>

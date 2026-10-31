@@ -38,14 +38,14 @@ function OptRow({ theme, i, label, desc, picked, onPress, disabled }: { theme: T
         <Text style={{ color: theme.text, fontSize: 15 }}>{label}</Text>
         {desc ? <Text style={{ color: theme.sub, fontSize: 13, marginTop: 2 }}>{desc}</Text> : null}
       </View>
-      {picked ? <Text style={{ color: BLUE, fontSize: 16 }}>✓</Text> : null}
+      {picked ? <Text style={{ color: theme.accent, fontSize: 16 }}>✓</Text> : null}
     </Pressable>
   );
 }
 function Btn({ theme, title, primary, onPress, disabled }: { theme: Theme; title: string; primary?: boolean; onPress(): void; disabled?: boolean }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, marginLeft: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: primary ? BLUE : theme.cardHi, opacity: disabled ? 0.5 : pressed ? 0.75 : 1 })}>
-      <Text style={{ color: primary ? '#fff' : theme.text, fontSize: 14, fontWeight: '600' }}>{title}</Text>
+    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => ({ height: 36, paddingHorizontal: 16, borderRadius: 18, marginLeft: 8, alignItems: 'center', justifyContent: 'center', backgroundColor: primary ? theme.accent : theme.cardHi, opacity: disabled ? 0.5 : pressed ? 0.75 : 1 })}>
+      <Text style={{ color: primary ? theme.accentText : theme.text, fontSize: 14, fontWeight: '600' }}>{title}</Text>
     </Pressable>
   );
 }
@@ -192,7 +192,7 @@ function Node({ n, c }: { n: any; c: Ctx }): React.ReactElement | null {
           <Pressable key={x.label} disabled={c.locked} onPress={() => c.setInput(n.id, choiceValue(x))} style={{ paddingHorizontal: 12, height: 28, justifyContent: 'center', borderRadius: 8, backgroundColor: on ? theme.card : 'transparent' }}><Text style={{ color: on ? theme.text : theme.sub, fontSize: 13 }}>{x.label}</Text></Pressable>); })}</View>
           : o.map((x) => { const on = choiceValue(x) === cur; return (
             <Pressable key={x.label} disabled={c.locked} onPress={() => c.setInput(n.id, choiceValue(x))} style={{ flexDirection: 'row', alignItems: 'center', minHeight: 30 }}>
-              <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: on ? 5 : 1.5, borderColor: on ? BLUE : theme.fillBorder, marginRight: 8 }} /><Text style={{ color: theme.text, fontSize: 14 }}>{x.label}</Text></Pressable>); })}</View>;
+              <View style={{ width: 16, height: 16, borderRadius: 8, borderWidth: on ? 5 : 1.5, borderColor: on ? theme.accent : theme.fillBorder, marginRight: 8 }} /><Text style={{ color: theme.text, fontSize: 14 }}>{x.label}</Text></Pressable>); })}</View>;
     }
     case 'toggle': return <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 28 }}><Text style={{ color: theme.text, fontSize: 14, flex: 1 }}>{n.label}</Text>
       <Switch value={c.values[n.id] === true} disabled={c.locked} onValueChange={(v) => c.setInput(n.id, v)} /></View>;

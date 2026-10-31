@@ -29,6 +29,7 @@ import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 import { useTeamPrefs } from '../teamPrefs';
 import { DEMO_ITEMS, useAppearanceTest } from '../appearanceTest';
+import { MessageTools, ReactionChips, toggleReaction, useReactions } from '../components/MessageTools';
 import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
 type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void; onOpenChat(t: { kind: 'bot' | 'room'; id: string }): void };
@@ -44,6 +45,18 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
+  // cells.js Bubble: one Bot reply's toolbar open at a time (tap toggles, a tap elsewhere closes).
+  const [tools, setTools] = useState<string | null>(null);
+  const inside = useRef(false);
+  const reactions = useReactions();
+  const input = useRef<React.ComponentRef<typeof TextInput>>(null);
+  // composer.js: Reply quotes the message as `> excerpt` (200 chars, whitespace folded) plus a blank line.
+  const quote = (s: string) => {
+    const ex = s.replace(/\s+/g, ' ').trim();
+    const line = `> ${ex.length > 200 ? `${ex.slice(0, 200)}…` : ex}\n\n`;
+    setText((v) => v + line);
+    setTimeout(() => input.current?.focus(), 50);
+  };
   // web cells.js / user-message.js: a message's Copy writes its text to the clipboard.
   const [copyOf, setCopyOf] = useState<string | null>(null);
   const copyText = (s: string) => { setCopyOf(null); Clipboard.setStringAsync(s).then(() => ToastAndroid.show('已复制', ToastAndroid.SHORT)).catch(() => {}); };
@@ -197,7 +210,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const showUp = dividerAt >= 0 && above.out && !above.seen && !above.dismissed;
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
+    <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }} onTouchStart={() => { if (!inside.current && tools !== null) setTools(null); inside.current = false; }}>
       {/* The empty state sits outside the inverted list: an inverted FlatList flips
           ListEmptyComponent too (both axes on Android), so it rendered mirrored. */}
       {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 62 + 40, left: 0, right: 0, alignItems: 'center' }}>
@@ -287,20 +300,27 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const md = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
             const think = look.thinking && item.data?.reasoning ? <View style={{ marginBottom: 12 }}><ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /></View> : null;
             const body = md;
+            const mkey = `${sessionId}:${item.key}`;
+            const open = !item.streaming && tools === item.key;
+            const tap = item.streaming ? undefined : () => setTools((k) => (k === item.key ? null : item.key));
+            const mine = () => { inside.current = true; };
+            const toolbar = open ? <MessageTools theme={theme} text={item.text} name={name} flat={flat} onReact={(e) => toggleReaction(mkey, e)} onReply={() => quote(item.text)} /> : null;
+            const chips = <ReactionChips theme={theme} picked={reactions[mkey] ?? []} onToggle={(e) => toggleReaction(mkey, e)} indent={!flat && lead ? 30 : 0} />;
             if (flat) return (
-              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
+              <Pressable onTouchStart={mine} onPress={tap} onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
                 {first ? <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 22, marginBottom: 4 }}>
                   {speaker ? <View style={{ marginRight: 8 }}><Avatar bot={speaker} size={22} /></View> : null}
                   <Text style={{ color: theme.text, fontSize: 13, lineHeight: 22, fontWeight: '600' }}>{name}</Text>
                   {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
                 </View> : null}
                 {think}
-                {body}
+                <View>{body}{toolbar}</View>
+                {chips}
               </Pressable>
             );
             const max = col ? (lead ? leadBubbleMax(col, look.width) : bubbleMax(col, look.width)) : '80%';
             return (
-              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, alignSelf: 'flex-start', maxWidth: max }}>
+              <Pressable onTouchStart={mine} onPress={tap} onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, alignSelf: 'flex-start', maxWidth: max }}>
                 {lead && first ? <View style={{ flexDirection: 'row', alignItems: 'baseline', marginLeft: 42, marginBottom: 4 }}>
                   <Text style={{ color: inkTextHex(speaker?.color ?? 'gray', theme.dark), fontSize: 12, lineHeight: 16, fontWeight: '500' }}>{name}</Text>
                   {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
@@ -309,7 +329,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
                   {lead ? <View style={{ width: 22, marginRight: 8 }}>{last && speaker ? <Avatar bot={speaker} size={22} /> : null}</View> : null}
                   <View style={{ flexShrink: 1, backgroundColor: theme.bubbleBot, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>{body}</View>
+                  {toolbar}
                 </View>
+                {chips}
               </Pressable>
             );
           })(p)}{placed.tails[p.item.key] ? <View>{placed.tails[p.item.key].btw.map(btwView)}{placed.tails[p.item.key].learning.map(learnView)}</View> : null}</Boundary>}
@@ -381,7 +403,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.tool, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="plus" color={theme.sub} size={14} />
           </Pressable>
-          <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.faint} multiline
+          <TextInput ref={input} value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.faint} multiline
             style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 16, lineHeight: 24, paddingVertical: 2, paddingHorizontal: 8, marginVertical: 0 }} />
           <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
             style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: dictation.listening ? '#ff3e51' : theme.tool, alignItems: 'center', justifyContent: 'center' }}>

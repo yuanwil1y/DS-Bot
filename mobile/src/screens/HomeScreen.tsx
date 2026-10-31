@@ -110,7 +110,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
       </View>
       <Menu theme={theme} visible={ctx !== null} onClose={() => setCtx(null)} items={[{ label: '复制对话 ID', onPress: () => { Clipboard.setStringAsync(ctx ?? ''); setCtx(null); } }]} />
       <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={56} left={12} items={[
-        { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务', onPress: onSchedules }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
+        { label: '用量', icon: 'gauge', onPress: onUsage }, { label: '连接器', icon: 'connector' }, { label: '自动化任务', icon: 'clock', onPress: onSchedules }, { label: 'Bot 设置', icon: 'gearLine', onPress: onAccount }, { label: '切换经典 Agent 模式', icon: 'switchMode', sep: true },
       ]} />
     </View>
   );

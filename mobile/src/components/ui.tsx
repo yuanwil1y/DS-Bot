@@ -57,7 +57,7 @@ export function Row({ theme, icon, label, value, caption, onPress, chevron = !!o
 }
 
 export function ToggleRow({ theme, label, value, onChange }: { theme: Theme; label: string; value: boolean; onChange(v: boolean): void }) {
-  return <Row theme={theme} label={label} right={<Switch value={value} onValueChange={onChange} thumbColor={value ? '#000' : '#ccc'} trackColor={{ true: '#c7c7cc', false: theme.cardHi }} />} />;
+  return <Row theme={theme} label={label} right={<Switch value={value} onValueChange={onChange} thumbColor="#ffffff" trackColor={{ true: theme.accent, false: theme.active }} />} />;
 }
 
 /** Full-height sheet with a round close button (Grok settings style). */

@@ -4,6 +4,7 @@ import { clearLastError, loadLastError, type LastError } from '../errors';
 import { Text, ToastAndroid } from 'react-native';
 import type { ChatTarget } from './HomeScreen';
 import { Group, Row, Sheet } from '../components/ui';
+import { AppearanceGroup, MotionGroup } from '../components/Appearance';
 import { FolderField } from '../components/Pickers';
 import { View } from 'react-native';
 import { NA, NA_MOBILE } from '../components/Menu';
@@ -42,7 +43,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       </Group>
       <Group theme={theme}>
         <Row theme={theme} label={t.language} value={label(prefs.lang)} onPress={() => prefs.set({ lang: cycle<typeof prefs.lang>(prefs.lang, ['auto', 'zh', 'en']) })} />
-        <Row theme={theme} label={t.theme} value={label(prefs.theme)} onPress={() => prefs.set({ theme: cycle<typeof prefs.theme>(prefs.theme, ['dark', 'light', 'auto']) })} />
+        <Row theme={theme} label="深浅色" caption="本设备的深色/浅色（网页由 DSH 外壳决定）。" value={label(prefs.theme)} onPress={() => prefs.set({ theme: cycle<typeof prefs.theme>(prefs.theme, ['dark', 'light', 'auto']) })} />
       </Group>
       {!state?.readOnly ? <Group theme={theme} title="主 Bot">
         <Row theme={theme} label="主 Bot" value={first?.name ?? '选择一个 Bot…'} caption={first ? `排在侧栏最上面。选另一个 Bot 就会把主 Bot 交给它，${first.name} 随之不再是主 Bot。` : undefined} onPress={() => setChoosing(choosing === 'first' ? null : 'first')} />
@@ -58,12 +59,14 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       <Group theme={theme} title={`Bot · ${bots.length}`}>
         {bots.map((b) => <Row key={b.id} theme={theme} label={b.name} value={[b.role, mainIds.includes(b.id) ? '主 Bot' : '', b.hidden && !mainIds.includes(b.id) ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'bot', id: b.id })} />)}
       </Group>
+      <MotionGroup theme={theme} />
       <Group theme={theme} title={`群聊 · ${rooms.length}`}>
         {rooms.length === 0 ? <Row theme={theme} label="还没有群聊。" caption="在群聊里，几个 Bot 和你一起做一件事。" /> : rooms.map((r) => <Row key={r.id} theme={theme} label={r.name} value={[`${(r.members ?? []).length} 位成员`, r.admin && byId[r.admin] ? `★ ${byId[r.admin].name}` : '', r.hidden ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'room', id: r.id })} />)}
       </Group>
       <Group theme={theme} title="设置页面">
         {['模型', '连接器', '能力', '浏览器', '密钥', '反馈', '关于 DS Bot'].map((p) => <Row key={p} theme={theme} label={p} value={NA} chevron={false} />)}
       </Group>
+      <AppearanceGroup theme={theme} />
       <Group theme={theme} title="模式">
         <Row theme={theme} label="经典 Agent 模式" value={NA_MOBILE} chevron={false} />
       </Group>

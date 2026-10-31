@@ -37,3 +37,4 @@
 - 2026-10-31 19:59 0.9.2: fonts DSSans, demo self-test, thinking row, web shots regenerated on mock demo; commit fa9a1e2; prerelease mobile-mvp-0.9.2
 - 2026-10-31 20:08 0.9.3: removed DSSans fonts + Text patch (0.9.2 launch crash), FatalGate/startup error screen; prerelease mobile-mvp-0.9.3
 - 2026-10-31 20:26 0.9.4: user bubble width = dsh .userStack (0.702, independent of width setting), always-visible copy action left of sent user bubbles (dsh MessageIconActions, 1s check), web flow gaps (4/16/28, thinking +12); versionCode 21; prerelease mobile-mvp-0.9.4
+- 流式失败排查：根因 run-local.sh PLUGIN=/tmp/rb2/ds-bot 路径失效，mock 未启动；补启 mock 后流式通过（0.9.3/0.9.4）

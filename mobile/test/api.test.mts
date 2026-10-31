@@ -3,6 +3,7 @@
 //   sh ../dev/mobile/run-local.sh start && npm run test:api [-- <token URL>]
 // Only the auth strategy differs from the app (Node has no cookie jar).
 import { readFileSync } from 'node:fs';
+import { connect as tcp } from 'node:net';
 import assert from 'node:assert/strict';
 import { BotClient } from '../src/api/client';
 import { Feed } from '../src/api/feed';
@@ -11,12 +12,18 @@ import { emptyChat, withHistory, applyFeed, rows, addPending, emptyRoom, withRoo
 import { timingText } from '../src/api/schedules';
 import { parseSideLine, sideChatsOf, sideTitle } from '../src/api/side';
 import type { FeedEvent } from '../src/api/types';
+import { memberWork } from '../src/api/work';
 import { cardsFor, needsYou, roomWork, eventLabel, mentionQuery, insertMention, mentionCandidates } from '../src/api/cards';
 
 const url = process.argv[2] ?? readFileSync('/tmp/dsh-mobile/web.log', 'utf8').match(/http:\/\/[\d.:]+\/\?token=\S+/g)?.at(-1);
 assert.ok(url, 'no token URL');
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const log = (...a: unknown[]) => console.log('  ✓', ...a);
+
+// The backend replies through the mock LLM; without it every turn ends empty (stream start -> end, no text).
+const mockPort = Number(process.env.MOCK_PORT ?? 8797);
+const mockUp = await new Promise<boolean>((r) => { const s = tcp(mockPort, '127.0.0.1'); s.once('connect', () => { s.end(); r(true); }); s.once('error', () => r(false)); });
+assert.ok(mockUp, `mock LLM not running on 127.0.0.1:${mockPort} (start it with run-local.sh)`);
 
 const conn = parseConnection(url);
 const auth = new ManualCookieTokenAuth();
@@ -29,6 +36,27 @@ log('bad token rejected');
 const hello = await client.connect();
 assert.equal(hello.api, 1);
 log('connect + hello api=1, caps', hello.capabilities.length);
+
+// Fixture: later steps talk to a bot named Writer; a fresh instance only has Chief.
+if (!(await client.state()).bots.some((b) => b.name === 'Writer')) {
+  await client.createBot({ name: 'Writer' });
+  // A new bot greets first; wait for that turn so it doesn't overlap the streaming check.
+  const wid = (await client.state()).bots.find((b) => b.name === 'Writer')!.id;
+  for (let i = 0; i < 100 && !(await client.chat(wid)).items.length; i++) await sleep(100);
+  await sleep(500);
+}
+assert.ok((await client.state()).bots.some((b) => b.name === 'Writer'), 'Writer fixture bot');
+{ // ...and a group that includes Writer (the group steps use it).
+  const s0 = await client.state(); const wid = s0.bots.find((b) => b.name === 'Writer')!.id;
+  if (!(s0.rooms ?? []).some((r) => (r.members ?? []).includes(wid))) {
+    await client.createRoom(s0.bots.map((b) => b.id), s0.bots.find((b) => b.id !== wid)!.id); // admin = Chief, so Writer is a plain member
+    // Seed one message so the room-chat step has rows, and let that turn finish.
+    const rid = (await client.state()).rooms!.find((r) => (r.members ?? []).includes(wid))!.id;
+    await client.send(rid, '大家好');
+    for (let i = 0; i < 150; i++) { const p = await client.roomChat(rid); if (!p.running && p.items.length > 1) break; await sleep(200); }
+  }
+  assert.ok(((await client.state()).rooms ?? []).some((r) => (r.members ?? []).includes(wid)), 'group fixture with Writer');
+}
 
 const events: FeedEvent[] = [];
 const statuses: string[] = [];
@@ -58,7 +86,7 @@ for (let i = 0; i < 200; i++) {
 }
 const kinds = [...new Set(events.slice(from).map((e) => e.event))];
 assert.ok(kinds.includes('stream'), 'stream events');
-assert.ok(sawDraft.length > 0, 'draft text rendered while streaming');
+assert.ok(sawDraft.length > 0, 'draft text rendered while streaming (stream had no text: is the mock LLM replying?)');
 const r = rows(model);
 assert.equal(r.at(-1)?.kind, 'bot');
 assert.equal(r.at(-2)?.text, '你好，测试流式回复');
@@ -126,15 +154,17 @@ assert.equal((await client.notices('stale-boot', 0)).reset, true);
 log('notices catch-up:', ns.notices.map((n) => n.kind).join(','), '; stale boot → reset');
 
 // group: live room events + approval answer + stop member work
+// Group approvals show on the member status dock (memberWork), not in cardsFor (web parity, 8f818e5).
+const roomApprovals = async () => { const s = await client.state(); return memberWork(s.rooms!.find((r) => r.id === room.id)!, s.work).flatMap((e) => e.approvals); };
 const room = (await client.state()).rooms!.find((r) => (r.members ?? []).includes(W.id))!;
 const ev0 = events.length;
 await client.send(room.id, '@Writer 提权');
-const ap = (await until(async () => cardsFor(await client.state(), { kind: 'room', id: room.id }).approvals[0]))!;
+const ap = (await until(async () => (await roomApprovals())[0]))!;
 assert.equal(ap.botId, W.id);
 assert.ok(roomWork(await client.state(), room.id).some((w) => w.botId === W.id && w.state === 'ask'));
 assert.ok(events.slice(ev0).some((e) => e.event === 'room' && (e.data as any)?.roomId === room.id), 'room feed event');
 await client.approvalAnswer(ap.id, 'allow');
-await until(async () => !cardsFor(await client.state(), { kind: 'room', id: room.id }).approvals.length);
+await until(async () => !(await roomApprovals()).length);
 await assert.rejects(client.approvalAnswer(ap.id, 'allow'));
 log('group approval card → allow; re-answer rejected');
 const rr = await until(async () => { const p = await client.roomChat(room.id); return !p.running && roomRows(withRoomPage(emptyRoom(), p)).filter((r) => r.kind === 'event').length ? p : null; }, 30000);

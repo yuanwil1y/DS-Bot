@@ -139,7 +139,7 @@ export function PermissionPicker({ theme, catalog, saved, onPick, repick }: { th
 // folder-menu.js
 export const folderName = (p: string) => String(p).replace(/[\\/]+$/, '').split(/[\\/]/).pop() || String(p);
 type Listing = Awaited<ReturnType<NonNullable<ReturnType<typeof useStore>['client']>['folderList']>>;
-export function FolderField({ theme, value, group, onPick }: { theme: Theme; value?: string; group?: boolean; onPick(path: string): Promise<unknown> }) {
+export function FolderField({ theme, value, group, team, disabled, onPick }: { theme: Theme; value?: string; group?: boolean; team?: boolean; disabled?: boolean; onPick(path: string): Promise<unknown> }) {
   const { client } = useStore();
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<{ team: string | null; picker: string | null; folders: { path: string; title: string }[] } | null>(null);
@@ -157,11 +157,11 @@ export function FolderField({ theme, value, group, onPick }: { theme: Theme; val
   const inside = listing?.entries?.filter((e) => !e.hidden) ?? [];
   return (
     <>
-      <Trigger theme={theme} title={value ? folderName(value) : fallback} sub={value} onPress={toggle} />
+      <Trigger theme={theme} title={value ? folderName(value) : fallback} sub={value} onPress={disabled ? () => {} : toggle} />
       <Pop theme={theme} visible={open} onClose={() => setOpen(false)}>
         {view === 'list' ? (
           <>
-            <Item theme={theme} label={fallback} sub={group ? undefined : info?.team ?? undefined} on={!value} onPress={() => choose('')} />
+            {team ? null : <Item theme={theme} label={fallback} sub={group ? undefined : info?.team ?? undefined} on={!value} onPress={() => choose('')} />}
             {folders.length ? <GroupHead theme={theme}>文件夹</GroupHead> : null}
             {folders.map((f) => <Item key={f.path} theme={theme} label={f.title} sub={f.path} on={f.path === value} onPress={() => choose(f.path)} />)}
             <Sep theme={theme} />

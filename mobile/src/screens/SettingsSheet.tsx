@@ -4,6 +4,8 @@ import { clearLastError, loadLastError, type LastError } from '../errors';
 import { Text, ToastAndroid } from 'react-native';
 import type { ChatTarget } from './HomeScreen';
 import { Group, Row, Sheet } from '../components/ui';
+import { FolderField } from '../components/Pickers';
+import { View } from 'react-native';
 import { NA, NA_MOBILE } from '../components/Menu';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
@@ -65,6 +67,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       <Group theme={theme} title="模式">
         <Row theme={theme} label="经典 Agent 模式" value={NA_MOBILE} chevron={false} />
       </Group>
+      <Locations theme={theme} />
       <Group theme={theme}>
         <Row theme={theme} label={t.disconnect} danger chevron={false} onPress={() => { onClose(); disconnect(); }} />
       </Group>
@@ -75,4 +78,21 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       <Text style={{ color: theme.faint, textAlign: 'center', marginTop: 24 }}>{t.appVersion} {APP_VERSION}</Text>
     </Sheet>
   );
+}
+
+// settings.js LocationsSection: the team workspace (数据位置 is the desktop app's only).
+function Locations({ theme }: { theme: Theme }) {
+  const { client } = useStore();
+  const [team, setTeam] = useState<string | null>(null);
+  const [moving, setMoving] = useState(false);
+  useEffect(() => { client?.folders().then((i) => setTeam(i?.team ?? null)).catch(() => {}); }, [client]);
+  const pick = (path: string) => {
+    if (moving) return Promise.resolve();
+    setMoving(true);
+    return client!.call<any>('team-workspace', { path }).then((a) => setTeam(a?.team ?? path)).finally(() => setMoving(false));
+  };
+  return <Group theme={theme} title="位置">
+    <Row theme={theme} label="总工作区" caption="没有单独设置文件夹的 Bot 在这里工作。" chevron={false} />
+    {team === null ? null : <View style={{ paddingHorizontal: 12, paddingBottom: 12 }}><FolderField theme={theme} team value={team} disabled={moving} onPick={pick} /></View>}
+  </Group>;
 }

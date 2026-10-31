@@ -2,7 +2,7 @@
 // BotSchedules (Bot 设置里的「定时任务」), ScheduleSummary (详情面板那一行) and TaskForm.
 // The host has list / create / delete only, so there is no edit or pause here either.
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
 import { NARROW, inAnHour, localZone, nextText, parseLocal, timingText } from '../api/schedules';
 export { timingText };
@@ -31,7 +31,8 @@ export function useSchedules(client: BotClient | null | undefined) {
   return view;
 }
 
-const fail = (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT);
+// Harness settings live in the DSH shell, which the phone cannot open.
+const HarnessButton = ({ theme }: { theme: Theme }) => <View style={{ marginTop: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: theme.fill, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.faint, fontSize: 13 }}>打开 Harness 设置 · 移动端暂未实现</Text></View>;
 
 function TaskRow({ theme, task, showBot }: { theme: Theme; task: ScheduleTask; showBot?: boolean }) {
   const { client, state } = useStore();
@@ -41,7 +42,7 @@ function TaskRow({ theme, task, showBot }: { theme: Theme; task: ScheduleTask; s
   const remove = () => {
     if (!confirming) { setConfirming(true); return; }
     setBusy(true);
-    client?.scheduleDelete(task.sessionId, task.id).then(publishSchedules, (e) => { setBusy(false); setConfirming(false); fail(e); });
+    client?.scheduleDelete(task.sessionId, task.id).then(publishSchedules, () => setBusy(false));
   };
   const room = task.roomId ? state?.rooms?.find((r) => r.id === task.roomId) : undefined;
   const bot = showBot && task.botId ? state?.bots.find((b) => b.id === task.botId) : undefined;
@@ -177,6 +178,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
               <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: theme.fill, alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 20, color: theme.sub }}>🕘</Text></View>
               <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600', marginTop: 10 }}>在 DSH 里打开「自动化任务」</Text>
               <Text style={{ color: theme.sub, fontSize: 13, marginTop: 6, textAlign: 'center' }}>{OFF_HINT}</Text>
+              <HarnessButton theme={theme} />
             </View>
           ) : (
             <>
@@ -204,7 +206,7 @@ export function BotSchedules({ theme, botId, onNew }: { theme: Theme; botId: str
     <View>
       <Text style={{ color: theme.sub, fontSize: 14, marginTop: 22, marginBottom: 8 }}>定时任务</Text>
       <Card theme={theme}>
-        {!view.available ? <Text style={{ color: theme.sub, fontSize: 13, padding: 16 }}>{OFF_HINT}</Text> : null}
+        {!view.available ? <View style={{ padding: 16, alignItems: 'flex-start' }}><Text style={{ color: theme.sub, fontSize: 13 }}>{OFF_HINT}</Text><HarnessButton theme={theme} /></View> : null}
         {tasks.map((t) => <TaskRow key={t.id} theme={theme} task={t} />)}
         {view.available ? <Pressable onPress={onNew} style={{ padding: 16 }}><Text style={{ color: theme.text, fontSize: 15 }}>＋ 新建任务</Text></Pressable> : null}
       </Card>

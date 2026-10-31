@@ -25,8 +25,9 @@ export function Mark({ look, size, state = 'idle', live = false, pokeable = fals
   const inner = image ? <Image source={{ uri: look.image }} style={{ width: size, height: size, borderRadius: size / 2 }} />
     : <SvgXml xml={xml} width={size} height={size} />;
   const mark = <Animated.View style={[{ width: size, height: size }, body]}>{inner}</Animated.View>;
-  // quiet: a tap does nothing (the web's quiet level drops the poke).
-  if (!pokeable || motion === 'quiet' || reduced) return mark;
+  // Web behavior, replicated: a quiet-level tap still sets poked; the body then stops (animation:none)
+  // and stays stopped, since the poke never ends, until the level changes (see plan()).
+  if (!pokeable) return mark;
   return <Pressable onPress={() => setPoked(true)} accessibilityRole="button">{mark}</Pressable>;
 }
 
@@ -115,27 +116,41 @@ function useSettled(state: MarkState) {
 
 /** The web's BotAvatar. `state` (mark.js botState) drives motion and the badge; the older
  *  `working` prop still maps to 'working'. `live` marks blink/fidget at the lively level. */
-export function Avatar({ bot, size = 44, working, star, ring = '#111', state: given, live = false, pokeable = false, badge = true }: { bot: Bot; size?: number; working?: boolean; star?: boolean; ring?: string; state?: MarkState; live?: boolean; pokeable?: boolean; badge?: boolean }) {
+export function Avatar({ bot, size = 44, working, star, ring = '#111', state: given, live = false, pokeable = false, badge = true, admin = false }: { bot: Bot; size?: number; working?: boolean; star?: boolean; admin?: boolean; ring?: string; state?: MarkState; live?: boolean; pokeable?: boolean; badge?: boolean }) {
   const look = lookOf(bot) as Look;
   const state: MarkState = given ?? (working ? 'working' : 'idle');
   const settled = useSettled(state);
   const theme = useTheme();
   const motion = useMotion();
-  const kind = !badge ? null : state === 'alert' ? 'alert' : state !== 'idle' && state !== 'waiting' ? 'working' : star ? 'main' : null;
-  const dot = Math.max(12, size * 0.3);
-  const q = Math.max(12, size / 3);
+  const kind = !badge ? null : state === 'alert' ? 'alert' : state !== 'idle' && state !== 'waiting' ? 'working' : admin ? 'admin' : star ? 'main' : null;
+  const ringC = theme.sidebar; // box-shadow 0 0 0 1.5px var(--bt-sidebar)
+  const ringS = { position: 'absolute' as const, width: 15, height: 15, borderRadius: 7.5, backgroundColor: ringC, right: -1.5, bottom: -1.5 };
+  const main = Math.min(22, Math.max(14, size * 0.36));
   return (
     <View style={{ width: size, height: size }}>
       <Mark look={look} size={size} state={settled ? 'done' : state} live={live} pokeable={pokeable} id={bot.id} />
-      {kind === 'main' ? <View style={{ position: 'absolute', right: -2, bottom: -2, width: dot, height: dot, borderRadius: dot, backgroundColor: '#f59e0b', borderWidth: 2, borderColor: ring, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: '#fff', fontSize: dot * 0.5, lineHeight: dot * 0.62 }}>★</Text></View> : null}
-      {kind === 'working' ? <View style={{ position: 'absolute', right: size / 36, bottom: size / 36, width: Math.max(8, size * 0.22), height: Math.max(8, size * 0.22), borderRadius: size, backgroundColor: theme.ok, borderWidth: 1.5, borderColor: ring }} /> : null}
-      {kind === 'alert' ? <AlertBadge size={size} q={q} ring={ring} ride={motion === 'lively'} bg={theme.accent} ink={theme.accentText} /> : null}
+      {kind === 'admin' ? <View style={ringS}><View style={{ position: 'absolute', left: 1.5, top: 1.5, width: 12, height: 12, borderRadius: 6, backgroundColor: theme.badgeAdmin, alignItems: 'center', justifyContent: 'center' }}><SvgXml width={7} height={7} xml={STAR_ICON} /></View></View> : null}
+      {kind === 'main' ? <View style={{ position: 'absolute', right: -0.07 * size, bottom: -0.07 * size, width: main, height: main }}><SvgXml width={main} height={main} xml={mainStar(theme.star, ringC)} /></View> : null}
+      {kind === 'working' ? <View style={{ position: 'absolute', right: 1 - 1.5, bottom: 1 - 1.5, width: 11, height: 11, borderRadius: 5.5, backgroundColor: ringC, alignItems: 'center', justifyContent: 'center' }}><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.badgeWorking }} /></View> : null}
+      {kind === 'alert' ? <AlertBadge size={size} ring={ringC} ride={motion === 'lively'} bg={theme.badgeAlert} ink={theme.accentText} /> : null}
     </View>
   );
 }
 
-/** The "?" badge: bottom-right, or (lively) riding on the head with bt-q-ride. */
-function AlertBadge({ size, q, ring, ride, bg, ink }: { size: number; q: number; ring: string; ride: boolean; bg: string; ink: string }) {
+/** mark.js AdminStar: the small star in a disc, inline after a name. */
+export function AdminStar() {
+  const theme = useTheme();
+  return <View accessibilityLabel="管理员" style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.badgeAdmin, alignItems: 'center', justifyContent: 'center' }}><SvgXml width={7} height={7} xml={STAR_ICON} /></View>;
+}
+
+// mark.js StarIcon / MainStar.
+const STAR_ICON = '<svg viewBox="0 0 10 10"><path d="M5 .6l1.3 2.8 3 .3-2.3 2 .7 3L5 7.2 2.3 8.7l.7-3L.7 3.7l3-.3z" fill="#fff"/></svg>';
+const MAIN_D = 'M10 2.4l2.29 5.04 5.51.63-4.09 3.74 1.11 5.42L10 14.5l-4.82 2.73 1.11-5.42L2.2 8.07l5.51-.63z';
+// paint-order:stroke → the stroke drawn under the fill.
+const mainStar = (fill: string, stroke: string) => `<svg viewBox="0 0 20 20" overflow="visible"><path d="${MAIN_D}" fill="none" stroke="${stroke}" stroke-width="2.6" stroke-linejoin="round"/><path d="${MAIN_D}" fill="${fill}"/></svg>`;
+
+/** .bt-badge-alert: 12px "?" bottom-right, or (lively) riding on the head with bt-q-ride. */
+function AlertBadge({ size, ring, ride, bg, ink }: { size: number; ring: string; ride: boolean; bg: string; ink: string }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!ride) return undefined;
@@ -143,8 +158,8 @@ function AlertBadge({ size, q, ring, ride, bg, ink }: { size: number; q: number;
     return () => a.stop();
   }, [ride, v]);
   const ty = useMemo(() => { const i: number[] = [], o: number[] = []; for (let k = 0; k <= 60; k++) { i.push(k / 60); o.push(sample('qRide', k / 60).ty * size); } return v.interpolate({ inputRange: i, outputRange: o }); }, [size, v]);
-  const pos = ride ? { left: size / 2 - q / 2, top: -size * 0.14, transform: [{ translateY: ty }] } : { right: 0, bottom: 0 };
-  return <Animated.View style={[{ position: 'absolute', width: q, height: q, borderRadius: q, backgroundColor: bg, borderWidth: 1.5, borderColor: ring, alignItems: 'center', justifyContent: 'center' }, pos as any]}><Text style={{ color: ink, fontSize: q * 0.7, fontWeight: '600', lineHeight: q * 0.95 }}>?</Text></Animated.View>;
+  const pos = ride ? { left: size / 2 - 7.5, top: -size * 0.14 - 1.5, transform: [{ translateY: ty }] } : { right: -1.5, bottom: -1.5 };
+  return <Animated.View style={[{ position: 'absolute', width: 15, height: 15, borderRadius: 7.5, backgroundColor: ring, alignItems: 'center', justifyContent: 'center' }, pos as any]}><View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: ink, fontSize: 8.5, fontWeight: '600', lineHeight: 12, includeFontPadding: false }}>?</Text></View></Animated.View>;
 }
 
 /** Group: up to three member avatars stacked, like the Grok list. */

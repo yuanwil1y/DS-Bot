@@ -626,6 +626,7 @@ function GroupSettingsForm({ theme, room, onOpenBot, onDeleted }: { theme: Theme
   const byId = Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b]));
   const members = (room.members ?? []).map((id) => byId[id]).filter(Boolean) as Bot[];
   const admin = room.admin ? byId[room.admin] : undefined;
+  const mainIds: string[] = (state as any)?.mainBotIds ?? (state?.mainBotId ? [state.mainBotId] : []);
   // Like the web pickers: a tap shows at once and settles when the room comes back.
   const [pendingMode, setPendingMode] = useState<string | null>(null);
   const [pendingShared, setPendingShared] = useState<boolean | null>(null);
@@ -723,7 +724,7 @@ function GroupSettingsForm({ theme, room, onOpenBot, onDeleted }: { theme: Theme
           return (
             <View key={m.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
               <Pressable accessibilityLabel={`打开 ${m.name} 的对话`} onPress={() => onOpenBot?.(m.id)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}>
-                <Avatar bot={m} size={26} ring={theme.card} />
+                <Avatar bot={m} size={26} ring={theme.card} admin={leads} star={mainIds.includes(m.id)} live={false} />
                 <Text style={{ flex: 1, color: theme.text, marginLeft: 10 }}>{m.name}{leads ? '  · 管理员' : ''}</Text>
               </Pressable>
               <Pressable hitSlop={8} accessibilityLabel={leads ? '让群聊不设管理员' : undefined} onPress={() => update({ admin: leads ? null : m.id }).catch(() => {})}

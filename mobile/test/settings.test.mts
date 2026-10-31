@@ -95,7 +95,8 @@ const L = P({ state: 'idle', motion: 'lively' }); assert.equal(L.eye!.anim, 'bli
 assert.equal(P({ state: 'idle', motion: 'lively', live: false }).eye, null);
 assert.ok(['hop', 'sway', 'stretch', 'look'].includes(fidgetOf('b1')));
 assert.equal(P({ state: 'working', poked: true }).body!.anim, 'poke'); assert.equal(P({ state: 'working', poked: true }).body!.origin, 'poke');
-assert.equal(P({ state: 'working', poked: true, motion: 'quiet' }).body!.anim, 'bob');
+assert.equal(P({ state: 'working', poked: true, motion: 'quiet' }).body, null); // web: quiet poke stops the body (animation:none) and never resets
+assert.equal(P({ state: 'working', poked: true, motion: 'quiet' }).eye!.anim, 'blink');
 assert.equal(P({ state: 'alert', image: true }).body!.anim, 'hop'); assert.equal(P({ state: 'thinking', image: true }).body!.anim, 'bob'); assert.equal(P({ state: 'idle', image: true }).body, null);
 assert.equal(progress({ anim: 'hop', origin: 'bottom', iterations: 2, delay: 0 }, 2700), null); near(progress({ anim: 'blinkIdle', origin: 'center', iterations: Infinity, delay: -1000 }, 500)!, 0.3);
 const bx = pathBox('M10 10l5 0 0 5zM2 3h1v-1'); assert.deepEqual(bx, { x0: 2, y0: 2, x1: 15, y1: 15 });

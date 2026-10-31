@@ -106,7 +106,9 @@ export function plan(o: { state: MarkState; shape: string; image?: boolean; moti
     if (state !== 'idle') body = loop('bob', 'center');
     if (state === 'alert') body = { anim: 'hop', origin: 'center', iterations: lively || motion === 'lively' ? Infinity : 2, delay: 0 };
     if (state === 'done') body = { anim: 'done', origin: 'bottom', iterations: 1, delay: 0 };
-    if (o.poked) body = motion === 'quiet' ? body : { anim: 'pokeImg', origin: 'center', iterations: 1, delay: 0 };
+    // web behavior, replicated: under quiet the poke class sets animation:none and, as animationend never
+    // fires, stays on, so the body stays still until the level changes (styles.js:83, mark.js:75).
+    if (o.poked) body = motion === 'quiet' ? null : { anim: 'pokeImg', origin: 'center', iterations: 1, delay: 0 };
     return { body, eyes: null, eye: null };
   }
   if ((state === 'idle' || state === 'alert') && lively) eye = loop('blinkIdle', 'center', blinkDelay(id));
@@ -118,7 +120,7 @@ export function plan(o: { state: MarkState; shape: string; image?: boolean; moti
   if (state === 'orbit' || state === 'waiting') { body = loop('sway', 'center'); eyes = loop('roll', 'center'); }
   if (state === 'alert') body = { anim: 'hop', origin: 'bottom', iterations: motion === 'lively' ? Infinity : 2, delay: 0 };
   if (state === 'done') body = { anim: 'done', origin: 'bottom', iterations: 1, delay: 0 };
-  if (o.poked && motion !== 'quiet') body = { anim: 'poke', origin: 'poke', iterations: 1, delay: 0 };
+  if (o.poked) body = motion === 'quiet' ? null : { anim: 'poke', origin: 'poke', iterations: 1, delay: 0 };
   return { body, eyes, eye };
 }
 

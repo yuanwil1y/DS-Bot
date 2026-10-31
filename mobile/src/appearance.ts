@@ -72,6 +72,9 @@ export function over(base, [r, g, b], a) {
   return `#${c.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
 }
 
+/** CSS color-mix(in srgb, a p, b). */
+export const mix = (a, p, b) => over(b, rgb(a), p);
+
 // themeVars(theme[mode], dark, accent) mapped to the app's palette keys.
 export function palette(prefs, dark) {
   const p = resolvePrefs(prefs);
@@ -89,6 +92,9 @@ export function palette(prefs, dark) {
     bubbleMe: t.user, userText: t.userText, bubbleBot: t.bubble,
     tagBg: alpha(t.text, dark ? 0.09 : 0.06), tagInk: alpha(t.text, 0.58),
     code: over(t.card, hover, dark ? 0.12 : 0.09),
+    // styles.js:102-109 badges: --bt-star/--bt-green mixed into --bt-sidebar.
+    star: '#ff9800', green: '#00c972',
+    badgeAdmin: mix('#ff9800', 0.82, t.sidebar), badgeWorking: mix('#00c972', 0.82, t.sidebar), badgeAlert: mix(accent, 0.78, t.sidebar),
     danger: dark ? '#ff5a52' : '#e5372d', ok: dark ? '#34c759' : '#22a447',
   };
 }

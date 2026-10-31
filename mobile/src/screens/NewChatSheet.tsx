@@ -3,7 +3,7 @@ import { CharacterGrid, LibraryPanel, avatarImage, pickImages } from './AvatarEd
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import type { Bot } from '../api';
-import { Avatar } from '../components/Avatar';
+import { AdminStar, Avatar } from '../components/Avatar';
 import { Group, PillButton, Row, Sheet } from '../components/ui';
 import { useStore } from '../store';
 import { t } from '../i18n';
@@ -119,7 +119,7 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
               {[admin!, ...picked].filter(Boolean).map((id) => {
                 const b = bots.find((x) => x.id === id); if (!b) return null;
                 return <Pressable key={id} onPress={() => (id === admin ? (setAdmin(null), setPicked([])) : setPicked((p) => p.filter((x) => x !== id)))} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 18, paddingLeft: 4, paddingRight: 12, height: 36 }}>
-                  <Avatar bot={b} size={28} star={id === admin} ring={theme.card} /><Text style={{ color: theme.text, marginLeft: 6 }}>{b.name} ✕</Text>
+                  <Avatar bot={b} size={28} badge={false} ring={theme.card} /><Text style={{ color: theme.text, marginLeft: 6, marginRight: id === admin ? 4 : 0 }}>{b.name}</Text>{id === admin ? <AdminStar /> : null}<Text style={{ color: theme.text }}> ✕</Text>
                 </Pressable>;
               })}
             </View>

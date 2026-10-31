@@ -60,3 +60,14 @@
 | 侧边对话 | 旧 /btw 卡片 | btw.js BtwCardView | 不显示 | 输入框上方显示，可折叠、可删除 |
 | 账户设置 | 主 Bot | settings.js MainBotsSection | 无 | 换主（replace）、移到最前、取消、添加 |
 | 账户设置 | Bot / 群聊列表 | BotsPage / GroupsPage | 无 | 列表+标签，点开设置 |
+
+## 10-31 21:10 更正（按功能复核 web 0.2.4）
+以下几处标注有误：它们的接口其实存在，应算作「app 还没做」，而不是「接口尚未实现」。
+- 首页账号菜单「连接器」：connector-connect/disconnect/retry 都有，连接器列表在 state 里。
+- 设置页里的 连接器 / 能力（capability-save/delete/approve）/ 密钥（state.secrets + secret-update/delete）/ 反馈（diagnostics*）/ 关于（repo-stars + 版本 + update-check）/ 浏览器（update-bot 的浏览器授权）：都有接口。
+- 群用量：`usage` 接口按 room:<id> 返回，有接口。
+- 「模型」页：网页只在 DS Bot 桌面应用里有（app/ui team.js 的 providers*），DSH Web 不显示，应标「移动端暂未实现」。
+- 「切换经典 Agent 模式」：它只切换客户端界面（setSurface('agent')），不调用接口；首页菜单应和设置页一致，标「移动端暂未实现」。
+- 消息「下载」：0.9.5 已做成分享 .md 文件。
+- earlier：网页用它往前翻历史，app 用 chat/room-chat 的 cursor 翻页，效果等价。
+- 群里的长消息「显示全文」（file-text）、Bot 间对话记录（exchange/exchange-text）、已保留的私密 Bot（private-release）：app 都没做，接口都有。

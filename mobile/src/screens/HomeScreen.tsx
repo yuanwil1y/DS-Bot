@@ -1,4 +1,4 @@
-// Home = the web's phone drawer (sidebar.js wide list): brand + search/new, Main Bot tile, rows, account at the foot.
+// Grok-style home (agreed): account top-left, '+' top-right, Main Bot centered, bots/groups list. Web typography/icons inside.
 import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -22,8 +22,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
   const [acct, setAcct] = useState(false);
-  const [soon, setSoon] = useState(false);
-  // context-menu.js: 复制对话 ID copies the Bot's current session id (or the group id).
+    // context-menu.js: 复制对话 ID copies the Bot's current session id (or the group id).
   const [ctx, setCtx] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const bots = state?.bots ?? [];
@@ -66,41 +65,36 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
     return list.sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.time ?? 0) - (a.time ?? 0));
   }, [bots, state?.rooms, state?.work, previews, unread, streaming, activity, main?.id, needs]);
 
-  // sidebar.js wide list (the phone drawer): .bt-tile for the Main Bot (60px mark, 13/18 name,
-  // role chip), then .bt-row rows (36px mark, 14/20 name, 13/18 preview, 8px unread dot).
+  // Agreed Grok-style structure (account top-left, '+' top-right, big Main Bot centered, list below);
+  // web typography/colors/icons applied inside it (rows = sidebar.js .bt-row metrics).
   const header = main ? (
-    <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 15 }}>
-      <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={({ pressed }) => ({ width: 95, alignItems: 'center', gap: 4, paddingTop: 6, paddingHorizontal: 8, paddingBottom: 4, borderRadius: 12, backgroundColor: pressed ? theme.active : 'transparent' })}>
-        <Avatar bot={main} size={60} star ring={theme.sidebar} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
-        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 13, lineHeight: 18, maxWidth: 84 }}>{main.name}</Text>
-        {main.role ? <View style={{ paddingVertical: 1, paddingHorizontal: 4, borderRadius: 4, borderWidth: 1, borderColor: theme.line, backgroundColor: theme.hover }}><Text numberOfLines={1} style={{ color: theme.sub, fontSize: 11, lineHeight: 16 }}>{main.role}</Text></View> : null}
-      </Pressable>
-    </View>
+    <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 24, gap: 6 }}>
+      <Avatar bot={main} size={112} star ring={theme.bg} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
+      <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{main.name}</Text>
+      {main.role ? <View style={{ paddingVertical: 1, paddingHorizontal: 4, borderRadius: 4, borderWidth: 1, borderColor: theme.line, backgroundColor: theme.hover }}><Text numberOfLines={1} style={{ color: theme.sub, fontSize: 11, lineHeight: 16 }}>{main.role}</Text></View> : null}
+    </Pressable>
   ) : <View style={{ height: 8 }} />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.sidebar, paddingHorizontal: 12, paddingVertical: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 6, gap: 8 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingLeft: 6, paddingRight: 8, marginRight: 'auto' }}>
-          <Mark look={MAIN_LOOK as any} size={22} />
-          <Text style={{ color: theme.text, fontSize: 15, lineHeight: 20, fontWeight: '600', letterSpacing: -0.15 }}>DS Bot</Text>
-          <StatusDot theme={theme} status={status} />
-        </View>
-        <RoundButton theme={theme} icon="search" onPress={() => setSoon(true)} label="搜索" />
-        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建…" />
+    <View style={{ flex: 1, backgroundColor: theme.bg }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 10 }}>
+        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? theme.youHi : theme.you, borderWidth: 1, borderColor: theme.line, alignItems: 'center', justifyContent: 'center' })}>
+          <Mark look={MAIN_LOOK as any} size={24} />
+          <View style={{ position: 'absolute', right: -2, top: -2 }}><StatusDot theme={theme} status={status} /></View>
+        </Pressable>
+        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
       </View>
-      <View style={{ flex: 1, marginRight: -12 }}>
+      <View style={{ flex: 1, paddingHorizontal: 12 }}>
       <FlashList
         data={items}
         keyExtractor={(i) => i.key}
         ListHeaderComponent={header}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingRight: 12 }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refresh(); setRefreshing(false); }} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refresh(); setRefreshing(false); }} />}
         ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40, fontSize: 13 }}>{t.noBots}</Text>}
         renderItem={({ item }) => (
           <Pressable onPress={() => onOpen(item.target)} onLongPress={() => setCtx(item.bot ? item.bot.sessionId ?? item.bot.id : item.target.id)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 54, padding: 8, marginBottom: 3, borderRadius: 10, backgroundColor: pressed ? theme.hover : 'transparent' })}>
-            {item.bot ? <Avatar bot={item.bot} size={36} state={item.state} live star={item.main} ring={theme.sidebar} /> : <GroupAvatar members={item.members ?? []} size={36} ring={theme.sidebar} />}
+            {item.bot ? <Avatar bot={item.bot} size={36} state={item.state} live star={item.main} ring={theme.bg} /> : <GroupAvatar members={item.members ?? []} size={36} ring={theme.bg} />}
             <View style={{ flex: 1, minWidth: 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, flexShrink: 1 }}>{item.name}</Text>
@@ -114,14 +108,8 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
         )}
       />
       </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 8 }}>
-        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? theme.youHi : theme.you, borderWidth: 1, borderColor: theme.line, alignItems: 'center', justifyContent: 'center' })}>
-          <Mark look={MAIN_LOOK as any} size={24} />
-        </Pressable>
-      </View>
-      <Menu theme={theme} visible={soon} onClose={() => setSoon(false)} top={56} left={150} items={[{ label: '搜索：移动端暂未实现' }]} />
       <Menu theme={theme} visible={ctx !== null} onClose={() => setCtx(null)} items={[{ label: '复制对话 ID', onPress: () => { Clipboard.setStringAsync(ctx ?? ''); setCtx(null); } }]} />
-      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} bottom={56} left={12} items={[
+      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={56} left={12} items={[
         { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务', onPress: onSchedules }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
       ]} />
     </View>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "DeepSeek Bot",
     "slug": "deepseek-bot",
-    "version": "0.7.1",
+    "version": "0.8.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -18,7 +18,11 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "io.github.fei2411.deepseekbot"
+      "package": "io.github.fei2411.deepseekbot",
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS"
+      ]
     },
     "scheme": "dsbot",
     "plugins": [
@@ -29,6 +33,16 @@
           "android": {
             "usesCleartextTraffic": true
           }
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "允许 DeepSeek Bot 使用麦克风进行听写和语音对话。",
+          "speechRecognitionPermission": "允许 DeepSeek Bot 使用语音识别。",
+          "androidSpeechServicePackages": [
+            "com.google.android.googlequicksearchbox"
+          ]
         }
       ]
     ]

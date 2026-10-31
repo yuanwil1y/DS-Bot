@@ -1,5 +1,7 @@
 // Grok-style chat for a Bot's private chat or a group chat: floating header, cards, pill composer.
 import { SIDE, parseSideLine, sideHostText, sideQuery } from '../api/side';
+import { VOICE } from '../api/voice';
+import { useDictation } from '../hooks/useDictation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
@@ -17,9 +19,9 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 
-type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void };
+type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void };
 
-export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, onSide }: Props) {
+export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, onSide, onVoice }: Props) {
   const { client, subscribe, markRead, setOpenBot, status, opens, streaming, state, refresh } = useStore();
   const id = (bot?.id ?? room?.id)!;
   const sessionId = bot ? bot.sessionId ?? bot.id : room!.id;
@@ -31,6 +33,13 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
   const setNa = (what: string) => ToastAndroid.show(`${what}：暂不支持`, ToastAndroid.SHORT);
+  const dictation = useDictation((chunk, final) => {
+    if (final) setText((v) => (v ? (v.endsWith(' ') || v.endsWith('\n') ? v : v + ' ') : '') + chunk);
+  });
+  const toggleDictate = () => {
+    if (dictation.listening) dictation.stop();
+    else void dictation.start({ continuous: true });
+  };
   const roomTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const byId = useMemo(() => Object.fromEntries((state?.bots ?? []).map((b) => [b.id, b])), [state?.bots]);
 
@@ -215,6 +224,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
         </View>
       ) : null}
       {err ? <Text numberOfLines={2} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 13 }}>{err}</Text> : null}
+      {dictation.note ? <Text numberOfLines={1} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 12 }}>{dictation.note}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 }}>
         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 5, paddingRight: 5, paddingVertical: 5 }}>
           <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
@@ -228,12 +238,16 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             </Pressable>
           ) : (
             <>
-              <Pressable onPress={() => setNa('听写')} accessibilityLabel="听写" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
-                <Icon name="mic" color={theme.sub} size={16} />
+              <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
+                style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: dictation.listening ? '#ff3e51' : (bot ? theme.cardHi : '#4d6bfe'), alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="mic" color={dictation.listening || !bot ? '#fff' : theme.sub} size={16} />
               </Pressable>
-              <Pressable onPress={() => setNa('语音对话')} accessibilityLabel="开始语音对话" style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
-              </Pressable>
+              {bot ? (
+                <Pressable onPress={onVoice} accessibilityLabel={VOICE.startVoice}
+                  style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: '#4d6bfe', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
+                </Pressable>
+              ) : null}
             </>
           )}
         </View>

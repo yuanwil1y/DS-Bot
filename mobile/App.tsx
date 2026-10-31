@@ -14,9 +14,10 @@ import { NewChatSheet } from './src/screens/NewChatSheet';
 import { SchedulesScreen } from './src/screens/Schedules';
 import { AvatarEditorScreen } from './src/screens/AvatarEditor';
 import { SideChatScreen } from './src/screens/SideChat';
+import { VoiceModeScreen } from './src/screens/VoiceMode';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
-type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage' | 'schedules' | 'avatar' | 'side'; target: ChatTarget; memId?: string; start?: string; chatId?: string };
+type Route = { name: 'chat' | 'panel' | 'settings' | 'memory' | 'usage' | 'schedules' | 'avatar' | 'side' | 'voice'; target: ChatTarget; memId?: string; start?: string; chatId?: string };
 
 function Root() {
   const theme = useTheme();
@@ -39,9 +40,10 @@ function Root() {
   let body: React.ReactNode;
   if (restoring) body = <ActivityIndicator style={{ flex: 1 }} />;
   else if (!client) body = <ConnectScreen theme={theme} />;
-  else if (top && (bot || room) && top.name === 'chat') body = <ChatScreen key={top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onDetails={() => push({ name: 'panel', target: top.target })} onSchedule={() => schedules(top.target.id)} onSide={(chatId) => push({ name: 'side', target: top.target, chatId })} />;
+  else if (top && (bot || room) && top.name === 'chat') body = <ChatScreen key={top.target.id} theme={theme} bot={bot} room={room} onBack={pop} onDetails={() => push({ name: 'panel', target: top.target })} onSchedule={() => schedules(top.target.id)} onSide={(chatId) => push({ name: 'side', target: top.target, chatId })} onVoice={() => push({ name: 'voice', target: top.target })} />;
   else if (top?.name === 'schedules') body = <SchedulesScreen key={'sc' + (top.start ?? '')} theme={theme} start={top.start} onBack={pop} />;
   else if (top?.name === 'side' && bot && top.chatId) body = <SideChatScreen key={'s' + top.chatId} theme={theme} bot={bot} chatId={top.chatId} onBack={pop} />;
+  else if (top?.name === 'voice' && bot) body = <VoiceModeScreen key={'v' + bot.id} theme={theme} bot={bot} onBack={pop} />;
   else if (top?.name === 'avatar' && bot) body = <AvatarEditorScreen key={'a' + bot.id} theme={theme} bot={bot} onBack={pop} />;
   else if (top?.name === 'usage') body = <UsageScreen theme={theme} onBack={pop} />;
   else if (top && (bot || room) && top.name === 'panel') body = <PanelScreen key={'p' + top.target.id} theme={theme} bot={bot} room={room} onClose={pop}

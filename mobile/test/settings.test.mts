@@ -6,6 +6,17 @@ import { BotClient } from '../src/api/client';
 import { parseLocal, timingText } from '../src/api/schedules';
 import { characterXml, ringXml, PICKER_SHAPES, CHARACTER_COLORS, lookOf } from '../src/avatar/mark';
 
+// 0.8.0 voice helpers
+import { plainSpeech, dictationErrorNote, VOICE } from '../src/api/voice';
+assert.equal(plainSpeech('你好 **世界**'), '你好 世界');
+assert.equal(plainSpeech('见 [文档](http://x)'), '见 文档');
+assert.equal(plainSpeech('```\ncode\n```\nok'), 'ok');
+assert.equal(dictationErrorNote('not-allowed'), VOICE.micBlocked);
+assert.equal(dictationErrorNote('no-speech'), '');
+assert.equal(VOICE.dictate, '听写');
+assert.equal(VOICE.listening, '在听');
+console.log('  ✓ voice: plainSpeech, error notes, zh labels');
+
 // 0.7.0 side chat helpers
 import { parseSideLine, sideQuery, sideTitle, sideFailure, withPending, sideHostText } from '../src/api/side';
 assert.deepEqual(parseSideLine('/side 进展？'), { args: '进展？', bare: false });

@@ -260,23 +260,35 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const corners = me
               ? { borderTopRightRadius: first ? 18 : 6, borderBottomRightRadius: last ? 18 : 6 }
               : { borderTopLeftRadius: first ? 18 : 6, borderBottomLeftRadius: last ? 18 : 6 };
+            // DSH user row (MessageItem.userRow, ds-bot styles.js 1101-1108, hover:none 1104): the copy
+            // action sits 6px left of the bubble, vertically centered, always shown on touch; only
+            // sent messages carry it (styles.js 1095: steering/unsent rows keep none).
             if (me) return (
-              <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ alignSelf: 'flex-end', maxWidth: col ? userMax(col, look.width) : '80%', marginTop: first ? 10 : 4, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
-                <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
-                  <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{item.text}</Text>
-                </View>
-                {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
-              </Pressable>
+              <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
+                {!item.pending && !item.failed && item.text ? <CopyAction theme={theme} text={item.text} /> : null}
+                <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ marginLeft: 6, flexShrink: 1, maxWidth: col ? userMax(col) : '70%', opacity: item.pending && !item.failed ? 0.65 : 1 }}>
+                  <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
+                    <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{item.text}</Text>
+                  </View>
+                  {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
+                </Pressable>
+              </View>
             );
+            // DSH ChatView flow gaps (measured on the 0.2.4 web at 412px): 4px between rows, 16px from
+            // a user row to the reply, 16px + process row + 12px when the Turn has thinking (28px with
+            // the row hidden).
+            const afterUser = !!prev && (prev.kind === 'user' || prev.kind === 'answer');
+            const reasoned = !!item.data?.reasoning;
+            const gapTop = first && afterUser ? (reasoned && !look.thinking ? 28 : 16) : first && room ? 16 : 4;
             const flat = look.layout === 'flat';
             const lead = !!room; // cells.js: group rows carry the speaker's avatar (data-lead)
             const name = item.name ?? speaker?.name ?? 'Bot';
             const when = item.time ? new Date(item.time).toTimeString().slice(0, 5) : '';
             const md = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
-            const think = look.thinking && item.data?.reasoning ? <ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /> : null;
+            const think = look.thinking && item.data?.reasoning ? <View style={{ marginBottom: 12 }}><ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /></View> : null;
             const body = md;
             if (flat) return (
-              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? 16 : 10, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
+              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
                 {first ? <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 22, marginBottom: 4 }}>
                   {speaker ? <View style={{ marginRight: 8 }}><Avatar bot={speaker} size={22} /></View> : null}
                   <Text style={{ color: theme.text, fontSize: 13, lineHeight: 22, fontWeight: '600' }}>{name}</Text>
@@ -288,7 +300,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             );
             const max = col ? (lead ? leadBubbleMax(col, look.width) : bubbleMax(col, look.width)) : '80%';
             return (
-              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? (room ? 16 : 10) : 4, alignSelf: 'flex-start', maxWidth: max }}>
+              <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: gapTop, alignSelf: 'flex-start', maxWidth: max }}>
                 {lead && first ? <View style={{ flexDirection: 'row', alignItems: 'baseline', marginLeft: 42, marginBottom: 4 }}>
                   <Text style={{ color: inkTextHex(speaker?.color ?? 'gray', theme.dark), fontSize: 12, lineHeight: 16, fontWeight: '500' }}>{name}</Text>
                   {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
@@ -405,6 +417,20 @@ function NewDivider({ theme }: { theme: Theme }) {
 
 // web cells.js Reasoning (.bt-think): a closed <details> 「思考过程 · Ns」; tap opens the text
 // (13/18 ink-2, 2px line-2 left rule, padding-left 10, five lines then scrolls).
+// DSH MessageIconActions copy button (24px, 15px glyph, label-tertiary ink) with
+// use-clipboard-copy's 1000ms check-mark feedback.
+function CopyAction({ theme, text }: { theme: Theme; text: string }) {
+  const [copied, setCopied] = useState(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  const copy = () => { Clipboard.setStringAsync(text).then(() => { setCopied(true); if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 1000); }).catch(() => {}); };
+  return (
+    <Pressable onPress={copy} accessibilityLabel={copied ? '已复制' : '复制'} hitSlop={10} style={({ pressed }) => ({ width: 24, height: 24, borderRadius: 6, alignItems: 'center', justifyContent: 'center', backgroundColor: pressed ? theme.fill : 'transparent' })}>
+      <Icon name={copied ? 'check-msg' : 'copy-msg'} color={theme.sub} size={15} />
+    </Pressable>
+  );
+}
+
 function ThinkingRow({ theme, text, ms }: { theme: Theme; text: string; ms?: number }) {
   const [open, setOpen] = useState(false);
   const secs = ms !== undefined ? Math.floor(Math.max(1000, ms) / 1000) : null;

@@ -66,7 +66,7 @@ for (const d of [false, true]) { const pl: any = palette({}, d); for (const k of
 assert.equal((palette({ accent: '#ff0000' }, false) as any).accent.toLowerCase(), '#ff0000');
 assert.equal(accentInk('#ffffff') === '#ffffff', false); assert.equal(accentInk('#000000'), '#ffffff');
 assert.equal(bubbleMax(400, 80), 318); assert.equal(bubbleMax(400, 100), 318); assert.equal(bubbleMax(400, 50), 200);
-assert.equal(leadBubbleMax(400, 80), 326); assert.equal(userMax(400, 80), 320); assert.equal(flatMax(400, 90), 360);
+assert.equal(leadBubbleMax(400, 80), 326); assert.equal(userMax(400), 400 * 0.702); assert.equal(userMax(2000), 960 * 0.702); assert.equal(flatMax(400, 90), 360);
 console.log('  ✓ appearance: set-prefs validation, resolvers, palette, widths');
 
 // motion (web keyframes)

@@ -33,3 +33,7 @@
 - 2026-10-31 19:05 home: restored agreed Grok-style structure (account top-left, + top-right, 112 Main Bot centered, list; no search/brand/foot); kept web row typography (36 avatar, 14/20 name, 13/18 preview, 8px dots, pin icon), web icons, .bt-you account button
 - 2026-10-31 19:24 0.9.0: emulator dropped (user); web reference shots (21) in docs/appearance-shots/web via variants.mjs; version 0.9.0/17; arm64 APK built
 - 2026-10-31 19:37 0.9.1: test-only 外观自动测试 (local override, 21 steps, overlay+停止); box SDK/JDK reinstalled after box reset; arm64 APK built
+- 2026-10-31 19:44 分析 selftest-0.9.1.mp4：147帧@2fps，19个 pNN 图 + compare/c01-c19 + seq-motion-{quiet,lively}；未改代码
+- 2026-10-31 19:59 0.9.2: fonts DSSans, demo self-test, thinking row, web shots regenerated on mock demo; commit fa9a1e2; prerelease mobile-mvp-0.9.2
+- 2026-10-31 20:08 0.9.3: removed DSSans fonts + Text patch (0.9.2 launch crash), FatalGate/startup error screen; prerelease mobile-mvp-0.9.3
+- 2026-10-31 20:26 0.9.4: user bubble width = dsh .userStack (0.702, independent of width setting), always-visible copy action left of sent user bubbles (dsh MessageIconActions, 1s check), web flow gaps (4/16/28, thinking +12); versionCode 21; prerelease mobile-mvp-0.9.4

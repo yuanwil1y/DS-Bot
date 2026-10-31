@@ -108,5 +108,7 @@ export const inkTextHex = (c, dark) => inkFillHex(c === 'black' ? 'gray' : c, da
 // styles.js bubble widths for a measured column (px).
 export const bubbleMax = (col, w) => Math.min((w / 100) * col, col - 82);
 export const leadBubbleMax = (col, w) => Math.min((w / 100) * (col - 30) + 30, col - 52);
-export const userMax = (col, w) => (w / 100) * col;
+// dsh MessageItem.module.css .userStack: max-width min(0.702 * min(960px, 100%), 82%); the
+// ds-bot width settings never reach the host's user row, in bubble or flat layout.
+export const userMax = (col) => 0.702 * Math.min(960, col);
 export const flatMax = (col, fw) => (fw / 100) * col;

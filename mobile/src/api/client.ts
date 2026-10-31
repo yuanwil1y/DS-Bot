@@ -89,6 +89,13 @@ export class BotClient {
   createBot(p: { name: string; role?: string; model?: string }) { return this.call<any>('create-bot', p); }
   createRoom(members: string[], admin?: string, name?: string) { return this.call<any>('create-room', { members, ...(admin ? { admin } : {}), ...(name ? { name } : {}) }); }
   updateBot(id: string, p: Record<string, unknown>) { return this.call<any>('update-bot', { id, ...p }); }
+  // team-actions.js connectors / capabilities.
+  connectorConnect(id: string, token: string) { return this.call<any>('connector-connect', { id, token }); }
+  connectorDisconnect(id: string) { return this.call<any>('connector-disconnect', { id }); }
+  connectorRetry(id: string) { return this.call<any>('connector-retry', { id }); }
+  capabilitySave(payload: Record<string, unknown>) { return this.call<any>('capability-save', payload); }
+  capabilityDelete(name: string) { return this.call<any>('capability-delete', { name }); }
+  capabilityApprove(name: string) { return this.call<any>('capability-approve', { name }); }
   // Same endpoints the web UI's model, folder, group and memory menus call.
   efforts(ref: string) { return this.call<{ efforts: { id: string; name: string }[]; defaultEffort?: string }>('efforts', { ref }); }
   refreshModels() { return this.call<{ modelsKey: string }>('models', {}); }

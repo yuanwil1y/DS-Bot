@@ -27,6 +27,7 @@ function Root() {
   const { client, restoring, state } = useStore();
   const [stack, setStack] = useState<Route[]>([]);
   const [settings, setSettings] = useState(false);
+  const [settingsStart, setSettingsStart] = useState<'connectors' | undefined>(undefined);
   const [newChat, setNewChat] = useState<'chat' | 'group' | null>(null);
   const push = (r: Route) => setStack((s) => [...s, r]);
   const pop = () => setStack((s) => s.slice(0, -1));
@@ -56,14 +57,14 @@ function Root() {
     onAvatar={() => push({ name: 'avatar', target: top.target })} onSchedules={(start) => schedules(start)}
     onMemory={(id) => push({ name: 'memory', target: top.target, memId: id })} onOpenBot={(id) => open({ kind: 'bot', id })} />;
   else if (top && (bot || room) && top.name === 'memory') body = <MemoryScreen key={'m' + top.target.id} theme={theme} id={top.memId ?? top.target.id} name={bot?.name ?? room?.name ?? ''} onBack={pop} />;
-  else body = <HomeScreen theme={theme} onOpen={open} onAccount={() => setSettings(true)} onUsage={() => push({ name: 'usage', target: { kind: 'bot', id: '' } })} onNew={setNewChat} onSchedules={() => schedules()} />;
+  else body = <HomeScreen theme={theme} onOpen={open} onAccount={() => { setSettingsStart(undefined); setSettings(true); }} onConnectors={() => { setSettingsStart('connectors'); setSettings(true); }} onUsage={() => push({ name: 'usage', target: { kind: 'bot', id: '' } })} onNew={setNewChat} onSchedules={() => schedules()} />;
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       {body}
       {/* TEST-ONLY: appearance self-test runner + overlay; remove before a real release. */}
       <AppearanceTestRunner stack={stack} setStack={setStack} closeSettings={() => setSettings(false)} settingsOpen={settings} reopenSettings={() => setSettings(true)} />
-      {client ? <SettingsSheet theme={theme} visible={settings} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t })} /> : null}
+      {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
     </SafeAreaView>
   );

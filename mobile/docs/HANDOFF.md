@@ -98,6 +98,7 @@
 - 0.9.4：用户气泡宽度按 dsh `.userStack`；已发送的用户消息左侧加复制；轮与轮之间的间距同网页。
 - 0.9.5：账号菜单按 `.bt-menu` 重做；Bot 回复工具条（表情、回复、更多→复制/下载），私聊和群聊都有。
 - 0.9.6：功能对齐第一批（表格 1–5、7）：改正占位标注；关于页；长消息折叠（fold.js）和群里「显示全文」（file-text）；释放已保留的私密 Bot；头像按编号取并缓存；反馈/诊断页。第 6 项没做（见下）。
+- 0.9.8：功能对齐最后一批（表格 11–13）：设置→浏览器（browser-settings.js，update-bot 的 browserGrants）、设置→连接器（connectors.js，GitHub token 连接/断开/重试，首页账号菜单「连接器」直接打开此页）、设置→能力（capability-settings.js，新增/编辑/删除二次确认/允许）。「移动端尚未开发」清零。
 - 0.9.7：功能对齐第二批（表格 8–10）：Bot 间对话弹窗（exchange.js，私聊里的事件行打开）；设置→密钥页（secret-card.js SecretsPage）；设置→用量页做全（usage-page.js + usage-data.js 原样移植：汇总、图表、按 Bot/模型、热力图、自选时段、单个 Bot/模型的详情）。
 
 ## 5. 当前状态
@@ -130,8 +131,16 @@
 - 客户端：`usage()` 改调 `usage`（旧的 `usage-summary` 主机没有）；新增 `exchange`、`exchangeText`、`secretUpdate`、`secretDelete`，`secretSet` 也接受 {name, purpose, value, scope}。
 - 私聊 `rows()` 现在保留 `kind:'event'` 行（`eventData()` 给出前缀：群聊回复／叫停者／收到回复／收到消息）。
 - 详情里的群用量标「接口尚未实现」：网页 details-drawer 用的是 DSH 的 projectionsBySession，手机拿不到；全局用量页里能看到按群的数据。
-- 还标「移动端尚未开发」的：设置里的连接器、能力、浏览器（表格 11–13）。
+- （0.9.8 已做完）设置里的连接器、能力、浏览器（表格 11–13）。
 - 手机上的取舍：悬停改为点按显示提示；自选时段一次显示一个月。
+
+**0.9.8 状态**：表格 1–13 全部完成（第 6 项按网页没有界面不做）。测试 `test/batch098.test.mts` 10 项；六套测试全过（batch098 10、batch097 8、batch096 14、settings 7、paihuo30 1、api 23）。
+- 新文件：`src/api/toolsModel.ts`（三页的纯函数：siteValue、授权时限、parseMap、capability 载荷等）、`src/screens/ToolPages.tsx`（三个页面）。
+- 客户端新增：connectorConnect/Disconnect/Retry、capabilitySave/Delete/Approve。
+- 网页的连接器是 token 方式（不是 OAuth），手机上唯一跳浏览器的是「去 GitHub 生成 token」，用系统浏览器打开。
+- 网页 select / checkbox 在手机上做成可点的选项胶囊。「Description」网页 i18n 没有中文，照网页显示英文。
+- NA_TODO 常量已删除，`grep -rn 移动端尚未开发 src` 为 0。
+- **还没对齐的（DSH Agent 除外）**：群用量（详情里，需要 DSH projectionsBySession）标「接口尚未实现」；模型服务商页、切换经典 Agent 模式、终端、文件树、HTML 节点、浏览器接管卡（待处理）、打开 Harness 设置标「移动端暂未实现」；记忆编辑网页本身没有；头像拖放/粘贴不做；已知问题见下。
 
 **（已在 0.9.6 改正）标错了、需要改的占位**：
 - 首页菜单「连接器」，以及设置页里的「连接器」「能力」「浏览器」「密钥」「反馈」「关于」：现在标「接口尚未实现」，但接口都有，应该做出来。
@@ -168,8 +177,8 @@
 7. 群聊里同样操作一遍。
 
 ## 6. 下一步建议（每一步都要先等用户说「做」）
-1. 等用户确认 0.9.7 的结果（Bot 间对话弹窗、密钥页、用量页），修他反馈的问题。
-2. 按表格 11→13 的顺序做，每批做完：tsc + 全部测试（batch097/batch096/settings/paihuo30/api 五套） → 打 APK → 发预发布 → 用中文汇报。
+1. 等用户确认 0.9.8 的结果（浏览器、连接器、能力三页），修他反馈的问题。表格 13 项已全部完成。
+2. 以后每批做完：tsc + 全部测试（batch098/batch097/batch096/settings/paihuo30/api 六套，用新的 DSH_HOME） → 打 APK → 发预发布 → 用中文汇报。
 4. **验证方法**：
    - 网页参考截图在 `docs/appearance-shots/web/`（用 `variants.mjs` 在 mock 演示数据上生成）。手机截图在 `phone/`，对比拼图在 `compare/`（c01–c19）。
    - 网页侧用 Playwright 打开本地 DSH（token URL），量 DOM 的数值，和 app 对比。

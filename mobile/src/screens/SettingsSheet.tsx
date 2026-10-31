@@ -9,7 +9,8 @@ import { Group, Row, Sheet } from '../components/ui';
 import { AppearanceGroup, MotionGroup } from '../components/Appearance';
 import { FolderField } from '../components/Pickers';
 import { View } from 'react-native';
-import { NA_MOBILE, NA_TODO } from '../components/Menu';
+import { NA_MOBILE } from '../components/Menu';
+import { BrowserPage, CapabilitiesPage, ConnectorsPage } from './ToolPages';
 import { AboutPage, FeedbackPage, KeptPrivateSection } from './AboutFeedback';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
@@ -20,7 +21,7 @@ import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
 import { APP_VERSION } from '../version';
 export { APP_VERSION };
 
-export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void }) {
+export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPage }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void; startPage?: 'connectors' }) {
   const { client, status, state, disconnect, refresh } = useStore();
   // settings.js MainBotsSection / BotsPage / GroupsPage.
   const bots = state?.bots ?? [];
@@ -34,10 +35,11 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   const setMain = (p: Record<string, unknown>) => client!.call('set-main', p).then(refresh, (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT));
   const openSettings = (t: ChatTarget) => { onClose(); onOpenSettings?.(t); };
   const prefs = usePrefs();
-  const [page, setPage] = useState<null | 'about' | 'feedback' | 'usage' | 'secrets'>(null);
+  const [page, setPage] = useState<null | 'about' | 'feedback' | 'usage' | 'secrets' | 'connectors' | 'capabilities' | 'browser'>(null);
   const [usageFocus, setUsageFocus] = useState<string | null>(null);
   useEffect(() => { if (page !== 'usage') setUsageFocus(null); }, [page]);
-  useEffect(() => { if (!visible) setPage(null); }, [visible]);
+  // team-actions.js openConnectors(): the account menu opens settings straight on 连接器.
+  useEffect(() => { setPage(visible ? startPage ?? null : null); }, [visible, startPage]);
   const [lastErr, setLastErr] = useState<LastError | null>(null);
   useEffect(() => { if (visible) loadLastError().then(setLastErr); }, [visible]);
   const host = client?.conn.baseUrl.replace(/^https?:\/\//, '') ?? '';
@@ -46,10 +48,13 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   return (
     <Sheet theme={theme} visible={visible} onClose={onClose}>
       {page ? <>
-        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={`‹ ${({ about: '关于 DS Bot', feedback: '反馈', usage: '用量', secrets: '密钥' } as const)[page]}`} chevron={false} onPress={() => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null))} /></Group>
+        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={`‹ ${({ about: '关于 DS Bot', feedback: '反馈', usage: '用量', secrets: '密钥', connectors: '连接器', capabilities: '能力', browser: '浏览器' } as const)[page]}`} chevron={false} onPress={() => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null))} /></Group>
         {page === 'about' ? <AboutPage theme={theme} onFeedback={() => setPage('feedback')} />
           : page === 'usage' ? <UsagePage theme={theme} focusId={usageFocus} onFocus={setUsageFocus} />
-          : page === 'secrets' ? <SecretsPage theme={theme} /> : <FeedbackPage theme={theme} />}
+          : page === 'secrets' ? <SecretsPage theme={theme} />
+          : page === 'connectors' ? <ConnectorsPage theme={theme} />
+          : page === 'capabilities' ? <CapabilitiesPage theme={theme} />
+          : page === 'browser' ? <BrowserPage theme={theme} /> : <FeedbackPage theme={theme} />}
       </> : <>
       <Group theme={theme} style={{ marginTop: 4 }}>
         <Row theme={theme} label={t.appName} caption={host} value={status === 'open' ? t.online : t.offline} />
@@ -81,7 +86,9 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       </Group>
       <Group theme={theme} title="设置页面">
         <Row theme={theme} label="模型" value={NA_MOBILE} chevron={false} />
-        {['连接器', '能力', '浏览器'].map((p) => <Row key={p} theme={theme} label={p} value={NA_TODO} chevron={false} />)}
+        <Row theme={theme} label="连接器" onPress={() => setPage('connectors')} />
+        <Row theme={theme} label="能力" onPress={() => setPage('capabilities')} />
+        <Row theme={theme} label="浏览器" onPress={() => setPage('browser')} />
         <Row theme={theme} label="用量" onPress={() => setPage('usage')} />
         <Row theme={theme} label="密钥" onPress={() => setPage('secrets')} />
         <Row theme={theme} label="反馈" onPress={() => setPage('feedback')} />

@@ -87,3 +87,10 @@
 - 用量页：usage-page.js + usage-data.js → `src/api/usageData.ts`（原样复制）、`src/api/usageModel.ts`、`src/screens/UsagePage.tsx`。悬停改为点按，自选时段一次一个月。
 - 群详情里的用量：网页靠 DSH projections，手机没有 → 标「接口尚未实现」。
 - 剩下「移动端尚未开发」：连接器、能力、浏览器。
+
+## 10-31 21:45 0.9.8 功能对齐最后一批
+- 设置→浏览器：browser-settings.js BrowserPage（说明、已允许的操作列表+移除授权、允许操作表单：Bot/网站/操作/时限），走 update-bot browserGrants。
+- 设置→连接器：connectors.js ConnectorsPage（state.connectors，连接/断开/重试，GitHub token 表单，生成 token 链接用系统浏览器）；首页账号菜单「连接器」按 team-actions.js openConnectors 直接打开此页。
+- 设置→能力：capability-settings.js CapabilitiesPage（完整表单、JSON 校验报错、编辑预填、删除 4 秒内二次确认、未批准的本地命令 MCP 显示「允许」）。
+- 「移动端尚未开发」清零；13 项对齐表全部完成。
+- 剩下没对齐（DSH Agent 除外）：详情里的群用量（接口尚未实现）；模型服务商页、经典 Agent 模式、终端、文件树、HTML 节点、待处理浏览器接管卡、Harness 设置（移动端暂未实现）。

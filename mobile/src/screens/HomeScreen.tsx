@@ -8,7 +8,7 @@ import { Avatar, GroupAvatar, Mark } from '../components/Avatar';
 import { MAIN_LOOK } from '../avatar/characters';
 import { Icon, RoundButton, StatusDot } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
-import { Menu, NA_MOBILE, NA_TODO } from '../components/Menu';
+import { Menu, NA_MOBILE } from '../components/Menu';
 import { useStore } from '../store';
 import { t } from '../i18n';
 import { workLine, workPhrase, type Doing } from '../api/work';
@@ -17,7 +17,7 @@ import type { Theme } from '../theme';
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
 type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean; pinned?: boolean; state?: MarkState };
 
-export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedules }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onSchedules(): void; onNew(mode: "chat" | "group"): void }) {
+export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedules, onConnectors }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onConnectors(): void; onUsage(): void; onSchedules(): void; onNew(mode: "chat" | "group"): void }) {
   const { state, status, unread, streaming, previews, refresh } = useStore();
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
@@ -110,7 +110,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
       </View>
       <Menu theme={theme} visible={ctx !== null} onClose={() => setCtx(null)} items={[{ label: '复制对话 ID', onPress: () => { Clipboard.setStringAsync(ctx ?? ''); setCtx(null); } }]} />
       <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={56} left={12} items={[
-        { label: '用量', icon: 'gauge', onPress: onUsage }, { label: '连接器', icon: 'connector', na: NA_TODO }, { label: '自动化任务', icon: 'clock', onPress: onSchedules }, { label: 'Bot 设置', icon: 'gearLine', onPress: onAccount }, { label: '切换经典 Agent 模式', icon: 'switchMode', sep: true, na: NA_MOBILE },
+        { label: '用量', icon: 'gauge', onPress: onUsage }, { label: '连接器', icon: 'connector', onPress: onConnectors }, { label: '自动化任务', icon: 'clock', onPress: onSchedules }, { label: 'Bot 设置', icon: 'gearLine', onPress: onAccount }, { label: '切换经典 Agent 模式', icon: 'switchMode', sep: true, na: NA_MOBILE },
       ]} />
     </View>
   );

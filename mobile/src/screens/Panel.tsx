@@ -11,7 +11,7 @@ import { botState } from '../avatar/motion';
 import { needsCount } from '../api/cards';
 import { Icon, PillButton, RoundButton } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
-import { Menu, NA, NA_MOBILE, NA_TODO } from '../components/Menu';
+import { Menu, NA, NA_MOBILE } from '../components/Menu';
 import { FolderField, ModelField, modelLine, PermissionPicker, presetName } from '../components/Pickers';
 import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';

@@ -1,0 +1,71 @@
+/// <reference types="node" />
+// 0.9.8: Settings → 浏览器 / 连接器 / 能力 (web 0.2.4 browser-settings.js, connectors.js, capability-settings.js).
+//   npx tsx test/batch098.test.mts "<token URL>"
+import assert from 'node:assert/strict';
+import { BotClient } from '../src/api/client';
+import { ManualCookieTokenAuth, parseConnection } from '../src/api/auth';
+import { addGrants, blank, capabilityPayload, capabilitySecondary, connectorStatus, editDraft, expired, grantKinds, grantTime, newGrant, removeGrants, siteValue, sortCapabilities, untilOf } from '../src/api/toolsModel';
+
+const log = (...a: unknown[]) => console.log('  ✓', ...a);
+let n = 0; const ok = (m: string) => { n++; log(m); };
+
+assert.equal(siteValue(' HTTPS://Example.com:8080/a?b#c '), 'example.com'); assert.equal(siteValue(''), '*'); assert.equal(siteValue('x.org/'), 'x.org');
+ok('siteValue');
+const now = new Date(2026, 9, 31, 10, 0).getTime();
+assert.equal(untilOf('hour', now), now + 3600000); assert.equal(untilOf('week', now), now + 7 * 86400000); assert.equal(untilOf('permanent', now), undefined);
+assert.equal(new Date(untilOf('today', now)!).getHours(), 23);
+assert.deepEqual(newGrant('', ['post'], 'permanent'), { site: '*', kinds: ['post'] });
+assert.equal(grantTime({ site: '*', kinds: [] }), '永久'); assert.equal(grantTime({ site: '*', kinds: [], until: 1 }), '已过期');
+assert.ok(grantTime({ site: '*', kinds: [], until: now + 1 }, now).startsWith('截至 2026年10月31日 10:00'));
+assert.deepEqual(grantKinds({ site: 'a', kinds: ['*'] }), ['全部四项']); assert.deepEqual(grantKinds({ site: 'a', kinds: ['delete', 'post'] }), ['发布', '删除']);
+ok('grant until / time / kinds');
+const old = { site: 'a', kinds: ['post'], until: 1 }, keep = { site: 'b', kinds: ['upload'] };
+assert.ok(expired(old)); assert.deepEqual(addGrants([old, keep], keep), [keep, keep]);
+assert.deepEqual(removeGrants([old, keep], 1), null); assert.deepEqual(removeGrants([keep, keep, old], 0), [keep]);
+ok('add drops expired; remove drops index + expired, empty → null');
+assert.equal(connectorStatus({ id: 'github', state: 'off' }), '仓库、issue 和 PR');
+assert.equal(connectorStatus({ id: 'github', state: 'error', error: 'bad' }), '连接失败：bad');
+assert.equal(connectorStatus({ id: 'github', state: 'ready', account: 'me' }), '已连接：me'); assert.equal(connectorStatus({ id: 'x', state: 'ready' }), '已连接');
+ok('connector status text');
+assert.throws(() => capabilityPayload({ ...blank(), name: 'x', envText: '{' }), /环境变量必须是有效的 JSON。/);
+assert.throws(() => capabilityPayload({ ...blank(), name: 'x', envText: '[1]' }), /环境变量必须是 JSON 对象。/);
+assert.throws(() => capabilityPayload({ ...blank(), transport: 'streamable-http', headersText: 'null' }), /请求头必须是 JSON 对象。/);
+assert.deepEqual(capabilityPayload({ ...blank(), name: ' t ', command: 'node', argsText: 'a\n\nb', envText: '' }), { name: 't', kind: 'mcp', description: '', transport: 'stdio', command: 'node', args: ['a', 'b'], env: {} });
+assert.deepEqual(capabilityPayload({ ...blank(), name: 'p', kind: 'pack', items: ['t'] }), { name: 'p', kind: 'pack', description: '', items: ['t'] });
+const ed = editDraft({ name: 't', kind: 'mcp', transport: 'stdio', args: ['a', 'b'], env: { K: 'v' } });
+assert.equal(ed.argsText, 'a\nb'); assert.equal(ed.envText, '{\n  "K": "v"\n}'); assert.equal(ed.originalName, 't');
+assert.equal(capabilitySecondary({ kind: 'pack', items: [] }), '没有项目'); assert.equal(capabilitySecondary({ kind: 'mcp', transport: 'stdio' }), '本地命令');
+assert.deepEqual(sortCapabilities([{ name: 'b' }, { name: 'a' }]).map((x) => x.name), ['a', 'b']);
+ok('parseMap errors / payload / edit prefill / secondary / sort');
+
+const url = process.argv[2]; assert.ok(url, 'token URL argv');
+const client = new BotClient(parseConnection(url), new ManualCookieTokenAuth());
+let st: any = await client.state();
+const bot = st.bots[0];
+await client.updateBot(bot.id, { browserGrants: addGrants(bot.browserGrants, newGrant('https://Example.com/x', ['post', 'upload'], 'hour')) });
+st = await client.state(); let g = st.bots.find((b: any) => b.id === bot.id).browserGrants;
+assert.equal(g.length, 1); assert.equal(g[0].site, 'example.com'); assert.deepEqual(g[0].kinds, ['post', 'upload']); assert.ok(g[0].until > Date.now());
+await client.updateBot(bot.id, { browserGrants: removeGrants(g, 0) });
+st = await client.state(); g = st.bots.find((b: any) => b.id === bot.id).browserGrants;
+assert.ok(!g || g.length === 0);
+ok('update-bot browserGrants add → state / remove → null');
+assert.ok(Array.isArray(st.connectors)); const gh = st.connectors.find((c: any) => c.id === 'github');
+assert.ok(gh, 'github connector listed'); assert.equal(typeof connectorStatus(gh), 'string');
+await assert.rejects(client.connectorConnect('no-such', 'x'));
+ok(`connectors in state (${st.connectors.map((c: any) => `${c.id}:${c.state}`).join(',')}); bad id rejects`);
+await client.capabilitySave(capabilityPayload({ ...blank(), name: 'm-skill', kind: 'skill', description: 'd', content: 'do it' }));
+await client.capabilitySave(capabilityPayload({ ...blank(), name: 'm-tool', command: 'echo', argsText: 'hi' }));
+st = await client.state(); let caps = sortCapabilities(st.capabilities);
+const tool = caps.find((c) => c.name === 'm-tool'); assert.ok(caps.find((c) => c.name === 'm-skill')); assert.ok(tool); assert.deepEqual(tool.args, ['hi']);
+ok(`capability-save skill + mcp stdio (approved=${tool.approved})`);
+await client.capabilitySave(capabilityPayload({ ...editDraft(caps.find((c) => c.name === 'm-skill')), description: 'd2' }));
+await client.capabilitySave(capabilityPayload({ ...blank(), name: 'm-pack', kind: 'pack', items: ['m-skill', 'm-tool'] }));
+await client.capabilityApprove('m-tool');
+st = await client.state(); caps = st.capabilities;
+assert.equal(caps.find((c: any) => c.name === 'm-skill').description, 'd2'); assert.deepEqual(caps.find((c: any) => c.name === 'm-pack').items, ['m-skill', 'm-tool']);
+assert.equal(caps.find((c: any) => c.name === 'm-tool').approved, true);
+ok('edit / pack / approve');
+for (const name of ['m-pack', 'm-tool', 'm-skill']) await client.capabilityDelete(name);
+st = await client.state(); assert.ok(!(st.capabilities ?? []).some((c: any) => c.name.startsWith('m-')));
+ok('capability-delete');
+console.log(`batch098: ${n} passed`);

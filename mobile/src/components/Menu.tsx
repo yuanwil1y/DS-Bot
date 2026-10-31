@@ -12,7 +12,6 @@ import { Icon } from './ui';
 export const NA = '接口尚未实现';
 export const NA_MOBILE = '移动端暂未实现';
 /** The host has the endpoint; the phone page is not built yet (a later batch). */
-export const NA_TODO = '移动端尚未开发';
 export type MenuItem = { label: string; onPress?: () => void; checked?: boolean; sep?: boolean; na?: string; icon?: string; hint?: string };
 
 export function Menu({ theme, visible, onClose, items, top = 64, right = 16, left, bottom, scrim = true }: { theme: Theme; visible: boolean; onClose(): void; items: MenuItem[]; top?: number; right?: number; left?: number; bottom?: number; scrim?: boolean }) {

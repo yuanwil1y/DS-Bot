@@ -13,7 +13,7 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-export const APP_VERSION = '0.8.1';
+export const APP_VERSION = '0.9.0';
 
 export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { theme: Theme; visible: boolean; onClose(): void; onOpenSettings?(t: ChatTarget): void }) {
   const { client, status, state, disconnect, refresh } = useStore();

@@ -31,3 +31,4 @@
 - 2026-10-31 18:42 10: 安静档点头像复刻网页（停住不复位）；管理员星标/主 Bot/工作/告警徽章按网页 color-mix 实现
 - 2026-10-31 18:53 appearance: web icons (SVG), web phone typography in chat/composer/header, Home rewritten as web drawer, RoomAvatar clusterSeats; tsc+tests ALL PASS
 - 2026-10-31 19:05 home: restored agreed Grok-style structure (account top-left, + top-right, 112 Main Bot centered, list; no search/brand/foot); kept web row typography (36 avatar, 14/20 name, 13/18 preview, 8px dots, pin icon), web icons, .bt-you account button
+- 2026-10-31 19:24 0.9.0: emulator dropped (user); web reference shots (21) in docs/appearance-shots/web via variants.mjs; version 0.9.0/17; arm64 APK built

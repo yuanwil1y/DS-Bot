@@ -1,6 +1,6 @@
 // Bot / group panel = web UI "查看对话详情" panel (phone layout), pushed as a page.
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native';
 import { type Bot, type Room } from '../api';
 import { elapsedLabel, memberWork, workPhrase } from '../api/work';
 import { shownMode } from '../api/cards';
@@ -407,7 +407,53 @@ export function BotSettingsScreen({ theme, bot, room, onBack, onClose, onAvatar,
   );
 }
 
-// memory-panel.js MemoryDialog: 记忆摘要 / 全部记忆 pages, ⋯ 记忆选项 (全部记忆 N, 重新生成摘要), "询问或更新".
+// memory-panel.js MemoryDialog: 记忆摘要 / 全部记忆 pages, ⋯ 记忆选项 (全部记忆 N, 重新生成摘要),
+// "询问或更新" (memory-ask: a reply plus the changes it made), entries grouped by scope
+// and topic with sizes, tap-twice remove (memory-forget).
+const MEM_POLL_MS = 1500;
+function memAgo(at: number, now: number) {
+  const sec = Math.max(0, Math.round((now - at) / 1000));
+  if (sec < 60) return null;
+  const min = Math.round(sec / 60); if (min < 60) return `${min} 分钟前`;
+  const hr = Math.round(min / 60); if (hr < 24) return `${hr} 小时前`;
+  const d = Math.round(hr / 24); return d === 1 ? '昨天' : d === 2 ? '前天' : `${d} 天前`;
+}
+export function summaryBlocks(text: unknown) {
+  const blocks: { kind: 'h' | 'p'; text: string }[] = []; let para: string[] = [];
+  const flush = () => { if (para.length) blocks.push({ kind: 'p', text: para.join(' ') }); para = []; };
+  for (const raw of String(text ?? '').split('\n')) {
+    const line = raw.trim().replace(/\*\*|__/g, '');
+    const h = /^#{1,6}\s+(.+)$/.exec(line);
+    if (h) { flush(); blocks.push({ kind: 'h', text: h[1].trim() }); } else if (line === '') flush(); else para.push(line.replace(/^[-*•]\s+/, ''));
+  }
+  flush(); return blocks;
+}
+function memChangeLine(c: any) {
+  const text = c.text.length > 120 ? `${c.text.slice(0, 120)}…` : c.text;
+  if (!c.ok) return `没有改动：${text}（${c.error ?? ''}）`;
+  if (c.op === 'remove') return c.scope === 'team' ? `已从团队记忆删除：${text}` : `已删除：${text}`;
+  if (c.op === 'edit') return `已更新：${text}`;
+  return c.scope === 'team' ? `已加入团队记忆：${text}` : `已添加：${text}`;
+}
+function MemEntry({ theme, entry, remove }: { theme: Theme; entry: any; remove(e: any): Promise<boolean> }) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (!confirming) return; const t = setTimeout(() => setConfirming(false), 3000); return () => clearTimeout(t); }, [confirming]);
+  const by = entry.source === 'memory panel' ? '由你添加' : entry.by ? `由 ${entry.by} 添加` : null;
+  const meta = [entry.added, by].filter(Boolean).join(' · ');
+  const tap = async () => { if (!confirming) { setConfirming(true); return; } setBusy(true); if (!(await remove(entry))) setBusy(false); };
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 12, padding: 12, marginBottom: 8, opacity: busy ? 0.5 : 1 }}>
+      <View style={{ flex: 1 }}>
+        <Text selectable style={{ color: theme.text }}>{String(entry.text ?? '')}</Text>
+        {meta ? <Text style={{ color: theme.faint, fontSize: 12, marginTop: 4 }}>{meta}</Text> : null}
+      </View>
+      <Pressable disabled={busy} onPress={tap} accessibilityLabel={confirming ? '再点一次删除' : '从记忆中删除'} hitSlop={8} style={{ marginLeft: 10, paddingHorizontal: confirming ? 10 : 6, height: 28, borderRadius: 14, justifyContent: 'center', backgroundColor: confirming ? theme.danger : 'transparent' }}>
+        <Text style={{ color: confirming ? '#fff' : theme.sub, fontSize: 13 }}>{confirming ? '删除' : '🗑'}</Text>
+      </Pressable>
+    </View>
+  );
+}
 export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: string; name: string; onBack(): void }) {
   const { client, state } = useStore();
   const isRoom = !!state?.rooms?.some((r) => r.id === id);
@@ -416,63 +462,122 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
   const [text, setText] = useState('');
   const [opts, setOpts] = useState(false);
   const [err, setErr] = useState('');
+  const [answer, setAnswer] = useState<any>(null);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const i = setInterval(() => setNow(Date.now()), 30000); return () => clearInterval(i); }, []);
   const timer = React.useRef<any>(0);
+  const latest = React.useRef(0);
   const load = React.useCallback((flags: { summarize?: boolean; regenerate?: boolean } = {}) => {
     clearTimeout(timer.current);
+    const ticket = ++latest.current;
     client?.memoryView(id, flags, isRoom).then((v) => {
+      if (ticket !== latest.current) return;
       setView(v); setErr('');
-      if (v?.summarizing) timer.current = setTimeout(() => load({ summarize: true }), 2000);
-    }).catch((e) => setErr(String(e?.message ?? e)));
+      if (v?.summarizing) timer.current = setTimeout(() => load({ summarize: flags.summarize || flags.regenerate }), MEM_POLL_MS);
+    }).catch((e) => { if (ticket === latest.current) setErr(String(e?.message ?? e)); });
   }, [client, id, isRoom]);
   useEffect(() => { load({ summarize: true }); return () => clearTimeout(timer.current); }, [load]);
   const entries: any[] = view?.entries ?? [];
   const count = entries.length;
-  const ro = !!state?.readOnly;
+  const owner = isRoom ? { roomId: id } : { botId: id };
+  const regenerate = () => { setPage('summary'); load({ regenerate: true }); };
+  const backToSummary = () => { setPage('summary'); load({ summarize: true }); };
+  const remove = async (e: any) => {
+    try { setView(await client!.call<any>('memory-forget', { ...owner, scope: e.scope, topic: e.topic, text: e.text })); return true; }
+    catch (x: any) { setAnswer({ asked: e.text, error: String(x?.message ?? x) }); return false; }
+  };
   async function send() {
-    if (!client || !text.trim()) return; setErr('');
-    try { await client.memoryAdd(id, text.trim(), isRoom); setText(''); load({ summarize: true }); } catch (e: any) { setErr(String(e?.message ?? e)); }
+    const asked = text.trim();
+    if (!client || !asked || answer?.pending) return;
+    setText(''); setAnswer({ asked, pending: true });
+    try {
+      const r = await client.call<any>('memory-ask', { ...owner, text: asked });
+      setAnswer({ asked, reply: r.reply, changes: r.changes ?? [] });
+      if (r.view) setView(r.view);
+      if ((r.changes ?? []).some((c: any) => c.ok)) load({ summarize: page === 'summary' });
+    } catch (e: any) { setAnswer({ asked, error: String(e?.message ?? e) }); }
   }
-  const status = view?.summarizing ? '正在生成摘要…' : '';
+  const when = view?.summary ? memAgo(view.summary.at, now) : null;
+  const status = view === null ? ''
+    : page === 'entries' ? `${count} 条`
+      : view.summarizing && view.summary ? '正在更新…'
+        : view.summary && view.fresh ? (when ? `更新于 ${when}` : '刚刚更新') : '';
+  const busy = answer?.pending === true;
+  const failed = view?.error && !view.summarizing ? (
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+      <Text style={{ flex: 1, color: theme.danger }}>{view.summary ? `摘要不是最新的：${view.error}` : `摘要没能生成：${view.error}`}</Text>
+      <PillButton theme={theme} title="重试" onPress={regenerate} />
+    </View>) : null;
+  // Entries: own + team for a Bot, the group's for a group; then by topic.
+  const groups: { key: string; scope: string; topic?: string; entries: any[] }[] = [];
+  for (const e of entries) { const key = `${e.scope}:${e.topic ?? ''}`; const g = groups.find((x) => x.key === key); if (g) g.entries.push(e); else groups.push({ key, scope: e.scope, topic: e.topic, entries: [e] }); }
+  const sections = isRoom ? [{ scope: 'group', title: '群记忆', hint: '只有群成员会读', size: view?.sizes?.group }]
+    : [{ scope: 'own', title: `${name} 的记忆`, hint: '', size: view?.sizes?.own }, { scope: 'team', title: '团队记忆', hint: '所有 Bot 都会读', size: view?.sizes?.team }];
+  const num = (n: any) => Number(n ?? 0).toLocaleString('zh-CN');
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={page === 'entries' ? () => setPage('summary') : onBack} label={page === 'entries' ? '返回摘要' : '返回'} />
+        <RoundButton theme={theme} icon="back" onPress={page === 'entries' ? backToSummary : onBack} label={page === 'entries' ? '返回摘要' : '关闭记忆'} />
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>{page === 'entries' ? '全部记忆' : '记忆摘要'}</Text>
         <Text style={{ flex: 1, color: theme.sub, marginLeft: 8 }} numberOfLines={1}>{page === 'summary' ? [name, status].filter(Boolean).join(' · ') : status}</Text>
         <RoundButton theme={theme} icon="more" onPress={() => setOpts(true)} label="记忆选项" />
       </View>
       <ScrollView contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
         {err ? <Text style={{ color: theme.danger, marginBottom: 10 }}>{err}</Text> : null}
-        {view === null ? null : page === 'entries' ? (
-          entries.map((e, i) => (
-            <View key={i} style={{ backgroundColor: theme.card, borderRadius: 12, padding: 12, marginBottom: 8 }}>
-              {e.topic ? <Text style={{ color: theme.sub, fontSize: 12, marginBottom: 4 }}>{String(e.topic)}</Text> : null}
-              <Text style={{ color: theme.text }}>{String(e.text ?? '')}</Text>
-            </View>
-          ))
+        {view === null ? (err ? null : <ActivityIndicator color={theme.sub} style={{ marginTop: 30 }} />) : page === 'entries' ? (
+          sections.map((sec) => (
+            <View key={sec.scope} style={{ marginBottom: 18 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+                <Text style={{ color: theme.text, fontSize: 15, fontWeight: '600' }}>{sec.title}</Text>
+                {sec.hint ? <Text style={{ color: theme.sub, fontSize: 12 }}>{sec.hint}</Text> : null}
+                <Text style={{ color: theme.faint, fontSize: 12, marginLeft: 'auto' }}>{`${num(sec.size)} / ${num(view?.limits?.main)} 字符`}</Text>
+              </View>
+              {groups.some((g) => g.scope === sec.scope)
+                ? groups.filter((g) => g.scope === sec.scope).map((g) => (
+                  <View key={g.key}>
+                    {g.topic ? <Text style={{ color: theme.sub, fontSize: 12, marginBottom: 6 }}>{String(g.topic)}</Text> : null}
+                    {g.entries.map((e) => <MemEntry key={`${e.topic ?? ''}:${e.text}`} theme={theme} entry={e} remove={remove} />)}
+                  </View>))
+                : <Text style={{ color: theme.faint }}>还没有保存内容</Text>}
+            </View>))
         ) : count === 0 ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
             <Text style={{ fontSize: 28, color: theme.sub }}>▤</Text>
             <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: 10 }}>{isRoom ? '这个群还没有记住任何内容' : `${name} 还没有记住任何内容`}</Text>
             <Text style={{ color: theme.sub, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{isRoom ? '群会记住工作需要的决定、规则和事实，只有群成员在这个群里会读。可以在下面告诉它，也可以在群里说。' : `Bot 会记住长期的偏好、做过的决定，以及你让它记住的事。可以在下面告诉 ${name}，也可以在对话里说。`}</Text>
           </View>
-        ) : view.summary ? (
-          <Text style={{ color: theme.text, lineHeight: 22 }}>{String(view.summary.text ?? '')}</Text>
-        ) : view.error ? (
-          <Text style={{ color: theme.sub }}>{`摘要没能生成：${view.error}`}</Text>
-        ) : <Text style={{ color: theme.sub }}>正在生成摘要…</Text>}
+        ) : !view.summary ? (failed ?? <View style={{ alignItems: 'center', marginTop: 30 }}><ActivityIndicator color={theme.sub} /><Text style={{ color: theme.sub, marginTop: 10 }}>正在生成摘要…</Text></View>) : (
+          <View style={{ opacity: view.fresh ? 1 : 0.6 }}>
+            {failed}
+            {summaryBlocks(view.summary.text).map((b, i) => b.kind === 'h'
+              ? <Text key={i} style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: i ? 14 : 0, marginBottom: 6 }}>{b.text}</Text>
+              : <Text key={i} selectable style={{ color: theme.text, lineHeight: 22, marginBottom: 8 }}>{b.text}</Text>)}
+          </View>
+        )}
       </ScrollView>
-      {!ro ? (
-        <View style={{ flexDirection: 'row', alignItems: 'center', margin: 14, backgroundColor: theme.fill, borderRadius: 26, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 18, padding: 5 }}>
-          <TextInput value={text} onChangeText={setText} placeholder="询问或更新" placeholderTextColor={theme.sub} style={{ flex: 1, color: theme.text, fontSize: 16 }} onSubmitEditing={send} />
-          <Pressable onPress={send} disabled={!text.trim()} accessibilityLabel="发送" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: text.trim() ? theme.accent : theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="send" color={text.trim() ? theme.accentText : theme.sub} size={18} />
-          </Pressable>
+      {answer ? (
+        <View style={{ marginHorizontal: 14, marginTop: 8, backgroundColor: theme.card, borderRadius: 16, padding: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text numberOfLines={1} style={{ flex: 1, color: theme.sub, fontSize: 13 }}>{answer.asked}</Text>
+            {answer.pending ? null : <Pressable onPress={() => setAnswer(null)} accessibilityLabel="关闭" hitSlop={8}><Text style={{ color: theme.sub }}>✕</Text></Pressable>}
+          </View>
+          {answer.pending ? <Text style={{ color: theme.sub, marginTop: 6 }}>思考中…</Text>
+            : answer.error ? <Text style={{ color: theme.danger, marginTop: 6 }}>{answer.error}</Text>
+              : <>
+                {answer.reply ? <Text selectable style={{ color: theme.text, marginTop: 6 }}>{answer.reply}</Text> : null}
+                {answer.changes.map((c: any, i: number) => <Text key={i} style={{ color: c.ok ? theme.text : theme.danger, marginTop: 4, fontSize: 13 }}>{c.ok ? '✓ ' : '✕ '}{memChangeLine(c)}</Text>)}
+              </>}
         </View>
       ) : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', margin: 14, backgroundColor: theme.fill, borderRadius: 26, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 18, padding: 5 }}>
+        <TextInput value={text} onChangeText={setText} maxLength={2000} editable={view !== null} placeholder="询问或更新" accessibilityLabel={`询问或更新 ${name} 的记忆`} placeholderTextColor={theme.sub} style={{ flex: 1, color: theme.text, fontSize: 16 }} onSubmitEditing={send} />
+        <Pressable onPress={send} disabled={busy || !text.trim()} accessibilityLabel="发送" style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: text.trim() && !busy ? theme.accent : theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
+          {busy ? <ActivityIndicator color={theme.sub} size="small" /> : <Icon name="send" color={text.trim() ? theme.accentText : theme.sub} size={18} />}
+        </Pressable>
+      </View>
       <Menu theme={theme} visible={opts} onClose={() => setOpts(false)} items={[
         { label: `全部记忆  ${count}`, onPress: () => setPage('entries') },
-        ...(count === 0 || view?.summarizing ? [{ label: '重新生成摘要' }] : [{ label: '重新生成摘要', onPress: () => load({ regenerate: true }) }]),
+        ...(count === 0 || view?.summarizing ? [{ label: '重新生成摘要', na: '' }] : [{ label: '重新生成摘要', onPress: regenerate }]),
       ]} />
     </View>
   );

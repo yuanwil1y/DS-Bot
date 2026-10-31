@@ -151,14 +151,14 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
   const usage = bot ? usageOf(stats?.tokenUsage) : '';
   const model = bot ? bot.model ?? bot.appliedModel ?? state?.defaultModel : undefined;
   const top = [
-    { icon: '⚙', label: bot ? '编辑 Bot' : '群设置', f: onSettings },
-    { icon: '⋯', label: '更多', f: () => setMore(true) },
-    { icon: copied ? '✓' : '⇪', label: copied ? '已复制对话' : '分享对话', f: share },
-    { icon: '✕', label: '关闭详情', f: onClose },
+    { icon: 'gear', label: bot ? '编辑 Bot' : '群设置', f: onSettings },
+    { icon: 'more', label: '更多', f: () => setMore(true) },
+    { icon: copied ? 'check' : 'share', label: copied ? '已复制对话' : '分享对话', f: share },
+    { icon: 'close', label: '关闭详情', f: onClose },
   ];
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 16, paddingTop: 8, gap: 8 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 17, paddingTop: 12, paddingBottom: 6, gap: 8 }}>
         {sides.length ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ alignItems: 'center', gap: 8, paddingVertical: 2 }}>
             {sides.map((c) => (
@@ -174,8 +174,8 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
             ))}
           </ScrollView>
         ) : <View style={{ flex: 1 }} />}
-        <View style={{ flexDirection: 'row', gap: 10, flexShrink: 0 }}>
-          {top.map((b) => <RoundButton key={b.icon} theme={theme} label={b.label} onPress={b.f}>{b.icon === '✓' ? <Text style={{ color: theme.text, fontSize: 16 }}>✓</Text> : <Icon name={b.icon} color={theme.text} size={18} />}</RoundButton>)}
+        <View style={{ flexDirection: 'row', gap: 8, flexShrink: 0 }}>
+          {top.map((b) => <RoundButton key={b.icon} theme={theme} label={b.label} onPress={b.f}><Icon name={b.icon} color={theme.text} /></RoundButton>)}
         </View>
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 }}>

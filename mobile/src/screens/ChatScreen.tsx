@@ -260,7 +260,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             if (me) return (
               <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ alignSelf: 'flex-end', maxWidth: col ? userMax(col, look.width) : '80%', marginTop: first ? 10 : 4, opacity: item.pending && !item.failed ? 0.65 : 1 }}>
                 <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
-                  <Text selectable style={{ color: theme.userText, fontSize: 17, lineHeight: 25 }}>{item.text}</Text>
+                  <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{item.text}</Text>
                 </View>
                 {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
               </Pressable>
@@ -269,7 +269,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const lead = !!room; // cells.js: group rows carry the speaker's avatar (data-lead)
             const name = item.name ?? speaker?.name ?? 'Bot';
             const when = item.time ? new Date(item.time).toTimeString().slice(0, 5) : '';
-            const body = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={17} />;
+            const body = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
             if (flat) return (
               <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? 16 : 10, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
                 {first ? <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 22, marginBottom: 4 }}>
@@ -298,17 +298,17 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       )}
 
       {/* Floating header: back, centered pill (opens details), more. */}
-      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} />
-        <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', height: 46, borderRadius: 23, paddingLeft: 6, paddingRight: 16, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
-          {bot ? <Avatar bot={bot} size={34} ring={theme.fill} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={34} ring={theme.fill} />}
+      <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10 }}>
+        <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} size={36} />
+        <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, borderRadius: 20, paddingLeft: 7.5, paddingRight: 13.5, paddingVertical: 7.5, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
+          {bot ? <Avatar bot={bot} size={24} ring={theme.bg} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={24} ring={theme.bg} />}
           <View style={{ marginLeft: 8, flexShrink: 1 }}>
-            <Text numberOfLines={1} style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>{name}</Text>
+            <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{name}</Text>
             {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}>🧠 记忆已更新</Text> : null}
             {sub ? <Text numberOfLines={1} style={{ color: status !== 'open' ? '#f5a623' : theme.sub, fontSize: 11 }}>{sub}</Text> : null}
           </View>
         </Pressable>
-        <View style={{ width: 46 }} />
+        <View style={{ width: 36 }} />
       </View>
 
       {showUp ? (
@@ -357,25 +357,25 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       ) : null}
       {err ? <Text numberOfLines={2} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 13 }}>{err}</Text> : null}
       {dictation.note ? <Text numberOfLines={1} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 12 }}>{dictation.note}</Text> : null}
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 14, paddingVertical: 10 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 52, borderRadius: 26, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, paddingLeft: 5, paddingRight: 5, paddingVertical: 5 }}>
-          <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
-            <Icon name="plus" color={theme.text} size={20} />
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingLeft: 16, paddingRight: 11, paddingBottom: 13 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 45, borderRadius: 22, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.composerBorder, padding: 7.5 }}>
+          <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.tool, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="plus" color={theme.sub} size={14} />
           </Pressable>
           <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.sub} multiline
-            style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 17, paddingVertical: 8, marginLeft: 10 }} />
+            style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 16, lineHeight: 24, paddingVertical: 2, paddingHorizontal: 8, marginVertical: 0 }} />
           <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
-            style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: dictation.listening ? '#ff3e51' : theme.cardHi, alignItems: 'center', justifyContent: 'center' }}>
+            style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: dictation.listening ? '#ff3e51' : theme.tool, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="mic" color={dictation.listening ? '#fff' : theme.sub} size={16} />
           </Pressable>
           {text.trim() ? (
-            <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
-              <Icon name="send" color={theme.accentText} size={20} />
+            <Pressable onPress={send} accessibilityLabel={t.send} style={{ width: 28, height: 28, borderRadius: 14, marginLeft: 8, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="send" color={theme.accentText} size={16} />
             </Pressable>
           ) : bot ? (
             <Pressable onPress={onVoice} accessibilityLabel={VOICE.startVoice}
-              style={{ width: 42, height: 42, borderRadius: 21, marginLeft: 6, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: theme.accentText, fontSize: 16, fontWeight: '700' }}>⦙⦙</Text>
+              style={{ width: 28, height: 28, borderRadius: 14, marginLeft: 8, backgroundColor: theme.accent, alignItems: 'center', justifyContent: 'center' }}>
+              <Icon name="voice" color={theme.accentText} size={18} />
             </Pressable>
           ) : null}
         </View>

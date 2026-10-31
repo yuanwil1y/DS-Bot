@@ -27,3 +27,6 @@
 - item10: settings 外观/动画 UI with custom slider + swatches — 86f0418
 - item10: accent on send/voice/primary/picks/divider — 1853c4c
 - item10: mark motion engine (motion.ts keyframes+cascade, animated Mark/Avatar, wired Home/header/Panel/ActivityRow/Voice) + appearance/motion tests — e8457a6
+- item10 phase3: parity table in spec — e97c180; tsc + tests ALL PASS
+- 2026-10-31 18:42 10: 安静档点头像复刻网页（停住不复位）；管理员星标/主 Bot/工作/告警徽章按网页 color-mix 实现
+- 2026-10-31 18:53 appearance: web icons (SVG), web phone typography in chat/composer/header, Home rewritten as web drawer, RoomAvatar clusterSeats; tsc+tests ALL PASS

@@ -1,11 +1,12 @@
-// Grok-style home: top account + '+' buttons, Main Bot centered, bots/groups list (no search, nothing at the bottom).
+// Home = the web's phone drawer (sidebar.js wide list): brand + search/new, Main Bot tile, rows, account at the foot.
 import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { botState, type MarkState } from '../avatar/motion';
 import { needsCount, type Bot, type Room } from '../api';
-import { Avatar, GroupAvatar } from '../components/Avatar';
-import { RoundButton, StatusDot } from '../components/ui';
+import { Avatar, GroupAvatar, Mark } from '../components/Avatar';
+import { MAIN_LOOK } from '../avatar/characters';
+import { Icon, RoundButton, StatusDot } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
 import { Menu } from '../components/Menu';
 import { useStore } from '../store';
@@ -21,6 +22,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
   const [acct, setAcct] = useState(false);
+  const [soon, setSoon] = useState(false);
   // context-menu.js: 复制对话 ID copies the Bot's current session id (or the group id).
   const [ctx, setCtx] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -64,45 +66,62 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
     return list.sort((a, b) => Number(b.pinned) - Number(a.pinned) || (b.time ?? 0) - (a.time ?? 0));
   }, [bots, state?.rooms, state?.work, previews, unread, streaming, activity, main?.id, needs]);
 
+  // sidebar.js wide list (the phone drawer): .bt-tile for the Main Bot (60px mark, 13/18 name,
+  // role chip), then .bt-row rows (36px mark, 14/20 name, 13/18 preview, 8px unread dot).
   const header = main ? (
-    <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 28 }}>
-      <Avatar bot={main} size={112} star ring={theme.bg} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
-      <Text style={{ color: theme.sub, fontSize: 16, marginTop: 10 }}>{main.name}</Text>
-    </Pressable>
+    <View style={{ alignItems: 'center', paddingTop: 20, paddingBottom: 15 }}>
+      <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={({ pressed }) => ({ width: 95, alignItems: 'center', gap: 4, paddingTop: 6, paddingHorizontal: 8, paddingBottom: 4, borderRadius: 12, backgroundColor: pressed ? theme.active : 'transparent' })}>
+        <Avatar bot={main} size={60} star ring={theme.sidebar} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
+        <Text numberOfLines={1} style={{ color: theme.text, fontSize: 13, lineHeight: 18, maxWidth: 84 }}>{main.name}</Text>
+        {main.role ? <View style={{ paddingVertical: 1, paddingHorizontal: 4, borderRadius: 4, borderWidth: 1, borderColor: theme.line, backgroundColor: theme.hover }}><Text numberOfLines={1} style={{ color: theme.sub, fontSize: 11, lineHeight: 16 }}>{main.role}</Text></View> : null}
+      </Pressable>
+    </View>
   ) : <View style={{ height: 8 }} />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10 }}>
-        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={{ width: 46, height: 46, borderRadius: 23, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center' }}>
-          {main ? <Avatar bot={main} size={34} ring={theme.fill} /> : null}
-          <View style={{ position: 'absolute', right: 0, top: 0 }}><StatusDot theme={theme} status={status} /></View>
-        </Pressable>
-        <View style={{ flexDirection: 'row' }}>
-          <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建" />
+    <View style={{ flex: 1, backgroundColor: theme.sidebar, paddingHorizontal: 12, paddingVertical: 6 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 6, gap: 8 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4, paddingLeft: 6, paddingRight: 8, marginRight: 'auto' }}>
+          <Mark look={MAIN_LOOK as any} size={22} />
+          <Text style={{ color: theme.text, fontSize: 15, lineHeight: 20, fontWeight: '600', letterSpacing: -0.15 }}>DS Bot</Text>
+          <StatusDot theme={theme} status={status} />
         </View>
+        <RoundButton theme={theme} icon="search" onPress={() => setSoon(true)} label="搜索" />
+        <RoundButton theme={theme} icon="plus" onPress={() => onNew('chat')} label="新建…" />
       </View>
+      <View style={{ flex: 1, marginRight: -12 }}>
       <FlashList
         data={items}
         keyExtractor={(i) => i.key}
         ListHeaderComponent={header}
         keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingRight: 12 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={async () => { setRefreshing(true); await refresh(); setRefreshing(false); }} />}
-        ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40 }}>{t.noBots}</Text>}
+        ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40, fontSize: 13 }}>{t.noBots}</Text>}
         renderItem={({ item }) => (
-          <Pressable onPress={() => onOpen(item.target)} onLongPress={() => setCtx(item.bot ? item.bot.sessionId ?? item.bot.id : item.target.id)} android_ripple={{ color: theme.card }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 13 }}>
-            {item.bot ? <Avatar bot={item.bot} size={52} state={item.state} live star={item.main} ring={theme.bg} /> : <GroupAvatar members={item.members ?? []} size={52} working={item.working} ring={theme.bg} />}
-            <View style={{ flex: 1, marginLeft: 16 }}>
-              <Text numberOfLines={1} style={{ color: theme.text, fontSize: 18, fontWeight: '600' }}>{item.name}{item.pinned ? '  📌' : ''}</Text>
-              {item.preview ? <Text numberOfLines={1} style={{ color: theme.sub, fontSize: 15, marginTop: 4 }}>{item.preview}</Text> : null}
+          <Pressable onPress={() => onOpen(item.target)} onLongPress={() => setCtx(item.bot ? item.bot.sessionId ?? item.bot.id : item.target.id)} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 54, padding: 8, marginBottom: 3, borderRadius: 10, backgroundColor: pressed ? theme.hover : 'transparent' })}>
+            {item.bot ? <Avatar bot={item.bot} size={36} state={item.state} live star={item.main} ring={theme.sidebar} /> : <GroupAvatar members={item.members ?? []} size={36} ring={theme.sidebar} />}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, flexShrink: 1 }}>{item.name}</Text>
+                {item.pinned ? <Icon name="pin" color={theme.text} /> : null}
+              </View>
+              {item.preview ? <Text numberOfLines={1} style={{ color: theme.sub, fontSize: 13, lineHeight: 18 }}>{item.preview}</Text> : null}
             </View>
-            {item.waiting ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#f5a623', marginLeft: 8 }} />
-              : item.unread > 0 ? <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: theme.badge, marginLeft: 8 }} /> : null}
+            {!item.bot && item.waiting ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.star, marginRight: 2 }} />
+              : item.unread > 0 ? <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: theme.accent, marginRight: 2 }} /> : null}
           </Pressable>
         )}
       />
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9, paddingTop: 8 }}>
+        <Pressable onPress={() => setAcct(true)} accessibilityLabel="账户" style={({ pressed }) => ({ width: 36, height: 36, borderRadius: 18, backgroundColor: pressed ? theme.youHi : theme.you, borderWidth: 1, borderColor: theme.line, alignItems: 'center', justifyContent: 'center' })}>
+          <Mark look={MAIN_LOOK as any} size={24} />
+        </Pressable>
+      </View>
+      <Menu theme={theme} visible={soon} onClose={() => setSoon(false)} top={56} left={150} items={[{ label: '搜索：移动端暂未实现' }]} />
       <Menu theme={theme} visible={ctx !== null} onClose={() => setCtx(null)} items={[{ label: '复制对话 ID', onPress: () => { Clipboard.setStringAsync(ctx ?? ''); setCtx(null); } }]} />
-      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} top={64} left={16} items={[
+      <Menu theme={theme} visible={acct} onClose={() => setAcct(false)} bottom={56} left={12} items={[
         { label: '用量', onPress: onUsage }, { label: '连接器' }, { label: '自动化任务', onPress: onSchedules }, { label: 'Bot 设置', onPress: onAccount }, { label: '切换经典 Agent 模式', sep: true },
       ]} />
     </View>

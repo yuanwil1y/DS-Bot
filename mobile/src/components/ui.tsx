@@ -3,18 +3,22 @@ import React from 'react';
 import { Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
+import { SvgXml } from 'react-native-svg';
+import { ICONS } from './icons.gen';
 
-/** Simple line icons drawn with text glyphs (no icon font dependency). */
-const glyphs: Record<string, string> = { back: '‹', plus: '+', more: '⋯', close: '✕', search: '⌕', grid: '⊞', share: '⇪', chevron: '›', send: '↑', check: '✓', mic: '🎙' };
-export function Icon({ name, color, size = 22 }: { name: keyof typeof glyphs | string; color: string; size?: number }) {
-  const g = glyphs[name] ?? name;
-  const big = name === 'back' || name === 'chevron';
-  return <Text style={{ color, fontSize: big ? size * 1.45 : name === 'plus' ? size * 1.25 : size, lineHeight: big ? size * 1.55 : size * 1.3, fontWeight: name === 'more' || name === 'send' ? '700' : '300', textAlign: 'center', includeFontPadding: false }}>{g}</Text>;
+// The web's own icons (icons.gen.ts, generated from ds-bot icons.js), drawn at the web's size
+// unless a size is given; currentColor becomes the passed color.
+export function Icon({ name, color, size }: { name: string; color: string; size?: number }) {
+  const xml = ICONS[name];
+  if (!xml) return <Text style={{ color, fontSize: size ?? 16 }}>{name}</Text>;
+  const own = Number(/width="([\d.]+)"/.exec(xml)?.[1] ?? 16);
+  const s = size ?? own;
+  return <SvgXml xml={xml} width={s} height={s} color={color} />;
 }
 
-export function RoundButton({ theme, icon, onPress, size = 46, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {
+export function RoundButton({ theme, icon, onPress, size = 36, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {
   return (
-    <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}>
+    <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.line, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}>
       {children ?? <Icon name={icon ?? ''} color={theme.text} />}
     </Pressable>
   );

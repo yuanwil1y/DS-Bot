@@ -26,7 +26,7 @@ function inline(s: string, color: string, codeBg: string, key: string): React.Re
 export const Markdown = React.memo(function Markdown({ text, color, codeBg, size = 16 }: P) {
   const blocks: React.ReactNode[] = [];
   const lines = text.split('\n');
-  const base = { color, fontSize: size, lineHeight: size * 1.45 };
+  const base = { color, fontSize: size, lineHeight: size + 10 };
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
     if (l.startsWith('```')) {
@@ -43,7 +43,7 @@ export const Markdown = React.memo(function Markdown({ text, color, codeBg, size
       continue;
     }
     if (l.startsWith('>')) { blocks.push(<Text key={i} style={[base, { opacity: 0.75, borderLeftWidth: 3, borderLeftColor: '#888', paddingLeft: 8 }]}>{inline(l.replace(/^>\s?/, ''), color, codeBg, `${i}`)}</Text>); continue; }
-    if (!l.trim()) { blocks.push(<View key={i} style={{ height: size * 0.5 }} />); continue; }
+    if (!l.trim()) { blocks.push(<View key={i} style={{ height: 6 }} />); continue; }
     blocks.push(<Text key={i} selectable style={base}>{inline(l, color, codeBg, `${i}`)}</Text>);
   }
   return <View>{blocks}</View>;

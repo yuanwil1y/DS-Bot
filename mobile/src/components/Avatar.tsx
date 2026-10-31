@@ -162,14 +162,38 @@ function AlertBadge({ size, ring, ride, bg, ink }: { size: number; ring: string;
   return <Animated.View style={[{ position: 'absolute', width: 15, height: 15, borderRadius: 7.5, backgroundColor: ring, alignItems: 'center', justifyContent: 'center' }, pos as any]}><View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: ink, fontSize: 8.5, fontWeight: '600', lineHeight: 12, includeFontPadding: false }}>?</Text></View></Animated.View>;
 }
 
-/** Group: up to three member avatars stacked, like the Grok list. */
-export function GroupAvatar({ members, size = 44, working, ring = '#111' }: { members: Bot[]; size?: number; working?: boolean; ring?: string }) {
-  const m = members.slice(0, 3); const s = size * 0.58;
-  const pos = [{ left: size * 0.2, top: 0 }, { left: 0, top: size - s }, { left: size - s, top: size - s }];
+// mark.js clusterSeats / RoomAvatar: members seated in the frame; a later seat cuts a
+// frame/14 gap into the seats it overlaps (the web masks; here a disc in the backdrop
+// color is drawn under each later seat, the same picture on a solid backdrop).
+function clusterSeats(count: number, frame: number): [number, number, number][] {
+  if (count === 1) return [[0, 0, frame]];
+  if (count === 2) return [[0, 0, frame * 2 / 3], [frame / 3, frame / 3, frame * 2 / 3]];
+  if (count === 3) { const s = frame * 5 / 9, r = frame - s; return [[r / 2, 0, s], [0, r, s], [r, r, s]]; }
+  const h = frame / 2;
+  return [[0, 0, h], [h, 0, h], [0, h, h], [h, h, h]];
+}
+export function GroupAvatar({ members, size = 36, ring }: { members: Bot[]; size?: number; working?: boolean; ring?: string }) {
+  const theme = useTheme();
+  const back = ring ?? theme.sidebar;
+  const people: (Bot | null)[] = members.length === 1 ? [members[0], null] : members;
+  if (!people.length) return <Mark look={lookOf(undefined) as Look} size={size} />;
+  const seats = clusterSeats(Math.min(people.length, 4), size);
+  const overflow = people.length > 4 ? people.length - 3 : 0;
+  const gap = size / 14;
   return (
     <View style={{ width: size, height: size }}>
-      {m.map((b, i) => <View key={b.id} style={{ position: 'absolute', ...pos[i], borderRadius: s, borderWidth: 1.5, borderColor: ring }}><Avatar bot={b} size={s - 3} /></View>)}
-      {working ? <View style={{ position: 'absolute', right: 0, top: 0, width: size * 0.26, height: size * 0.26, borderRadius: size, backgroundColor: '#34c759', borderWidth: 2, borderColor: ring }} /> : null}
+      {seats.map(([x, y, s], i) => {
+        const r = s * 0.48 + gap;
+        const cut = i > 0 ? <View key={`c${i}`} style={{ position: 'absolute', left: x + s / 2 - r, top: y + s / 2 - r, width: r * 2, height: r * 2, borderRadius: r, backgroundColor: back }} /> : null;
+        const you = { position: 'absolute' as const, left: x + s * 0.04, top: y + s * 0.04, width: s * 0.92, height: s * 0.92, borderRadius: s, alignItems: 'center' as const, justifyContent: 'center' as const };
+        const p = people[i];
+        const seat = overflow > 0 && i === 3
+          ? <View key="more" style={[you, { backgroundColor: theme.active }]}><Text style={{ color: theme.faint, fontSize: Math.max(8, Math.round(s * 0.36)), fontWeight: '500' }}>+{overflow}</Text></View>
+          : p ? <View key={p.id} style={{ position: 'absolute', left: x, top: y }}><Avatar bot={p} size={s} badge={false} /></View>
+            : <View key="you" style={[you, { backgroundColor: mixInk(theme.text, 0.12) }]} />;
+        return [cut, seat];
+      })}
     </View>
   );
 }
+const mixInk = (hex: string, a: number) => { const n = parseInt(hex.slice(1, 7), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };

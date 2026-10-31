@@ -1,0 +1,34 @@
+// 0.9.13: only the short self-test remains; every action it calls is registered; cleanup in finally;
+// LONG_TEXT passes FOLD_HUGE; the removed self-tests leave no code behind.
+import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import assert from 'node:assert/strict';
+import { FOLD_HUGE } from '../src/api/fold';
+const walk = (d: string): string[] => readdirSync(d).flatMap((f) => { const p = join(d, f); return statSync(p).isDirectory() ? walk(p) : /\.(tsx?|json)$/.test(f) ? [p] : []; });
+const files = [...walk('src'), 'App.tsx'];
+const all = files.map((f) => readFileSync(f, 'utf8')).join('\n');
+let n = 0; const ok = (m: string) => { n++; console.log('  ✓', m); };
+for (const f of ['src/featureTest.tsx', 'src/appearanceTest.tsx', 'src/demo.json']) assert.ok(!existsSync(f), f);
+assert.doesNotMatch(all, /featureTest|appearanceTest|AppearanceTest|FeatureTest|外观自动测试|功能自测|DEMO_ITEMS|onPoke|testSet/);
+ok('old self-tests removed');
+const st = readFileSync('src/selfTest.tsx', 'utf8');
+const used = new Set([...st.matchAll(/act\('([\w.]+)'/g), ...readFileSync('App.tsx', 'utf8').matchAll(/act\('([\w.]+)'/g)].map((m) => m[1]));
+const reg = new Set<string>();
+for (const m of all.matchAll(/useFT\(([^,]+),/g)) for (const q of m[1].matchAll(/'([\w.]+)'/g)) reg.add(q[1]);
+reg.delete('fold.none'); // Fold's inactive placeholder
+assert.deepEqual([...used].filter((x) => !reg.has(x)), [], 'unregistered');
+assert.deepEqual([...reg].filter((x) => !used.has(x)), [], 'registered but unused (dead)');
+ok(`actions: ${used.size}, all registered and used`);
+assert.equal((all.match(/（测试用）"/g) ?? []).length, 1); assert.match(all, /label="短自测（测试用）"/);
+ok('one settings entry');
+const finals = st.split('} finally {').slice(1);
+assert.equal(finals.length, 2);
+assert.match(finals[0], /capabilityDelete\(TEMP_SKILL\)/); assert.match(finals[1], /secretDelete\(TEMP_SECRET\)/);
+ok('temp skill / secret deleted in finally');
+const m = st.match(/export const LONG_TEXT = (Array\.from[^\n]+);/)!;
+assert.ok(eval(m[1]).length > FOLD_HUGE.chars);
+ok('LONG_TEXT > FOLD_HUGE');
+const steps = (st.match(/await step\(/g) ?? []).length;
+assert.ok(steps >= 14 && steps <= 22, 'steps ' + steps);
+ok(`${steps} steps (~1 min)`);
+console.log(`batch0915: ${n} passed`);

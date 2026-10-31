@@ -2,7 +2,6 @@
 // 删除后仍受保护 section (kept-private.js KeptPrivateSection), as on the 0.2.4 web.
 // The phone installs nothing: where the web offers Update / Restart, the row says so.
 import React, { useEffect, useState } from 'react';
-import { useFT } from '../featureTest'; // TEST-ONLY
 import { Linking, Pressable, ScrollView, Text, TextInput, ToastAndroid, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import * as Sharing from 'expo-sharing';
@@ -43,7 +42,6 @@ export function AboutPage({ theme, onFeedback }: { theme: Theme; onFeedback(): v
     setChecking(true);
     client!.updateCheck(true).then((u) => { if (u) aboutCache.update = u; setUpdate(u ?? {}); }, (e) => show(errText(e))).finally(() => setChecking(false));
   };
-  useFT('about.check', () => check()); // TEST-ONLY
   const phase = update.phase ?? 'idle';
   const dsh = update.dsh;
   const repo: string | undefined = update.repoUrl;

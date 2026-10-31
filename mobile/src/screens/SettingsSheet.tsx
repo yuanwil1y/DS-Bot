@@ -18,8 +18,7 @@ import { useStore } from '../store';
 import { t } from '../i18n';
 import type { Theme } from '../theme';
 
-import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
-import { startFeatureTest, useFT } from '../featureTest'; // TEST-ONLY
+import { startSelfTest, useFT } from '../selfTest'; // TEST-ONLY
 import { APP_VERSION } from '../version';
 export { APP_VERSION };
 
@@ -111,10 +110,9 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
         {lastErr ? <Text selectable style={{ color: '#ff6b6b', fontSize: 12, padding: 12 }}>{`[${lastErr.where}] ${lastErr.message}\n${lastErr.stack ?? ''}`.slice(0, 1200)}{'\n（点上面一行清除）'}</Text> : null}
       </Group>
       <Text style={{ color: theme.faint, textAlign: 'center', marginTop: 24 }}>{t.appVersion} {APP_VERSION}</Text>
-      {/* TEST-ONLY: appearance self-test for screen recording; remove before a real release. */}
+      {/* TEST-ONLY: short self-test for screen recording; remove before a formal release. */}
       <Group theme={theme} title="测试">
-        <Row theme={theme} label="外观自动测试（测试用）" caption="自动切换各外观组合，便于录屏对照网页；仅本机临时生效，结束或停止后恢复" onPress={() => { onClose(); startAppearanceTest(); }} />
-        <Row theme={theme} label="功能自测（测试用）" caption="自动走一遍 0.9.5–0.9.10 的新功能（菜单、连接器、能力、浏览器、用量、密钥、反馈、关于、回复工具栏、定时任务、返回、深浅色），便于录屏；不保存任何东西，结束后恢复" onPress={() => { onClose(); startFeatureTest(); }} />
+        <Row theme={theme} label="短自测（测试用）" caption="约 1 分钟：关于、用量横轴与日历、能力删除、密钥展开、新建任务键盘、长消息折叠；临时技能/密钥用完即删，结束后恢复" onPress={() => { onClose(); startSelfTest(); }} />
       </Group>
       </>}
     </Sheet>

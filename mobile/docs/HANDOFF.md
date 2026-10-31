@@ -14,11 +14,11 @@
 - **不要部署到生产环境的 DSH**。
 - **只以 GitHub 预发布交付**：仓库 `yuanwil1y/DS-Bot`，remote 名 `yuanwil1y`。**永远不要推到 origin（Fei2411）**。
 - 提交身份：`git -c user.name='yuanwil1y' -c user.email='yuanwil1y@users.noreply.github.com' commit ...`
-- **不用模拟器**。用户在自己的手机上测试，方法是 app 里内置的一键「外观自测」录屏，再加截图。
+- **不用模拟器**。用户在自己的手机上测试，方法是 app 里内置的一键「短自测（测试用）」录屏，再加截图。
 - **用户确认过、故意保留的差异（不要再当成没对齐去改）**：
   - 用量页顶部汇总：网页是两行两列，app 是一个大数字加下面三个小数字。用户 2026-10-31 看过对比后说「那样挺好」，保留 app 现在的排法。
   - 首页按 Grok 布局，账号菜单从左上头像向下弹（网页是从侧栏底部向上弹）。
-- **自测（外观自测、功能自测）只是测试工具**：它自身的小毛病（提示条位置、结束后没重开设置等）不要再当问题汇报。
+- **现有测试**：app 内只有一个「短自测（测试用）」（账户设置 → 测试，约 1 分钟）；仓库里是 test/*.test.mts（用 mock DSH 跑）。**短自测在正式发布前必须删除**（src/selfTest.tsx、各 useFT 调用、设置行、App.tsx SelfTestRunner、test/batch0915）。
 - **用户要求慢工细活**：每做完一项先汇报进度；开始新的工作前必须等用户明确说「做」。汇报用中文，要简短。
 
 ## 2. 技术栈与目录结构
@@ -34,7 +34,7 @@
 | `src/api/chatModel.ts`、`cards.ts`、`work.ts`、`side.ts`、`schedules.ts`、`voice.ts`、`memoryNews.ts` | 纯逻辑，移植自网页（聊天 reducer、卡片、工作状态文案等） |
 | `src/store.tsx`、`prefs.tsx`、`teamPrefs.tsx`、`visits.ts` | 全局状态、本机偏好、团队偏好（set-prefs）、上次离开时间 |
 | `src/theme.ts`、`src/appearance.ts` | 主题配色、外观偏好（宽度、主题色、动画），规格见 `docs/appearance-prefs-spec.md` |
-| `src/appearanceTest.tsx` | 一键外观自测（只改本机设置，带浮层和停止按钮），用户录屏用 |
+| `src/selfTest.tsx` | 短自测（测试用，约 1 分钟，带步骤标签和停止按钮），用户录屏用；正式发布前删除 |
 | `src/errors.tsx` | 错误边界和 FatalGate：启动或致命 JS 错误时显示错误页，并记录「最近一次错误」 |
 | `src/screens/` | Connect、Home、Chat、Panel（Bot/群详情、设置、记忆、用量）、SettingsSheet（账户设置）、NewChatSheet、Schedules、SideChat、VoiceMode、AvatarEditor |
 | `src/components/Menu.tsx` | 通用弹出菜单，按网页 `.bt-menu`：13px 行、16px 图标、提示列，常量 `NA`、`NA_MOBILE` |
@@ -96,7 +96,7 @@
 - 0.8.0：听写和语音对话。
 - 0.8.1：麦克风常驻，连续听写。
 - 0.9.0：逐页还原网页逻辑；外观、动画、主题；网页参考截图。
-- 0.9.1：一键外观自测（仅测试用）。
+- 0.9.1：一键外观自测（仅测试用，0.9.13 已删除）。
 - 0.9.2：打包 DSSans 字体，结果启动闪退，下一版回退。
 - 0.9.3：去掉打包字体，改回系统字体；启动错误显示错误页。
 - 0.9.4：用户气泡宽度按 dsh `.userStack`；已发送的用户消息左侧加复制；轮与轮之间的间距同网页。
@@ -164,11 +164,7 @@
 - 回归测试：test/batch0912.test.mts（32 个图标 XML 合法、无 currentColor、每个 shape 有可见 paint）。
 - 渲染验证：docs/appearance-shots/icon-render/header-buttons.png（Chrome 渲染同一 XML，8 主题×模式）。原生模拟器无 KVM 权限未验证。
 
-## 0.9.11 (vc31) — 功能自测（测试用）
-- 账户设置 → 测试 → 「功能自测（测试用）」：一键走查（约 4 分钟），底部步骤标签，可点「停止」。
-- 实现：src/featureTest.tsx（useFT 动作注册 + 脚本 runFeatureTest）；App.tsx FeatureTestRunner 保存/恢复页面栈与设置。
-- 不改服务器：表单只打开/取消，无效 JSON 只显示错误，删除只第一次点（4 秒复原），聊天用本地演示数据，剪贴板复原。
-- 正式发布前删除：featureTest.tsx、各 useFT 调用、设置行、App.tsx runner。测试：test/batch0913.test.mts。
+## 0.9.11 (vc31) — 功能自测（测试用，0.9.13 已删除，被短自测取代）
 
 ## 0.9.12 (vc32) — 0.9.11 录屏问题按网页 0.2.4 修正
 - 关于：登录后即预取 update-check（同网页 index.js 启动 fresh:false），进页立即有数据；DeepSeek Harness 行同网页条件 `dsh?.current`（取决于服务器是否返回 dsh）。src/api/aboutModel.ts prefetchUpdate/aboutCache。
@@ -176,6 +172,12 @@
 - 用量自定义：SpanPicker 同 .bt-us-pick（≤640px 两个月竖排、每月 ≤252px、弹层铺满宽度、圆角 18、阴影、底部分隔线）。
 - 定时任务表单：网页 schedules.js 有 autoFocus，保留；根改为 KeyboardAvoidingView，键盘不再挡「什么时候」。
 - 连接器：GitHub 图标块（网页 connectors.js 同一 SVG 路径）。密钥空状态：「添加密钥」左对齐、上间距 12（.bt-actions）。
-- 自测 LONG_TEXT 520 行 ≈ 23 300 字，超过 FOLD_HUGE 20 000，能演示折叠。
+- 长消息演示 LONG_TEXT 520 行 ≈ 23 300 字，超过 FOLD_HUGE 20 000，能演示折叠（现在在 src/selfTest.tsx）。
 - 左侧灰条：系统（HyperOS 侧边栏手柄）叠层，盖在系统对话框之上，非 app。
-- 视觉验证：react-native-web 渲染（/tmp/rnw 临时工具）→ docs/appearance-shots/verify-0912/（v-* 深/浅，cmp-* 网页|app）。测试：test/batch0914.test.mts。
+- 视觉验证：react-native-web 渲染（/tmp/rnw 临时工具）→ docs/appearance-shots/verify-0912/（v-* 深/浅，cmp-* 网页|app）。
+
+
+## 0.9.13 (vc33) — 只留一个短自测
+- 删除「外观自测」「功能自测」及全部相关代码（featureTest.tsx、appearanceTest.tsx、demo.json、各页动作注册、App.tsx 两个 runner、batch0913/0914 测试）。
+- 新增「短自测（测试用）」约 1 分钟，只测 0.9.12 未录到的 7 项：关于秒开、用量 12 个月 x 轴、自定义范围选择器开/关、新建计划键盘弹起时「什么时候」可见、能力临时技能 selftest-temp 双击删除、密钥 SELFTEST_TEMP 增/展开/删、超长消息折叠/显示全部/收起。每状态约 2.5 秒，失败跳过，finally 清理临时数据，结束恢复原页面。
+- 测试：test/batch0915.test.mts。正式发布前删除短自测。

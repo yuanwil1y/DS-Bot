@@ -1,6 +1,6 @@
 {
   "name": "deepseek-bot-mobile",
-  "version": "0.9.12",
+  "version": "0.9.13",
   "main": "index.ts",
   "dependencies": {
     "@react-native-community/datetimepicker": "9.2.1",

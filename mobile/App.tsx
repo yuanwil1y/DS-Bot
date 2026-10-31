@@ -16,9 +16,7 @@ import { SchedulesScreen } from './src/screens/Schedules';
 import { AvatarEditorScreen } from './src/screens/AvatarEditor';
 import { SideChatScreen } from './src/screens/SideChat';
 import { VoiceModeScreen } from './src/screens/VoiceMode';
-import { STEPS, pokeAll, stopAppearanceTest, testSet, useAppearanceTest } from './src/appearanceTest'; // TEST-ONLY
-import { Pressable, Text } from 'react-native';
-import { FTLabel, act, ftLog, ftSet, runFeatureTest, stopFeatureTest, useFeatureTest } from './src/featureTest'; // TEST-ONLY
+import { FTLabel, act, ftLog, runSelfTest, stSet, stopSelfTest, useSelfTest } from './src/selfTest'; // TEST-ONLY
 import { backOne, type NavRoute } from './src/nav';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
@@ -69,9 +67,8 @@ function Root() {
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.bg }} edges={['top', 'bottom', 'left', 'right']}>
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       {body}
-      {/* TEST-ONLY: appearance self-test runner + overlay; remove before a real release. */}
-      <FeatureTestRunner stack={stack} setStack={setStack} settingsOpen={settings} setSettings={(on) => { setSettingsStart(undefined); setSettings(on); }} />
-      <AppearanceTestRunner stack={stack} setStack={setStack} closeSettings={() => setSettings(false)} settingsOpen={settings} reopenSettings={() => setSettings(true)} />
+      {/* TEST-ONLY: short self-test runner + label; remove before a formal release. */}
+      <SelfTestRunner stack={stack} setStack={setStack} settingsOpen={settings} setSettings={(on) => { setSettingsStart(undefined); setSettings(on); }} />
       {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t, fromSheet: true })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
     </SafeAreaView>
@@ -87,82 +84,38 @@ export default function App() {
   return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><TeamPrefsProvider><View style={{ flex: 1 }}><Keyed /></View></TeamPrefsProvider></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
 }
 
-// TEST-ONLY feature walkthrough (see src/featureTest.tsx). Remove before a real release.
-function FeatureTestRunner({ stack, setStack, settingsOpen, setSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; settingsOpen: boolean; setSettings(on: boolean): void }) {
-  const test = useFeatureTest();
-  const { state } = useStore();
+// TEST-ONLY short self-test (see src/selfTest.tsx). Remove before a formal release.
+function SelfTestRunner({ stack, setStack, settingsOpen, setSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; settingsOpen: boolean; setSettings(on: boolean): void }) {
+  const test = useSelfTest();
+  const { client, state, refresh } = useStore();
   const latest = useRef(state); latest.current = state;
   useEffect(() => {
-    if (!test.running) return;
+    if (!test.running || !client) return;
     const saved = stack;
     const hadSettings = settingsOpen;
     const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    const restore = () => { testSet({ demo: null, dark: null, override: null }); ftSet({ long: false }); setStack(saved); setSettings(hadSettings); };
     setSettings(false);
     (async () => {
       const st = latest.current;
       const mainId = (st as any)?.mainBotId ?? st?.bots?.[0]?.id ?? '';
       try {
         await wait(800);
-        await runFeatureTest({
-          mainId,
+        await runSelfTest({
+          client, mainId, refresh: async () => { await refresh(); await wait(300); },
+          has: (kind, name) => (((latest.current as any)?.[kind === 'capability' ? 'capabilities' : 'secrets'] ?? []) as any[]).some((x) => x.name === name),
           setStack: (r) => setStack(r as Route[]),
           openSettings: async (page) => { setSettings(true); await wait(700); await act('settings.page', page); },
           closeSettings: () => setSettings(false),
         });
-        ftSet({ label: '测试完成，正在恢复…' });
+        stSet({ label: '测试完成，正在恢复…' });
       } catch (e: any) {
         if (String(e?.message) !== 'stopped') ftLog(`中止：${e?.message ?? e}`);
       }
-      restore();
-      await wait(2500);
-      stopFeatureTest();
+      stSet({ long: false }); setStack(saved); setSettings(hadSettings);
+      await wait(1500);
+      stopSelfTest();
     })();
     return undefined;
   }, [test.running]);
-  return test.running ? <FTLabel onStop={stopFeatureTest} /> : null;
-}
-
-// TEST-ONLY appearance self-test (see src/appearanceTest.tsx). Remove before a real release.
-function AppearanceTestRunner({ stack, setStack, closeSettings, settingsOpen, reopenSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; closeSettings(): void; settingsOpen: boolean; reopenSettings(): void }) {
-  const test = useAppearanceTest();
-  const { state, previews } = useStore();
-  const latest = useRef({ state, previews }); latest.current = { state, previews };
-  useEffect(() => {
-    if (!test.running) return;
-    let cancelled = false;
-    const saved = stack;
-    const hadSettings = settingsOpen;
-    closeSettings();
-    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
-    (async () => {
-      const st = latest.current.state;
-      const mainId = (st as any)?.mainBotId ?? st?.bots?.[0]?.id ?? '';
-      // The Main Bot chat, showing the fixed local demo conversation (never sent).
-      const chat: ChatTarget = { kind: 'bot', id: mainId };
-      await wait(800);
-      for (const step of STEPS) {
-        if (cancelled) return;
-        testSet({ override: step.prefs, dark: step.dark, label: step.label, demo: mainId });
-        setStack(step.view === 'chat' ? [{ name: 'chat', target: chat }] : step.view === 'panel' ? [{ name: 'chat', target: { kind: 'bot', id: mainId } }, { name: 'panel', target: { kind: 'bot', id: mainId } }] : []);
-        if (step.poke) { let left = step.hold; for (let i = 0; i < 4 && !cancelled; i++) { await wait(1500); pokeAll(); left -= 1500; } await wait(Math.max(0, left)); } else await wait(step.hold);
-      }
-      if (cancelled) return;
-      testSet({ override: null, dark: null, label: '测试完成', demo: null });
-      setStack(saved);
-      if (hadSettings) reopenSettings();
-      await wait(2500);
-      if (!cancelled) stopAppearanceTest();
-    })();
-    return () => { cancelled = true; setStack(saved); if (hadSettings) reopenSettings(); };
-  }, [test.running]);
-  if (!test.running) return null;
-  return (
-    <View pointerEvents="box-none" style={{ position: 'absolute', bottom: 96, left: 0, right: 0, alignItems: 'center', zIndex: 1000, elevation: 1000 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: 'rgba(0,0,0,.5)', borderRadius: 999, paddingVertical: 6, paddingLeft: 14, paddingRight: 6 }}>
-        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{test.label}</Text>
-        <Pressable onPress={stopAppearanceTest} style={{ backgroundColor: '#e5484d', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 }}><Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>停止</Text></Pressable>
-      </View>
-    </View>
-  );
+  return test.running ? <FTLabel onStop={stopSelfTest} /> : null;
 }

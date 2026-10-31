@@ -31,8 +31,7 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 import { useTeamPrefs } from '../teamPrefs';
-import { DEMO_ITEMS, useAppearanceTest } from '../appearanceTest';
-import { LONG_TEXT, ftLog, useFT, useFeatureTest } from '../featureTest'; // TEST-ONLY
+import { LONG_TEXT, ftLog, useFT, useSelfTest } from '../selfTest'; // TEST-ONLY
 import { MessageTools, ReactionChips, toggleReaction, useReactions } from '../components/MessageTools';
 import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
@@ -119,7 +118,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
     }
   }
   function send() {
-    const s = text.trim(); if (!s || !client || demo) return; // demo: never sent
+    const s = text.trim(); if (!s || !client) return;
     const side = parseSideLine(s);
     if (side) {
       // `/side` never becomes a normal send: a refusal keeps the draft.
@@ -145,26 +144,12 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const onErr = (e: any) => setErr(String(e?.message ?? e));
   const after = () => { refresh(); load(); };
   const mq = room ? mentionQuery(text) : null;
-  // TEST-ONLY: during the appearance self-test this chat shows the fixed local demo conversation.
-  const demo = useAppearanceTest().demo === bot?.id && !!bot;
-  const ftLong = useFeatureTest().long; // TEST-ONLY: a long demo reply for 显示全部 / 收起
-  const list = useMemo(() => (demo ? rows(withHistory(emptyChat(), ftLong ? [...DEMO_ITEMS, { kind: 'bot', text: LONG_TEXT, time: DEMO_ITEMS.at(-1)!.time + 60_000, seq: 2000, turn: 99 }] as any : DEMO_ITEMS)) : bot ? rows(model) : roomRows(rmodel)), [demo, bot, model, rmodel, ftLong]);
+  // TEST-ONLY (src/selfTest.tsx): a local long Bot reply appended to the Main Bot chat, never sent.
+  const stLong = useSelfTest().long && !!bot && bot.id === ((state as any)?.mainBotId ?? state?.bots?.[0]?.id);
+  const longAt = useMemo(() => Date.now(), [stLong]);
+  const list = useMemo(() => (bot ? rows(stLong ? withHistory(model, [{ kind: 'bot', text: LONG_TEXT, time: longAt, seq: 9e9, turn: 9e9 } as any]) : model) : roomRows(rmodel)), [bot, model, rmodel, stLong, longAt]);
   const data = useMemo(() => [...list].reverse(), [list]);
-  // TEST-ONLY feature walkthrough actions (src/featureTest.tsx).
-  const ftBot = () => data.find((r) => r.kind === 'bot' && !r.streaming && r.text !== LONG_TEXT);
-  const ftShow = (key: string) => { const i = data.findIndex((r) => r.key === key); if (i >= 0) listRef.current?.scrollToIndex({ index: i, viewPosition: 0.5, animated: true }); };
-  useFT('chat.tools', (on = true) => { const r = ftBot(); if (!r) { ftLog('跳过：没有 Bot 回复'); return; } if (on) ftShow(r.key); setTools(on ? r.key : null); });
-  useFT('chat.react', (e: string) => { const r = ftBot(); if (r) toggleReaction(`${sessionId}:${r.key}`, e); });
-  useFT('chat.reply', () => { const r = ftBot(); if (r) quote(r.text); });
-  useFT('chat.clear', () => { setText(''); input.current?.blur(); });
-  useFT('chat.long', () => { const r = data.find((x) => x.text === LONG_TEXT); if (r) ftShow(r.key); else ftLog('跳过：没有长消息'); });
-  useFT('chat.bottom', () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
-  useFT('chat.exchange', (on = true) => {
-    if (!on) { setExchangePair(null); return false; }
-    const r = data.find((x) => x.kind === 'event' && x.data?.event === 'exchange' && x.data?.role !== 'report' && x.data?.botId);
-    if (!r || !bot) { ftLog('跳过：这个对话没有交接记录（exchange）'); return false; }
-    ftShow(r.key); setExchangePair([bot.id, r.data.botId]); return true;
-  });
+  useFT('chat.long', () => { const i = data.findIndex((x) => x.text === LONG_TEXT); if (i >= 0) listRef.current?.scrollToIndex({ index: i, viewPosition: 0.5, animated: true }); else ftLog('跳过：没有长消息'); }); // TEST-ONLY
   async function share() {
     setMenu(false);
     const md = list.filter((r) => !r.pending).map((r) => `**${r.kind === 'user' ? t.you : r.name ?? bot?.name ?? ''}**\n\n${r.text}`).join('\n\n---\n\n');
@@ -237,7 +222,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 62 + 40, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: theme.sub, textAlign: 'center' }}>{t.empty}</Text>
       </View> : null}
-      {loading && !demo ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
+      {loading ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
         <FlatList
           inverted
           ref={listRef}

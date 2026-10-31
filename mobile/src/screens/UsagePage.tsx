@@ -1,7 +1,7 @@
 // Settings → 用量: a port of ds-bot 0.2.4 usage-page.js (UsagePage) over the `usage`
 // endpoint and usage-data.js. Hover becomes tap; the 53-week heat map scrolls sideways.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ftLog, useFT } from '../featureTest'; // TEST-ONLY
+import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { Avatar, GroupAvatar, Mark } from '../components/Avatar';
@@ -28,11 +28,8 @@ export function UsagePage({ theme, focusId, onFocus }: { theme: Theme; focusId: 
   const [topH, setTopH] = useState(34);
   const [by, setBy] = useState<'bot' | 'model'>('bot');
   const focus = focusOf(focusId);
-  // TEST-ONLY feature walkthrough actions.
-  const ftFocus = useRef<() => void>(() => ftLog('跳过：没有用量数据'));
+  // TEST-ONLY self-test action.
   useFT('usage.range', (id: string) => { if (id === 'custom') setPicking((o) => !o); else { setRangeId(id); setPicking(false); } });
-  useFT('usage.by', (b: 'bot' | 'model') => setBy(b));
-  useFT('usage.focus', () => ftFocus.current());
   useEffect(() => {
     let stopped = false; let timer: any;
     const load = async () => {
@@ -74,7 +71,6 @@ export function UsagePage({ theme, focusId, onFocus }: { theme: Theme; focusId: 
   }
   const { faces, models, ownerAt, face, keep, all, part, series, tipSeries, fillOf, columns, ranked, isBot, activeDays, first } = shaped!;
   const pick = (next: { kind: string; key: string } | null | undefined) => next && onFocus(`${next.kind}:${next.key}`);
-  ftFocus.current = () => { const at = ranked(all.owners).find(([i]: [number, any]) => isBot(i))?.[0]; if (at === undefined) ftLog('跳过：没有 Bot 用量'); else pick({ kind: 'owner', key: view.owners[at].key }); }; // TEST-ONLY
   const chooseRange = (id: string) => {
     if (id !== 'custom') { setRangeId(id); setPicking(false); return; }
     if (span) setRangeId('custom');
@@ -185,7 +181,6 @@ function Chart({ theme, range, columns, series, tipSeries, by, onBy, onPick }: {
   const count = columns.length;
   const fillOf = new Map(series.map((e) => [e.key, e.fill]));
   const tipOf = new Map(tipSeries.map((e) => [e.key, e]));
-  useFT('usage.tip', (on: boolean) => { if (!on) { setHover(null); return; } let i = -1; columns.forEach((c, at) => { if (c.total > 0) i = at; }); if (i < 0) ftLog('跳过：图表没有柱子'); else setHover(i); }); // TEST-ONLY
   const tip = hover === null ? null : columns[hover];
   const H = 200;
   const grid = (level: number, label: string) => <View key={level} style={{ position: 'absolute', left: 0, right: 0, bottom: level * H, borderTopWidth: 1, borderStyle: 'dashed', borderColor: theme.border }}>
@@ -283,7 +278,6 @@ function Heat({ theme, view, keep, paint }: { theme: Theme; view: UsageView; kee
   const h = heat(view, keep);
   const CELL = 10; const GAP = 3;
   const scroll = useRef<any>(null);
-  useFT('usage.heat', (where: 'start' | 'end') => (where === 'start' ? scroll.current?.scrollTo({ x: 0, animated: true }) : scroll.current?.scrollToEnd({ animated: true }))); // TEST-ONLY
   return <Card theme={theme}>
     <Head theme={theme} title="活跃度" right={<Text style={{ fontSize: 12, color: theme.faint }}>{h.summary}</Text>} />
     <ScrollView ref={scroll} horizontal showsHorizontalScrollIndicator={false} onContentSizeChange={() => scroll.current?.scrollToEnd({ animated: false })}>

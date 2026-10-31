@@ -1,7 +1,7 @@
 // Settings → 密钥: a port of ds-bot 0.2.4 secret-card.js SecretsPage (SecretRow, ScopeEditor,
 // PurposeEditor, ValueEditor, AddSecret). Values go out in secret-set and never come back.
 import React, { useEffect, useState } from 'react';
-import { ftLog, useFT } from '../featureTest'; // TEST-ONLY
+import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Pressable, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { Avatar } from '../components/Avatar';
 import { Group, Icon } from '../components/ui';
@@ -29,8 +29,7 @@ export function SecretsPage({ theme }: { theme: Theme }) {
   const [open, setOpen] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const secrets: SecretView[] = (state as any)?.secrets ?? [];
-  useFT('secrets.expand', (on: boolean) => { if (!secrets.length) { ftLog('跳过：没有密钥'); return; } setOpen(on ? secrets[0].name : null); }); // TEST-ONLY
-  useFT('secrets.add', (on: boolean) => setAdding(on)); // TEST-ONLY (never saves)
+  useFT('secrets.expand', (name: string | null) => { if (name && !secrets.some((x) => x.name === name)) { ftLog(`跳过：没有密钥 ${name}`); return; } setOpen(name); }); // TEST-ONLY
   const run = (p: Promise<unknown>) => p.then(() => { refresh(); return true; }, (e: any) => { ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT); return false; });
   return <>
     <Text style={{ marginTop: 8, marginBottom: 4, paddingHorizontal: 4, fontSize: 12, lineHeight: 17, color: theme.sub }}>

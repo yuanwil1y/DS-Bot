@@ -4,7 +4,6 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import * as SecureStore from 'expo-secure-store';
 import { useStore } from './store';
 import { applyPrefs, resolvePrefs } from './appearance';
-import { useAppearanceTest } from './appearanceTest'; // TEST-ONLY
 const KEY = 'dsbot.teamPrefs.v1';
 type Raw = Record<string, unknown>;
 type Ctx = { prefs: Raw; resolved: ReturnType<typeof resolvePrefs>; readOnly: boolean; set(patch: Raw): Promise<void> };
@@ -17,8 +16,7 @@ export function TeamPrefsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { SecureStore.getItemAsync(KEY).then((s) => { if (s) setCache(JSON.parse(s)); }).catch(() => {}); }, []);
   const server = (state as any)?.prefs as Raw | undefined;
   useEffect(() => { if (server) { setCache(server); setPending(null); SecureStore.setItemAsync(KEY, JSON.stringify(server)).catch(() => {}); } }, [JSON.stringify(server ?? null)]);
-  const test = useAppearanceTest(); // TEST-ONLY local override, never written to the server
-  const prefs = test.override ? applyPrefs(pending ?? server ?? cache, test.override) : (pending ?? server ?? cache);
+  const prefs = pending ?? server ?? cache;
   const readOnly = !client || !!state?.readOnly;
   const set = useCallback(async (patch: Raw) => {
     if (!client || state?.readOnly) return;

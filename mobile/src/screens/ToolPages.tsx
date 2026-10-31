@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Linking, Pressable, Text, TextInput, ToastAndroid, View } from 'react-native';
 import { Avatar } from '../components/Avatar';
 import { SvgXml } from 'react-native-svg';
-import { ftLog, useFT } from '../featureTest'; // TEST-ONLY
+import { ftLog, useFT } from '../selfTest'; // TEST-ONLY
 import { Group } from '../components/ui';
 import { Soft } from './AboutFeedback';
 import { useStore } from '../store';
@@ -69,8 +69,6 @@ export function ConnectorsPage({ theme }: { theme: Theme }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const run = async (f: () => Promise<unknown>) => { setError(''); try { await f(); await refresh(); return true; } catch (e: any) { setError(e?.message ?? String(e)); return false; } };
-  useFT('conn.open', () => { const c = list.find((x) => x.state === 'off'); if (!c) { ftLog('跳过：没有未连接的连接器'); return; } setOpen(c.id); setError(''); }); // TEST-ONLY (never submits)
-  useFT('conn.cancel', () => { setOpen(''); setToken(''); }); // TEST-ONLY
   const connect = async (id: string) => { setBusy(true); const ok = await run(() => client!.connectorConnect(id, token)); setBusy(false); if (ok) { setToken(''); setOpen(''); } };
   return (
     <Group theme={theme} title="连接器">
@@ -109,8 +107,6 @@ function CapabilityForm({ theme, draft, setDraft, items, onClose }: { theme: The
     try { payload = capabilityPayload(draft); } catch (e: any) { setError(e?.message ?? String(e)); return; }
     try { await client!.capabilitySave(payload); await refresh(); onClose(); } catch (e: any) { setError(e?.message ?? String(e)); }
   };
-  // TEST-ONLY: show the client-side JSON error; only ever runs when the payload does NOT parse, so nothing is saved.
-  useFT('cap.invalid', () => { try { capabilityPayload(draft); ftLog('跳过：表单内容有效，未提交'); } catch (e: any) { setError(e?.message ?? String(e)); } });
   const available = items.filter((i) => i.name !== draft.name && ['mcp', 'skill'].includes(i.kind));
   const JSON_HINT = '{"API_KEY": "$DSH_SECRET_MY_KEY"}';
   return (
@@ -147,10 +143,8 @@ export function CapabilitiesPage({ theme }: { theme: Theme }) {
   const [confirming, setConfirming] = useState('');
   useEffect(() => { if (!confirming) return undefined; const t = setTimeout(() => setConfirming(''), 4000); return () => clearTimeout(t); }, [confirming]);
   const run = (f: () => Promise<unknown>) => void f().then(() => refresh()).catch(fail);
-  useFT('cap.form', (patch: Partial<Draft> | null) => setDraft(patch ? { ...blank(), ...patch } : null)); // TEST-ONLY
-  useFT('cap.patch', (patch: Partial<Draft>) => setDraft((d) => (d ? { ...d, ...patch } : d))); // TEST-ONLY
-  useFT('cap.arm', () => { if (!items.length) { ftLog('跳过：没有已保存的能力'); return; } setConfirming(items[0].name); }); // TEST-ONLY: arms only, never confirms
   const remove = (item: any) => { if (confirming !== item.name) { setConfirming(item.name); return; } setConfirming(''); run(() => client!.capabilityDelete(item.name)); };
+  useFT('cap.delete', (name: string) => { const it = items.find((i) => i.name === name); if (it) remove(it); else ftLog(`跳过：没有能力 ${name}`); }); // TEST-ONLY: the self-test's own temp skill only
   return (
     <>
       <Group theme={theme} title="共享能力">
@@ -180,7 +174,6 @@ export function BrowserPage({ theme }: { theme: Theme }) {
   const [kinds, setKinds] = useState<string[]>(['post']);
   const [duration, setDuration] = useState('hour');
   const [busy, setBusy] = useState(false);
-  useFT('browser.duration', (k: string) => setDuration(k)); // TEST-ONLY
   const chosen = bots.find((b) => b.id === botId) ?? bots[0];
   const run = async (f: () => Promise<unknown>) => { try { await f(); await refresh(); return true; } catch (e) { fail(e); return false; } };
   const add = async () => {

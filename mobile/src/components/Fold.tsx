@@ -1,5 +1,5 @@
 // fold.js useFold + the .bt-fold control (显示全部 · N 字 / 收起) under a message.
-import { useFT } from '../featureTest'; // TEST-ONLY
+import { useFT } from '../selfTest'; // TEST-ONLY
 import React, { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { foldView, type Folded, type Limit, type Whole } from '../api/fold';

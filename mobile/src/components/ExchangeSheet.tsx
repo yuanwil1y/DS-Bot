@@ -1,4 +1,3 @@
-import { FTLabel } from '../featureTest'; // TEST-ONLY
 // exchange.js ExchangeDialog (0.2.4): what two Bots said to each other, as a bottom sheet.
 // Polls `exchange` every 2 s (8 s in the background) and redraws only on a change.
 import React, { useEffect, useRef, useState } from 'react';
@@ -86,6 +85,5 @@ export function ExchangeSheet({ theme, pair, onClose }: { theme: Theme; pair: [s
         </Pressable>
       </View>
     </View>
-    <FTLabel />
   </Modal>;
 }

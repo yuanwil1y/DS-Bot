@@ -1,8 +1,8 @@
 // Scheduled tasks = web schedules.js: SchedulesPage (账户菜单「自动化任务」/ 设置 → 定时任务),
 // BotSchedules (Bot 设置里的「定时任务」), ScheduleSummary (详情面板那一行) and TaskForm.
 // The host has list / create / delete only, so there is no edit or pause here either.
-import React, { useEffect, useState } from 'react';
-import { useFT } from '../featureTest'; // TEST-ONLY
+import React, { useEffect, useRef, useState } from 'react';
+import { useFT } from '../selfTest'; // TEST-ONLY
 import { KeyboardAvoidingView, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
@@ -104,12 +104,6 @@ export function TaskForm({ theme, start, onDone, onCancel }: { theme: Theme; sta
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pick, setPick] = useState(false);
-  // TEST-ONLY: open the native pickers the same way the buttons do; the runner closes them with DateTimePickerAndroid.dismiss.
-  useFT('sched.kind', (k: ScheduleWhen['kind']) => setKind(k));
-  useFT('sched.pickDate', () => { let base: Date; try { base = new Date(parseLocal(at)); } catch { base = new Date(); } DateTimePickerAndroid.open({ value: base, mode: 'date', onChange: () => {} }); });
-  useFT('sched.pickClock', () => { let base: Date; try { base = new Date(parseLocal(at)); } catch { base = new Date(); } DateTimePickerAndroid.open({ value: base, mode: 'time', is24Hour: true, onChange: () => {} }); });
-  useFT('sched.pickTime', () => pickTime(time, setTime));
-  useFT('sched.dismiss', async (mode: 'date' | 'time') => { await DateTimePickerAndroid.dismiss(mode); });
   const timing = (): ScheduleWhen => {
     if (kind === 'at') return { kind, at: parseLocal(at) };
     if (kind === 'every') return { kind, minutes: Math.round(Number(count) * UNITS.find(([id]) => id === unit)![1]) };
@@ -183,6 +177,8 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
   const [adding, setAdding] = useState(Boolean(start));
   useFT('sched.add', (on: boolean) => setAdding(on)); // TEST-ONLY (form is cancelled, never created)
   useFT('sched.available', () => !!view?.available); // TEST-ONLY
+  const scroll = useRef<any>(null);
+  useFT('sched.end', () => scroll.current?.scrollToEnd({ animated: true })); // TEST-ONLY: keyboard stays up
   const bots = state?.bots ?? []; const rooms = state?.rooms ?? [];
   const groups = view?.available ? [
     ...bots.map((b) => ({ id: b.id, avatar: <Avatar bot={b} size={18} />, name: b.name, tasks: view.tasks.filter((t) => t.botId === b.id) })),
@@ -193,7 +189,7 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
     // keyboard, so the page pads itself and 什么时候 scrolls into reach above it.
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }}>
       <PageHeader theme={theme} title="定时任务" onBack={onBack} />
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 18, paddingBottom: 40 }}>
         {view === null ? <Text style={{ color: theme.sub }}>加载中…</Text>
           : !view.available ? (
             <View style={{ alignItems: 'center', padding: 28, backgroundColor: theme.card, borderRadius: 16, borderWidth: 1, borderColor: theme.fillBorder }}>

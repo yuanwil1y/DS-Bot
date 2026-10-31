@@ -70,7 +70,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
   const header = main ? (
     <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 24, gap: 6 }}>
       <Avatar bot={main} size={112} star ring={theme.bg} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
-      <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{main.name}</Text>
+      <Text numberOfLines={1} style={{ color: theme.text, fontSize: 13, lineHeight: 18 }}>{main.name}</Text>
       {main.role ? <View style={{ paddingVertical: 1, paddingHorizontal: 4, borderRadius: 4, borderWidth: 1, borderColor: theme.line, backgroundColor: theme.hover }}><Text numberOfLines={1} style={{ color: theme.sub, fontSize: 11, lineHeight: 16 }}>{main.role}</Text></View> : null}
     </Pressable>
   ) : <View style={{ height: 8 }} />;

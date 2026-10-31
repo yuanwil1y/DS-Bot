@@ -90,6 +90,7 @@ const tool = (name, input) => ({
     ? { ...input, options: input.options.map(option => (typeof option === 'string' ? { label: option } : option)) }
     : input,
 })
+const DEMO = process.env.MOCK_DEMO ? JSON.parse((await import('node:fs')).readFileSync(process.env.MOCK_DEMO, 'utf8')) : []
 const think = value => ({ type: 'thinking', thinking: value })
 const ESCALATION = '提权测试：用户在群里要求'
 const HANDED_WORK = '群里派的活'
@@ -577,6 +578,10 @@ function decide(body) {
       },
     })]
   }
+  // MOCK_DEMO=<demo.json>: a fixed demo conversation (mobile appearance self-test, web
+  // reference shots); a user line that matches one entry exactly gets its scripted reply.
+  const demo = DEMO.find(d => d.user === userText.trim())
+  if (demo) return [...(demo.think ? [think(demo.think)] : []), text(demo.bot)]
   // Streams slowly, then checks the team: exercises the activity row stepping aside
   // for a streaming reply and coming back for the tool.
   if (/^\s*慢慢说/.test(userText) && tools.has('list_bots')) {

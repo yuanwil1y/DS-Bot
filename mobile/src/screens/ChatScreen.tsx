@@ -5,7 +5,7 @@ import { SIDE, parseSideLine, sideHostText, sideQuery } from '../api/side';
 import { VOICE } from '../api/voice';
 import { useDictation } from '../hooks/useDictation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
+import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Modal, Pressable, ScrollView, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
   cardsFor, insertMention, mentionCandidates, mentionQuery,
   addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, placeCards, withHistory, withRoomPage,
@@ -28,6 +28,7 @@ import { useStore } from '../store';
 import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 import { useTeamPrefs } from '../teamPrefs';
+import { DEMO_ITEMS, useAppearanceTest } from '../appearanceTest';
 import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
 type Props = { theme: Theme; bot?: Bot; room?: Room; onBack(): void; onDetails(): void; onSchedule(): void; onSide(chatId: string): void; onVoice(): void; onOpenChat(t: { kind: 'bot' | 'room'; id: string }): void };
@@ -100,7 +101,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
     }
   }
   function send() {
-    const s = text.trim(); if (!s || !client) return;
+    const s = text.trim(); if (!s || !client || demo) return; // demo: never sent
     const side = parseSideLine(s);
     if (side) {
       // `/side` never becomes a normal send: a refusal keeps the draft.
@@ -126,7 +127,9 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const onErr = (e: any) => setErr(String(e?.message ?? e));
   const after = () => { refresh(); load(); };
   const mq = room ? mentionQuery(text) : null;
-  const list = useMemo(() => (bot ? rows(model) : roomRows(rmodel)), [bot, model, rmodel]);
+  // TEST-ONLY: during the appearance self-test this chat shows the fixed local demo conversation.
+  const demo = useAppearanceTest().demo === bot?.id && !!bot;
+  const list = useMemo(() => (demo ? rows(withHistory(emptyChat(), DEMO_ITEMS)) : bot ? rows(model) : roomRows(rmodel)), [demo, bot, model, rmodel]);
   const data = useMemo(() => [...list].reverse(), [list]);
   async function share() {
     setMenu(false);
@@ -200,7 +203,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 62 + 40, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: theme.sub, textAlign: 'center' }}>{t.empty}</Text>
       </View> : null}
-      {loading ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
+      {loading && !demo ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
         <FlatList
           inverted
           ref={listRef}
@@ -269,14 +272,17 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const lead = !!room; // cells.js: group rows carry the speaker's avatar (data-lead)
             const name = item.name ?? speaker?.name ?? 'Bot';
             const when = item.time ? new Date(item.time).toTimeString().slice(0, 5) : '';
-            const body = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
+            const md = <Markdown text={item.text + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />;
+            const think = look.thinking && item.data?.reasoning ? <ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /> : null;
+            const body = md;
             if (flat) return (
               <Pressable onLongPress={item.streaming ? undefined : () => setCopyOf(item.text)} style={{ marginTop: first ? 16 : 10, maxWidth: col ? flatMax(col, look.flatWidth) : '100%' }}>
                 {first ? <View style={{ flexDirection: 'row', alignItems: 'center', minHeight: 22, marginBottom: 4 }}>
                   {speaker ? <View style={{ marginRight: 8 }}><Avatar bot={speaker} size={22} /></View> : null}
-                  <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600' }}>{name}</Text>
+                  <Text style={{ color: theme.text, fontSize: 13, lineHeight: 22, fontWeight: '600' }}>{name}</Text>
                   {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
                 </View> : null}
+                {think}
                 {body}
               </Pressable>
             );
@@ -287,6 +293,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                   <Text style={{ color: inkTextHex(speaker?.color ?? 'gray', theme.dark), fontSize: 12, lineHeight: 16, fontWeight: '500' }}>{name}</Text>
                   {when ? <Text style={{ color: theme.sub, fontSize: 11, marginLeft: 6 }}>{when}</Text> : null}
                 </View> : null}
+                {think}
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
                   {lead ? <View style={{ width: 22, marginRight: 8 }}>{last && speaker ? <Avatar bot={speaker} size={22} /> : null}</View> : null}
                   <View style={{ flexShrink: 1, backgroundColor: theme.bubbleBot, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>{body}</View>
@@ -362,7 +369,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.tool, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="plus" color={theme.sub} size={14} />
           </Pressable>
-          <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.sub} multiline
+          <TextInput value={text} onChangeText={setText} placeholder={`给 ${name} 发消息`} placeholderTextColor={theme.faint} multiline
             style={{ flex: 1, maxHeight: 150, color: theme.text, fontSize: 16, lineHeight: 24, paddingVertical: 2, paddingHorizontal: 8, marginVertical: 0 }} />
           <Pressable onPress={toggleDictate} accessibilityLabel={dictation.listening ? VOICE.stopDictate : VOICE.dictate}
             style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: dictation.listening ? '#ff3e51' : theme.tool, alignItems: 'center', justifyContent: 'center' }}>
@@ -394,4 +401,20 @@ function NewDivider({ theme }: { theme: Theme }) {
     <Text style={{ color: theme.accent, fontSize: 12, fontWeight: '500', marginHorizontal: 8 }}>新</Text>
     <View style={{ flex: 1, height: 1, backgroundColor: theme.accent, opacity: 0.2 }} />
   </View>;
+}
+
+// web cells.js Reasoning (.bt-think): a closed <details> 「思考过程 · Ns」; tap opens the text
+// (13/18 ink-2, 2px line-2 left rule, padding-left 10, five lines then scrolls).
+function ThinkingRow({ theme, text, ms }: { theme: Theme; text: string; ms?: number }) {
+  const [open, setOpen] = useState(false);
+  const secs = ms !== undefined ? Math.floor(Math.max(1000, ms) / 1000) : null;
+  const label = secs === null ? '' : ` · ${secs >= 60 ? `${Math.floor(secs / 60)}m ` : ''}${secs % 60}s`;
+  return (
+    <View style={{ marginTop: 2, marginBottom: 4 }}>
+      <Pressable onPress={() => setOpen((v) => !v)} hitSlop={6}><Text style={{ color: theme.sub, fontSize: 13, lineHeight: 18 }}>思考过程{label}</Text></Pressable>
+      {open ? <ScrollView nestedScrollEnabled style={{ marginTop: 6, paddingLeft: 10, borderLeftWidth: 2, borderLeftColor: theme.border, maxHeight: 90 }}>
+        <Text selectable style={{ color: theme.sub, fontSize: 13, lineHeight: 18 }}>{text}</Text>
+      </ScrollView> : null}
+    </View>
+  );
 }

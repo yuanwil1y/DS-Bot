@@ -6,14 +6,22 @@
 // Avatar.tsx and the runner in App.tsx before a real release.
 import { useSyncExternalStore } from 'react';
 type Raw = Record<string, unknown>;
-type S = { running: boolean; override: Raw | null; dark: boolean | null; label: string };
-let s: S = { running: false, override: null, dark: null, label: '' };
+type S = { running: boolean; override: Raw | null; dark: boolean | null; label: string; demo: string | null };
+let s: S = { running: false, override: null, dark: null, label: '', demo: null };
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 export const testSet = (p: Partial<S>) => { s = { ...s, ...p }; emit(); };
 export const useAppearanceTest = () => useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => s);
 export const startAppearanceTest = () => testSet({ running: true, label: '准备…' });
-export const stopAppearanceTest = () => testSet({ running: false, override: null, dark: null, label: '' });
+export const stopAppearanceTest = () => testSet({ running: false, override: null, dark: null, label: '', demo: null });
+// Fixed demo conversation (docs/appearance-shots/demo.json, the same text the web reference
+// shots use): shown LOCALLY in the chat whose id is `demo` while the test runs; never sent.
+import DEMO from './demo.json';
+const T0 = Date.UTC(2026, 9, 31, 6, 0);
+export const DEMO_ITEMS = (DEMO as { user: string; bot: string; think?: string }[]).flatMap((d, i) => [
+  { kind: 'user', text: d.user, time: T0 + i * 120_000, seq: 1000 + i * 2, turn: i + 1 },
+  { kind: 'bot', text: d.bot, time: T0 + i * 120_000 + 30_000, seq: 1001 + i * 2, turn: i + 1, ...(d.think ? { reasoning: d.think, ms: 1000 } : {}) },
+]);
 // Poke signal for pokeable marks (quiet-motion step taps the main avatar).
 const pokes = new Set<() => void>();
 export const onPoke = (f: () => void) => { pokes.add(f); return () => { pokes.delete(f); }; };
@@ -33,6 +41,6 @@ export const STEPS: Step[] = [
   st('w08', 'thinking on · chat', { thinking: true }, false),
   st('w09', 'motion normal · home', { motion: 'normal' }, false, 'home'),
   st('w10', 'deepseek dark · home', {}, true, 'home'),
-  st('w09', 'motion quiet · 头像点击', { motion: 'quiet' }, false, 'panel', 6000, true),
+  st('w09', 'motion quiet · 头像点击', { motion: 'quiet' }, false, 'panel', 9000, true),
   st('w09', 'motion lively · home', { motion: 'lively' }, false, 'home', 6000),
 ];

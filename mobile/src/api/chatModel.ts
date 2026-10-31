@@ -67,7 +67,8 @@ export function rows(m: ChatModel): ChatRow[] {
       ...(i.kind === 'view' ? { data: { title: i.title ?? '', view: i.view } }
         : i.kind === 'answer' && i.views?.length ? { data: { views: i.views, answers: i.answers ?? [] } }
         : i.kind === 'answer' && i.handoff ? { data: { handoff: i.handoff } }
-          : i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } } : {}) }));
+          : i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } }
+            : i.kind === 'bot' && i.reasoning ? { data: { reasoning: i.reasoning, ms: i.ms } } : {}) }));
   for (const p of m.pending ?? []) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   for (const [id, text] of Object.entries(m.drafts)) out.push({ key: `d${id}`, kind: 'bot', text, streaming: true });
   return out;

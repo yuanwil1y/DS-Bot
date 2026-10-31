@@ -50,7 +50,7 @@ export type BotState = {
   [k: string]: unknown;
 };
 export type Hello = { api: number | null; plugin?: { name: string; version: string }; boot: string; seq: number; revision: number; capabilities: string[]; readOnly?: boolean };
-export type ChatItem = { kind: 'user' | 'bot' | 'answer' | string; text?: string; time?: number; seq?: number; turn?: number; questions?: Question[]; answers?: any[]; views?: any[]; title?: string; view?: any; callId?: string | null; handoff?: { reason?: string; note?: string; outcome?: string } };
+export type ChatItem = { kind: 'user' | 'bot' | 'answer' | string; text?: string; time?: number; seq?: number; turn?: number; questions?: Question[]; answers?: any[]; views?: any[]; title?: string; view?: any; callId?: string | null; handoff?: { reason?: string; note?: string; outcome?: string }; reasoning?: string; ms?: number };
 export type QOption = { label: string; description?: string } | string;
 export type Question = { id: string; callId?: string; question: string; header?: string; detail?: string; options?: QOption[]; multiSelect?: boolean; allowCustom?: boolean; askedAt?: number };
 export type SecretRequest = { id: string; callId?: string; sessionId?: string; kind: 'fill' | 'allow'; name: string; purpose?: string; status: string; scope?: 'all' | string[] };

@@ -16,7 +16,7 @@ for (const m of ['quiet','normal','lively']) V.push([`w09-motion-${m}-drawer`,{m
 V.push(['w10-deepseek-dark-drawer',{},'dark','drawer']);
 const only=process.argv[2];
 const b = await chromium.launch({ executablePath: '/usr/bin/google-chrome', args:['--no-sandbox'] });
-const rose = (await import('/tmp/rb2/ds-bot/src/client/inks.js')).INKS.rose[0];
+const rose = (await import('/workspace/dsbot-app/ds-bot/src/client/inks.js')).INKS.rose[0];
 for (const [name,p,sc,view] of V) {
   if (only && !name.includes(only)) continue;
   const prefs={...base,...p}; if (prefs.accent==='ROSE') prefs.accent=rose;

@@ -3,7 +3,7 @@
 import type { ChatItem, FeedEvent } from './types';
 import { eventLabel } from './cards';
 
-export type ChatRow = { key: string; kind: string; text: string; data?: any; time?: number; streaming?: boolean; pending?: boolean; failed?: boolean; name?: string; botId?: string };
+export type ChatRow = { key: string; kind: string; text: string; turn?: number; seq?: number; data?: any; time?: number; streaming?: boolean; pending?: boolean; failed?: boolean; name?: string; botId?: string };
 export type Pending = { key: string; text: string; time: number; failed?: boolean };
 export type ChatModel = { items: ChatItem[]; drafts: Record<string, string>; pending?: Pending[] };
 
@@ -63,7 +63,7 @@ export function rows(m: ChatModel): ChatRow[] {
   const out: ChatRow[] = m.items
     .filter((i) => i.text || (i.kind === 'view' && i.view !== undefined) || (i.kind === 'answer' && (i.questions?.length || i.views?.length || i.handoff)))
     // An answer to a question, a view or a browser handoff draws its settled card (widget-cell.js AnsweredReply).
-    .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time,
+    .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time, turn: i.turn, seq: i.seq,
       ...(i.kind === 'view' ? { data: { title: i.title ?? '', view: i.view } }
         : i.kind === 'answer' && i.views?.length ? { data: { views: i.views, answers: i.answers ?? [] } }
         : i.kind === 'answer' && i.handoff ? { data: { handoff: i.handoff } }
@@ -103,4 +103,49 @@ export function roomRows(m: RoomModel): ChatRow[] {
     : { key: i.id, kind: i.kind, text: i.text ?? '', time: i.time, name: i.name, botId: i.botId, streaming: i.live }));
   for (const p of m.pending) out.push({ key: p.key, kind: 'user', text: p.text, time: p.time, pending: true, failed: p.failed });
   return out;
+}
+
+// btw-model.js owningTurn/dockCards/tailCards + learning-card-model.js proposalPlacement,
+// on the rows the chat page carries (`turn`, `seq`, `time`). A turn spans from just after
+// the previous turn's last seq to its own last seq; the newest turn is open while the Bot
+// runs. Cards a closed turn owns go after that turn's last row; the rest stay in the dock.
+type Span = { turn: number; start: number; end: number; endTime: number; last: string; closed: boolean };
+export function turnSpans(list: ChatRow[], running: boolean): Span[] {
+  const by = new Map<number, Span>();
+  for (const r of list) {
+    if (typeof r.turn !== 'number' || r.pending || r.streaming) continue;
+    const s = by.get(r.turn) ?? { turn: r.turn, start: -Infinity, end: -Infinity, endTime: -Infinity, last: r.key, closed: true };
+    if (typeof r.seq === 'number' && r.seq >= s.end) { s.end = r.seq; s.last = r.key; } else if (typeof r.seq !== 'number') s.last = r.key;
+    if (typeof r.time === 'number') s.endTime = Math.max(s.endTime, r.time);
+    by.set(r.turn, s);
+  }
+  const spans = [...by.values()].sort((a, b) => a.end - b.end);
+  spans.forEach((s, n) => { s.start = n === 0 ? -Infinity : spans[n - 1].end + 1; });
+  if (running && spans.length) spans[spans.length - 1].closed = false;
+  return spans;
+}
+const num = (v: any) => (typeof v === 'number' && Number.isFinite(v) ? v : v && typeof v === 'object' && Number.isFinite(v.seq) ? v.seq : undefined);
+export function btwOwner(card: any, spans: Span[]): Span | undefined {
+  const turn = Number.isInteger(card?.turn) ? card.turn : Number.isInteger(card?.atTurn) ? card.atTurn : undefined;
+  if (turn !== undefined) return spans.find((s) => s.turn === turn);
+  const at = num(card?.anchorSeq) ?? num(card?.atSeq);
+  if (at === undefined) return undefined;
+  return spans.find((s) => at >= s.start && at <= s.end) ?? (num(card?.anchorSeq) === undefined ? [...spans].reverse().find((s) => s.start <= at) : undefined);
+}
+export function learningOwner(p: any, spans: Span[]): Span | undefined {
+  if (!Number.isFinite(p?.at)) return undefined;
+  const closed = spans.filter((s) => s.closed && Number.isFinite(s.endTime));
+  const later = (a: Span, b?: Span) => !b || a.endTime > b.endTime || (a.endTime === b.endTime && a.turn > b.turn);
+  let latest: Span | undefined; let before: Span | undefined;
+  for (const s of closed) { if (later(s, latest)) latest = s; if (s.endTime <= p.at && later(s, before)) before = s; }
+  return before ?? latest;
+}
+export function placeCards<B, L>(list: ChatRow[], running: boolean, btw: B[], learning: L[]) {
+  const spans = turnSpans(list, running);
+  const tails: Record<string, { btw: B[]; learning: L[] }> = {};
+  const dock = { btw: [] as B[], learning: [] as L[] };
+  const at = (key: string) => (tails[key] ??= { btw: [], learning: [] });
+  for (const c of btw) { const o = btwOwner(c, spans); if (o && o.closed) at(o.last).btw.push(c); else dock.btw.push(c); }
+  for (const p of learning) { const o = learningOwner(p, spans); if (o) at(o.last).learning.push(p); else dock.learning.push(p); }
+  return { tails, dock };
 }

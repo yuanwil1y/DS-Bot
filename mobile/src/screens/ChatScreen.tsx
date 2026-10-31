@@ -8,7 +8,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, AppState, FlatList, KeyboardAvoidingView, Modal, Pressable, Share, Text, TextInput, ToastAndroid, View } from 'react-native';
 import {
   cardsFor, insertMention, mentionCandidates, mentionQuery,
-  addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, withHistory, withRoomPage,
+  addPending, speakingList, applyFeed, dropPending, emptyChat, emptyRoom, failPending, roomRows, rows, placeCards, withHistory, withRoomPage,
   type Bot, type ChatModel, type ChatRow, type Room, type RoomModel,
   latestMemoryChange, MEMORY_NOTICE_MS, noteMemoryNews,
 } from '../api';
@@ -179,6 +179,12 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
     else if (idx.length && Math.max(...idx) < dividerAt) setAbove((a) => (a.out ? a : { ...a, out: true }));
   };
   const viewableCb = useRef((info: any) => onViewable.current(info)).current;
+  // btw.js BtwTurnTail / learning-card.js LearningTurnTail: cards sit after the turn that owns them.
+  const placed = useMemo(() => placeCards(list, botRunning,
+    bot ? (((state as any)?.btwCards?.[bot.id] ?? []) as any[]).filter((c) => c?.partId === (bot.sessionId ?? bot.id)) : [],
+    bot ? ((state?.learning?.[bot.id] ?? []) as any[]) : []), [list, botRunning, state, bot?.id]);
+  const btwView = (c: any) => <BtwCard key={c.id} theme={theme} card={c} onDelete={() => client!.call<any>('btw-delete', { sessionId: c.partId, cardId: c.id }).then(async (r) => { await after(); return r; })} />;
+  const learnView = (p: any) => <LearningCard key={p.id} theme={theme} proposal={p} onAnswer={(approve) => client!.learningAnswer(p.id, approve).then(after)} />;
   const showUp = dividerAt >= 0 && above.out && !above.seen && !above.dismissed;
 
   return (
@@ -211,8 +217,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{w?.tool ? `${byId[b].name} · ${workPhrase(w)}…` : `${byId[b].name} 正在输入…`}</Text>
               </View>) : null; })}
             {bot && (state?.work as any)?.bots?.[bot.id]?.tool === 'browser_handoff' ? <PendingHandoffStub theme={theme} /> : null}
-            {bot ? (((state as any)?.btwCards?.[bot.id] ?? []) as any[]).filter((c) => c?.partId === (bot.sessionId ?? bot.id)).map((c) => <BtwCard key={c.id} theme={theme} card={c} onDelete={() => client!.call<any>('btw-delete', { sessionId: c.partId, cardId: c.id }).then(async (r) => { await after(); return r; })} />) : null}
-            {bot ? (state?.learning?.[bot.id] ?? []).map((p: any) => <LearningCard key={p.id} theme={theme} proposal={p} onAnswer={(approve) => client!.learningAnswer(p.id, approve).then(after)} />) : null}
+            {placed.dock.btw.map(btwView)}
+            {placed.dock.learning.map(learnView)}
             {bot ? (cards.secrets ?? []).map((r) => <SecretCard key={JSON.stringify([cards.sessionId, r.id, r.kind])} theme={theme} bot={bot} bots={state?.bots ?? []} request={r} saved={(state?.secrets ?? []).find((x) => x.name === r.name)}
               onSet={(value, scope) => client!.secretSet({ requestId: r.id, value, scope }).then(after)} onAllow={() => client!.secretAllow(r.id).then(after)} onCancel={() => client!.secretCancel(r.id).then(after)} />) : null}
             {cards.question ? <QuestionCard key={cards.question.id} theme={theme} q={cards.question} onError={onErr}
@@ -255,7 +261,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 </View>
               </Pressable>
             );
-          })(p)}</Boundary>}
+          })(p)}{placed.tails[p.item.key] ? <View>{placed.tails[p.item.key].btw.map(btwView)}{placed.tails[p.item.key].learning.map(learnView)}</View> : null}</Boundary>}
         />
       )}
 

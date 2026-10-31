@@ -21,3 +21,4 @@
 - 10-31 18:10 [6 总工作区] 完成：设置新增「位置」分组，按 settings.js LocationsSection 用 folders 读取、team-workspace 设置（FolderField team 模式无默认项、更改中禁用）；「数据位置」网页仅桌面 App 有，不做
 - 10-31 18:11 [7 多问题卡 + show_view 展示卡] 部分完成：show_view 纯展示卡按 cells.js/parts.js 'view' 行在对话里原位渲染(ShownView=WidgetCard，主机已校验)；已回答的多问题卡原已逐题显示。网页 QuestionCard(多问题逐题作答)只挂在 DSH 外壳 pendingInteraction 上，Bot 会话里 ask_user_question 被主机隐藏，插件接口拿不到该数据，故不做
 - 8 未读分隔线: 本机记录上次离开时间(SecureStore)，「新」分隔线 + 「↑ N 条新消息」药丸(✕关闭/点按跳转)；N 按回复段近似计数
+- 9 learning//btw 按轮内联: 用 chat 页 item 的 turn/seq/time 推出轮次范围，移植 owningTurn/tailCards/proposalPlacement；已关闭轮的卡片放在该轮末行后，其余留在顶部 dock

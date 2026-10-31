@@ -35,3 +35,14 @@ export function ringXml(shape: string, stroke: string): string {
 }
 export const shapeLabel = (id: string) => SHAPES[id]?.label ?? id;
 export const swatch = (color: string, dark: boolean) => (GRADIENTS[color] ? GRADIENTS[color][1][1] : (INKS[color] ?? INKS.gray)[dark ? 1 : 0]);
+
+/** characterXml with the .bt-eyes group and each .bt-eye rect transformed (an animation frame). */
+export function animatedXml(shape: string, color: string, dark: boolean, eyesTf: string, eyeTf: (e: number[]) => string): string {
+  const def = shapeOf(shape);
+  const stops = GRADIENTS[color];
+  const grad = stops ? `<linearGradient id="mg" gradientUnits="userSpaceOnUse" x1="18" y1="10" x2="78" y2="92">${stops.map(([o, v]: [number, string]) => `<stop offset="${o}" stop-color="${v}"/>`).join('')}</linearGradient>` : '';
+  const fill = stops ? 'url(#mg)' : `var(--bt-ink-${INKS[color] ? color : 'gray'})`;
+  const body = `<g mask="url(#mm)">${bodyOf(def, /^#[0-9a-f]{6}$/i.test(color) ? color : fill)}</g>`;
+  const eyes = def.eyes.map((e: number[]) => { const [cx, cy, w, h, tilt] = e; const tf = eyeTf(e); return `<g transform="translate(${cx} ${cy}) rotate(${tilt})"><rect x="${-w / 2}" y="${-h / 2}" width="${w}" height="${h}" rx="${w / 2}" fill="#000"${tf ? ` transform="${tf}"` : ''}/></g>`; }).join('');
+  return resolve(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${def.size} ${def.size}"><defs>${grad}<mask id="mm" ${maskBox(def.size)}>${holes(def, eyesTf ? `<g transform="${eyesTf}">${eyes}</g>` : eyes)}</mask></defs>${def.wrap ? `<g transform="${def.wrap}">${body}</g>` : body}</svg>`, dark);
+}

@@ -6,7 +6,8 @@ import * as Speech from 'expo-speech';
 import type { Bot } from '../api';
 import { VOICE, plainSpeech } from '../api/voice';
 import { useDictation } from '../hooks/useDictation';
-import { Avatar } from '../components/Avatar';
+import { Mark } from '../components/Avatar';
+import { lookOf, type Look } from '../avatar/mark';
 import { Icon } from '../components/ui';
 import { useStore } from '../store';
 import type { Theme } from '../theme';
@@ -140,7 +141,7 @@ export function VoiceModeScreen({ theme, bot, onBack }: { theme: Theme; bot: Bot
         <Animated.View style={{ width: 200, height: 200, alignItems: 'center', justifyContent: 'center', marginBottom: 8, transform: [{ scale: pulse }] }}>
           <View style={{ position: 'absolute', width: 168, height: 168, borderRadius: 84, backgroundColor: theme.cardHi, opacity: 0.7 }} />
           <View style={{ position: 'absolute', width: 140, height: 140, borderRadius: 70, borderWidth: 1, borderColor: theme.fillBorder }} />
-          <Avatar bot={bot} size={112} ring={theme.bg} working={phase === 'thinking'} />
+          <Mark look={lookOf(bot) as Look} size={112} live id={bot.id} state={phase === 'thinking' ? 'thinking' : phase === 'speaking' ? 'sending' : 'idle'} />
         </Animated.View>
         <Text style={{ color: theme.text, fontSize: 16, fontWeight: '600', marginTop: 8 }}>{bot.name}</Text>
         <Text style={{ color: theme.sub, fontSize: 13, marginTop: 6, minHeight: 18 }}>{status}</Text>

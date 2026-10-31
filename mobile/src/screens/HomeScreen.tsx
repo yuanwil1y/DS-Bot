@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
+import { botState, type MarkState } from '../avatar/motion';
 import { needsCount, type Bot, type Room } from '../api';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { RoundButton, StatusDot } from '../components/ui';
@@ -13,7 +14,7 @@ import { workLine, workPhrase, type Doing } from '../api/work';
 import type { Theme } from '../theme';
 
 export type ChatTarget = { kind: 'bot'; id: string } | { kind: 'room'; id: string };
-type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean; pinned?: boolean };
+type Item = { key: string; target: ChatTarget; name: string; preview: string; time?: number; bot?: Bot; members?: Bot[]; unread: number; working: boolean; waiting: boolean; needs?: number; main?: boolean; pinned?: boolean; state?: MarkState };
 
 export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedules }: { theme: Theme; onOpen(t: ChatTarget): void; onAccount(): void; onUsage(): void; onSchedules(): void; onNew(mode: "chat" | "group"): void }) {
   const { state, status, unread, streaming, previews, refresh } = useStore();
@@ -50,7 +51,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
         const line = running && doing ? `${workPhrase(doing)}…`
           : away ? workLine(roomsById[groups[0].roomId]?.name ?? '一个群聊', groups[0], groups.length - 1)
             : (!running && !needs[b.id] && doing === 'waiting' ? waitsFor(b.id, b) : '') || (p?.text ?? '').replace(/\s+/g, ' ').trim();
-        return { key: b.id, target: { kind: 'bot', id: b.id } as ChatTarget, name: b.name, bot: b, pinned: !!b.pinned, preview: line, time: p?.time ?? b.createdAt, unread: unread[b.id] ?? 0, working: running || away, waiting: !!needs[b.id], needs: needs[b.id] ?? 0 };
+        return { key: b.id, target: { kind: 'bot', id: b.id } as ChatTarget, name: b.name, bot: b, pinned: !!b.pinned, preview: line, time: p?.time ?? b.createdAt, unread: unread[b.id] ?? 0, working: running || away, waiting: !!needs[b.id], needs: needs[b.id] ?? 0, state: botState(running || away, doing, !!needs[b.id]) };
       }),
       ...((state?.rooms ?? []) as Room[]).filter((r) => !(r as any).hidden).map((r) => {
         const p = previews[r.id];
@@ -65,7 +66,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
 
   const header = main ? (
     <Pressable onPress={() => onOpen({ kind: 'bot', id: main.id })} style={{ alignItems: 'center', paddingTop: 8, paddingBottom: 28 }}>
-      <Avatar bot={main} size={112} star ring={theme.bg} working={!!streaming[main.id]} />
+      <Avatar bot={main} size={112} star ring={theme.bg} live state={botState(!!streaming[main.id], activity[main.id], !!needs[main.id])} />
       <Text style={{ color: theme.sub, fontSize: 16, marginTop: 10 }}>{main.name}</Text>
     </Pressable>
   ) : <View style={{ height: 8 }} />;
@@ -90,7 +91,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
         ListEmptyComponent={<Text style={{ color: theme.sub, textAlign: 'center', marginTop: 40 }}>{t.noBots}</Text>}
         renderItem={({ item }) => (
           <Pressable onPress={() => onOpen(item.target)} onLongPress={() => setCtx(item.bot ? item.bot.sessionId ?? item.bot.id : item.target.id)} android_ripple={{ color: theme.card }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 13 }}>
-            {item.bot ? <Avatar bot={item.bot} size={52} working={item.working} star={item.main} ring={theme.bg} /> : <GroupAvatar members={item.members ?? []} size={52} working={item.working} ring={theme.bg} />}
+            {item.bot ? <Avatar bot={item.bot} size={52} state={item.state} live star={item.main} ring={theme.bg} /> : <GroupAvatar members={item.members ?? []} size={52} working={item.working} ring={theme.bg} />}
             <View style={{ flex: 1, marginLeft: 16 }}>
               <Text numberOfLines={1} style={{ color: theme.text, fontSize: 18, fontWeight: '600' }}>{item.name}{item.pinned ? '  📌' : ''}</Text>
               {item.preview ? <Text numberOfLines={1} style={{ color: theme.sub, fontSize: 15, marginTop: 4 }}>{item.preview}</Text> : null}

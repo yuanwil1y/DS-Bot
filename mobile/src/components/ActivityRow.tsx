@@ -5,13 +5,17 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import type { Bot } from '../api';
 import { PHRASES, elapsedLabel, workPhrase } from '../api/work';
-import { Avatar } from './Avatar';
+import { Mark } from './Avatar';
+import { lookOf, type Look } from '../avatar/mark';
+import { toolState, type MarkState } from '../avatar/motion';
 import type { Theme } from '../theme';
 
 const draw = (pool: string[]) => pool[Math.min(pool.length - 1, Math.floor(Math.random() * pool.length))];
 
 export function ActivityRow({ theme, bot, mark, visible, tool, at }: { theme: Theme; bot?: Bot; mark?: React.ReactNode; visible: boolean; tool?: any; at: number }) {
-  const want = !visible ? null : tool?.tool || tool?.said || tool?.note ? { key: `tool:${workPhrase(tool)}`, label: workPhrase(tool), pool: PHRASES.working } : { key: 'thinking', label: '', pool: PHRASES.thinking };
+  const want = !visible ? null : tool?.tool || tool?.said || tool?.note ? { key: `tool:${workPhrase(tool)}`, label: workPhrase(tool), pool: PHRASES.working, state: (tool?.tool ? toolState(String(tool.tool)) : 'working') as MarkState } : { key: 'thinking', label: '', pool: PHRASES.thinking, state: 'thinking' as MarkState };
+  const markState = useRef<MarkState>('thinking');
+  if (want) markState.current = want.state;
   const [shown, setShown] = useState<{ key: string; text: string; at: number } | null>(null);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
@@ -31,7 +35,7 @@ export function ActivityRow({ theme, bot, mark, visible, tool, at }: { theme: Th
   if (!visible || !shown) return null;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 6, marginLeft: 4 }}>
-      {bot ? <Avatar bot={bot} size={28} /> : mark}
+      {bot ? <Mark look={lookOf(bot) as Look} size={28} state={markState.current} live pokeable id={bot.id} /> : mark}
       <Text style={{ color: theme.sub, fontSize: 14, marginLeft: 8 }}>{`${shown.text}…`}</Text>
       <Text style={{ color: theme.faint, fontSize: 13, marginLeft: 6 }}>{`· ${elapsedLabel(Math.max(1000, now - at))}`}</Text>
     </View>

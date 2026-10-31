@@ -6,6 +6,8 @@ import { elapsedLabel, memberWork, workPhrase } from '../api/work';
 import { shownMode } from '../api/cards';
 import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
+import { botState } from '../avatar/motion';
+import { needsCount } from '../api/cards';
 import { Icon, PillButton, RoundButton } from '../components/ui';
 import * as Clipboard from 'expo-clipboard';
 import { Menu, NA, NA_MOBILE } from '../components/Menu';
@@ -178,7 +180,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
       </View>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 }}>
         <View style={{ alignItems: 'center', marginTop: 10 }}>
-          {bot ? <Avatar bot={bot} size={64} ring={theme.bg} working={running} /> : <MemberPile theme={theme} members={members} />}
+          {bot ? <Avatar bot={bot} size={64} ring={theme.bg} live pokeable badge={false} state={botState(running, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <MemberPile theme={theme} members={members} />}
           {editing ? (
             <TextInput autoFocus value={draft} onChangeText={setDraft} onBlur={saveName} onSubmitEditing={saveName} placeholder={room ? '按成员命名' : undefined} placeholderTextColor={theme.faint}
               accessibilityLabel={bot ? 'Bot 名字' : '群名'} style={{ color: theme.text, fontSize: 20, fontWeight: '600', marginTop: 16, textAlign: 'center', minWidth: 160, borderBottomWidth: 1, borderColor: theme.fillBorder, paddingVertical: 2 }} />

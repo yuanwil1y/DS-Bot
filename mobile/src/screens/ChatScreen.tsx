@@ -17,6 +17,8 @@ import * as Clipboard from 'expo-clipboard';
 import { ActivityRow } from '../components/ActivityRow';
 import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
+import { botState } from '../avatar/motion';
+import { needsCount } from '../api/cards';
 import { Markdown } from '../components/Markdown';
 import { Boundary } from '../errors';
 import { leaveVisit, loadSeen, unreadOf, type Visit } from '../visits';
@@ -299,7 +301,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8 }}>
         <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} />
         <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', height: 46, borderRadius: 23, paddingLeft: 6, paddingRight: 16, backgroundColor: theme.fill, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
-          {bot ? <Avatar bot={bot} size={34} ring={theme.fill} /> : <GroupAvatar members={members} size={34} ring={theme.fill} />}
+          {bot ? <Avatar bot={bot} size={34} ring={theme.fill} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={34} ring={theme.fill} />}
           <View style={{ marginLeft: 8, flexShrink: 1 }}>
             <Text numberOfLines={1} style={{ color: theme.text, fontSize: 17, fontWeight: '600' }}>{name}</Text>
             {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}>🧠 记忆已更新</Text> : null}

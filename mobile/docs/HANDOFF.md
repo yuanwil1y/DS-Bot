@@ -204,3 +204,8 @@
 - TextInput 不再用固定 height：自定义强调色、密钥输入、新建会话搜索改 minHeight + paddingVertical + includeFontPadding:false + textAlignVertical:center（系统粗体/大字号不再被吞）。
 - 位置 → 总工作区：文件夹选择框和行合成一个 Group 子项（不再有分隔线），左右与行文字对齐 18；Pickers 的框底色改 theme.fill，卡片里不再「卡片套卡片」。
 - 截图：docs/appearance-shots/verify-0916/。
+
+### 比例对齐 Grok Bot（只改尺寸，不动位置）
+- 首页：顶部圆钮 36→48，主 Bot 头像 112→96、名字 13→15，列表行高 54→82、头像 36→50、标题 14→17/23、预览 13→15/21、左右边距 12→18。
+- 聊天：返回圆钮/占位 36→44，标题胶囊 40→44（头像 24→28、字号 14→16），气泡字号 14→16、内边距 12×7→14×10、圆角 18→20，输入框 45→46；列表/横幅顶部偏移 62→66。
+- 渲染：verify-0916/home.png、chat.png（左 Grok，右我们）。harness 新增 home/chat 页（stub/store.js 带假会话，stub/dict.js 替代 useDictation）。

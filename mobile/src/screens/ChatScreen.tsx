@@ -214,7 +214,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
     <KeyboardAvoidingView behavior="padding" style={{ flex: 1, backgroundColor: theme.bg }} onTouchStart={() => { if (!inside.current && tools !== null) setTools(null); inside.current = false; }}>
       {/* The empty state sits outside the inverted list: an inverted FlatList flips
           ListEmptyComponent too (both axes on Android), so it rendered mirrored. */}
-      {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 62 + 40, left: 0, right: 0, alignItems: 'center' }}>
+      {!loading && !data.length ? <View pointerEvents="none" style={{ position: 'absolute', top: 66 + 40, left: 0, right: 0, alignItems: 'center' }}>
         <Text style={{ color: theme.sub, textAlign: 'center' }}>{t.empty}</Text>
       </View> : null}
       {loading ? <ActivityIndicator style={{ marginTop: 120 }} color={theme.sub} /> : (
@@ -227,7 +227,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           onScrollToIndexFailed={(e) => listRef.current?.scrollToOffset({ offset: e.averageItemLength * e.index, animated: true })}
           data={data}
           keyExtractor={(r) => r.key}
-          style={{ flex: 1, marginTop: 62 }}
+          style={{ flex: 1, marginTop: 66 }}
           onLayout={(e) => setColW(e.nativeEvent.layout.width - 28)}
           contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 12 }}
           onEndReached={older}
@@ -291,8 +291,8 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
               <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', marginTop: 4 }}>
                 {!item.pending && !item.failed && item.text ? <CopyAction theme={theme} text={item.text} /> : null}
                 <Pressable onLongPress={item.pending ? undefined : () => setCopyOf(item.text)} onPress={item.failed ? () => retry(item) : undefined} style={{ marginLeft: 6, flexShrink: 1, maxWidth: col ? userMax(col) : '70%', opacity: item.pending && !item.failed ? 0.65 : 1 }}>
-                  <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>
-                    <FoldPlain theme={theme} text={item.text} ink={theme.userText} render={(x) => <Text selectable style={{ color: theme.userText, fontSize: 14, lineHeight: 24 }}>{x}</Text>} />
+                  <View style={{ backgroundColor: theme.bubbleMe, borderRadius: 20, ...corners, paddingHorizontal: 14, paddingVertical: 10 }}>
+                    <FoldPlain theme={theme} text={item.text} ink={theme.userText} render={(x) => <Text selectable style={{ color: theme.userText, fontSize: 16, lineHeight: 26 }}>{x}</Text>} />
                   </View>
                   {item.failed ? <Text style={{ color: theme.danger, fontSize: 12, marginTop: 4, textAlign: 'right' }}>{t.failed}</Text> : null}
                 </Pressable>
@@ -313,7 +313,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
             const wh = item.data?.whole;
             const md = <FoldMarkdown theme={theme} text={room ? stripLongNote(item.text) : item.text} streaming={item.streaming} limit={room ? FOLD_AT : FOLD_HUGE}
               whole={wh ? { length: wh.length, load: () => client!.fileText(wh.file) } : undefined}
-              render={(x) => <Markdown text={x + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={14} />} />;
+              render={(x) => <Markdown text={x + (item.streaming ? ' ▍' : '')} color={theme.text} codeBg={theme.code} size={16} />} />;
             const think = look.thinking && item.data?.reasoning ? <View style={{ marginBottom: 12 }}><ThinkingRow theme={theme} text={item.data.reasoning} ms={item.data.ms} /></View> : null;
             const body = md;
             const mkey = `${sessionId}:${item.key}`;
@@ -344,7 +344,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 {think}
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
                   {lead ? <View style={{ width: 22, marginRight: 8 }}>{last && speaker ? <Avatar bot={speaker} size={22} /> : null}</View> : null}
-                  <View style={{ flexShrink: 1, backgroundColor: theme.bubbleBot, borderRadius: 18, ...corners, paddingHorizontal: 12, paddingVertical: 7 }}>{body}</View>
+                  <View style={{ flexShrink: 1, backgroundColor: theme.bubbleBot, borderRadius: 20, ...corners, paddingHorizontal: 14, paddingVertical: 10 }}>{body}</View>
                   {toolbar}
                 </View>
                 {chips}
@@ -356,20 +356,20 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
 
       {/* Floating header: back, centered pill (opens details), more. */}
       <View pointerEvents="box-none" style={{ position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 10 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} size={36} />
-        <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 40, borderRadius: 20, paddingLeft: 7.5, paddingRight: 13.5, paddingVertical: 7.5, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
-          {bot ? <Avatar bot={bot} size={24} ring={theme.bg} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={24} ring={theme.bg} />}
+        <RoundButton theme={theme} icon="back" onPress={onBack} label={t.back} size={44} />
+        <Pressable onPress={onDetails} accessibilityLabel={memoryNotice ? `记忆已更新，打开 ${byId[memChanged!]?.name ?? name} 的记忆` : '查看对话详情'} style={({ pressed }) => ({ flexDirection: 'row', alignItems: 'center', minHeight: 44, borderRadius: 22, paddingLeft: 8, paddingRight: 16, paddingVertical: 7.5, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.fillBorder, opacity: pressed ? 0.7 : 1, maxWidth: '62%' })}>
+          {bot ? <Avatar bot={bot} size={28} ring={theme.bg} live badge={false} state={botState(botRunning, (state?.activity as any)?.[bot.id], !!needsCount(state)[bot.id])} /> : <GroupAvatar members={members} size={28} ring={theme.bg} />}
           <View style={{ marginLeft: 8, flexShrink: 1 }}>
-            <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>{name}</Text>
+            <Text numberOfLines={1} style={{ color: theme.text, fontSize: 16, lineHeight: 22, fontWeight: '500' }}>{name}</Text>
             {memoryNotice ? <Text numberOfLines={1} accessibilityLiveRegion="polite" style={{ color: theme.sub, fontSize: 11 }}><Icon name="memory" color={theme.sub} size={11} /> 记忆已更新</Text> : null}
             {sub ? <Text numberOfLines={1} style={{ color: status !== 'open' ? '#f5a623' : theme.sub, fontSize: 11 }}>{sub}</Text> : null}
           </View>
         </Pressable>
-        <View style={{ width: 36 }} />
+        <View style={{ width: 44 }} />
       </View>
 
       {showUp ? (
-        <View style={{ position: 'absolute', top: 62 + 8, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 34, borderRadius: 17, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
+        <View style={{ position: 'absolute', top: 66 + 8, alignSelf: 'center', flexDirection: 'row', alignItems: 'center', height: 34, borderRadius: 17, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
           <Pressable onPress={() => { setAbove((a) => ({ ...a, seen: true })); listRef.current?.scrollToIndex({ index: dividerAt, viewPosition: 0.8, animated: true }); }} style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 12, paddingRight: 6, height: 34 }}>
             <Text style={{ color: theme.text, fontSize: 13 }}>↑ {unread.count === 1 ? '1 条新消息' : unread.count > 0 ? `${unread.count} 条新消息` : '新消息'}</Text>
           </Pressable>
@@ -415,7 +415,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
       {err ? <Text numberOfLines={2} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 13 }}>{err}</Text> : null}
       {dictation.note ? <Text numberOfLines={1} style={{ color: theme.danger, paddingHorizontal: 20, fontSize: 12 }}>{dictation.note}</Text> : null}
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', paddingLeft: 16, paddingRight: 11, paddingBottom: 13 }}>
-        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 45, borderRadius: 22, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.composerBorder, padding: 7.5 }}>
+        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-end', minHeight: 46, borderRadius: 23, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.composerBorder, padding: 7.5 }}>
           <Pressable onPress={() => setMenu(true)} accessibilityLabel="添加" style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: theme.tool, alignItems: 'center', justifyContent: 'center' }}>
             <Icon name="plus" color={theme.sub} size={14} />
           </Pressable>

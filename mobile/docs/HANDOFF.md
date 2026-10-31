@@ -149,3 +149,7 @@
   - 原因 1：从设置页 Bot/群聊列表进入的 Bot/群聊设置，会先关掉设置面板再入栈，所以返回时直接回到首页，设置面板没了。现在这个路由带 `fromSheet`，返回时出栈并重开设置面板（对应网页 Back to Bots / Back to group chats）。
   - 原因 2：App 的 BackHandler 每次栈变化都重新注册，成了最新注册的那个，抢在 PageHeader 前面执行，于是系统返回键跳过了「全部记忆→摘要」「单项用量→全部用量」这些内层。现在改为只在挂载时注册一次，作为兜底。
   - 逻辑抽到 `src/nav.ts`（backOne / sheetBack / innerBack），测试见 test/batch0910.test.mts（6 项）。
+- 0.9.10 第三次重做（versionCode 29）：页头圆形按钮配色。
+  - 原因：(1) 图标 SVG 用的是 currentColor，Android 上 SvgXml 没有解析，描边成了黑色，深色主题下看不见；(2) 圆的填充等于页面背景，描边用的 line 只有文字色 8% 透明度，几乎看不出。
+  - 修复：Icon 把 currentColor 直接替换成实色，所有图标都生效；新增 `roundFill`（文字色混入背景，深色 8%、浅色 4%）和 `roundBorder`（深色 30%、浅色 25%）；图标用 text 色，大小 22dp。颜色依据 Grok 参考图：#1d1d1d 背景、填充 #2c2c2e、圈 #4b4b4d、白色图标。
+  - 测试 test/batch0911.test.mts：4 套主题 × 深浅色，图标对比度 ≥4.5:1，圈对比度 ≥1.5:1。

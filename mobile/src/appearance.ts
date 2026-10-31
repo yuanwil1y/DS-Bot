@@ -87,6 +87,8 @@ export function palette(prefs, dark) {
     cardHi: over(t.card, hover, dark ? 0.2 : 0.17),
     hover: `rgba(${hover.join(',')},${dark ? 0.12 : 0.09})`, active: `rgba(${hover.join(',')},${dark ? 0.2 : 0.17})`,
     fillBorder: alpha(t.text, 0.15), border: alpha(t.text, 0.15), sep: alpha(t.text, 0.08), line: alpha(t.text, 0.08), composerBorder: alpha(t.text, 0.3), tool: alpha(t.text, 0.05), you: mix(t.text, 0.05, t.sidebar), youHi: mix(t.text, 0.09, t.sidebar),
+    // Circular header button (Grok ref: dark fill #2c2c2e / ring #4b4b4d on #1d1d1d, white glyph).
+    roundFill: mix(t.text, dark ? 0.08 : 0.04, t.bg), roundBorder: mix(t.text, dark ? 0.3 : 0.25, t.bg),
     text: t.text, sub: alpha(t.text, 0.6), faint: alpha(t.text, 0.36),
     accent, accentText: accentInk(accent), badge: accent,
     bubbleMe: t.user, userText: t.userText, bubbleBot: t.bubble,

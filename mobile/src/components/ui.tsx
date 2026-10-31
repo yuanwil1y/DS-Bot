@@ -13,13 +13,14 @@ export function Icon({ name, color, size }: { name: string; color: string; size?
   if (!xml) return <Text style={{ color, fontSize: size ?? 16 }}>{name}</Text>;
   const own = Number(/width="([\d.]+)"/.exec(xml)?.[1] ?? 16);
   const s = size ?? own;
-  return <SvgXml xml={xml} width={s} height={s} color={color} />;
+  // Inline the color: SvgXml does not reliably resolve currentColor on Android (0.9.10 invisible chevron).
+  return <SvgXml xml={xml.replace(/currentColor/g, color)} width={s} height={s} color={color} />;
 }
 
 export function RoundButton({ theme, icon, onPress, size = 36, children, label, style }: { theme: Theme; icon?: string; onPress?: () => void; size?: number; children?: React.ReactNode; label?: string; style?: ViewStyle }) {
   return (
-    <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.bg, borderWidth: 1, borderColor: theme.line, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}>
-      {children ?? <Icon name={icon ?? ''} color={theme.text} />}
+    <Pressable accessibilityLabel={label} onPress={onPress} hitSlop={6} style={({ pressed }) => [{ width: size, height: size, borderRadius: size / 2, backgroundColor: theme.roundFill ?? theme.bg, borderWidth: 1, borderColor: theme.roundBorder ?? theme.line, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.6 : 1 }, style]}>
+      {children ?? <Icon name={icon ?? ''} color={theme.text} size={size >= 44 ? 22 : undefined} />}
     </Pressable>
   );
 }

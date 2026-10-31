@@ -1,3 +1,4 @@
+import { CharacterGrid, LibraryPanel, avatarImage, pickImages } from './AvatarEditor';
 // '+' -> what the web UI's New chat offers: message a Bot, Create new Bot, Create group chat.
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
@@ -37,11 +38,13 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
   const [picked, setPicked] = useState<string[]>([]);
   const [name, setName] = useState('');
   const [look, setLook] = useState(randomLook);
+  const [image, setImage] = useState<string | null>(null);
+  const [library, setLibrary] = useState(false);
   const [message, setMessage] = useState('');
   const [model, setModel] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useEffect(() => { if (initial) { setMode(initial); setQ(''); setAdmin(null); setPicked([]); setName(''); setLook(randomLook()); setMessage(''); setErr(''); setModel(state?.defaultModel ?? state?.models?.[0]?.ref); } }, [initial]);
+  useEffect(() => { if (initial) { setMode(initial); setQ(''); setAdmin(null); setPicked([]); setName(''); setLook(randomLook()); setImage(null); setLibrary(false); setMessage(''); setErr(''); setModel(state?.defaultModel ?? state?.models?.[0]?.ref); } }, [initial]);
   const readOnly = !!state?.readOnly;
   const bots = state?.bots ?? [];
   const w = q.trim().toLowerCase();
@@ -56,9 +59,13 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
   // Web: a new Bot opens on its chat with the settings panel showing.
   const createBot = () => run(async () => {
     if (clash || problem) return;
-    const b = await client!.createBot({ name: finalName, color: look.color, avatar: { shape: look.shape }, ...(model ? { model } : {}) } as any);
+    const b = await client!.createBot({ name: finalName, color: look.color, avatar: image ? { shape: look.shape, image } : { shape: look.shape }, ...(model ? { model } : {}) } as any);
     await refresh(); onClose(); if (b?.id) onOpen({ kind: 'bot', id: b.id, settings: true } as any);
   });
+  const upload = async () => {
+    setErr('');
+    try { const [a] = await pickImages(false); if (a) setImage(await avatarImage(a)); } catch (e: any) { setErr(String(e?.message ?? e)); }
+  };
   // new-chat.js makeGroup: with no message the admin greets and asks what the group is for.
   const createRoom = () => run(async () => {
     const text = message.trim();
@@ -87,9 +94,18 @@ export function NewChatSheet({ theme, mode: initial, onClose, onOpen }: { theme:
       {mode === 'bot' ? (
         <>
           <View style={{ alignItems: 'center', marginTop: 12 }}>
-            <Avatar bot={{ id: 'new-bot', name: finalName, color: look.color, avatar: { shape: look.shape } } as any} size={88} ring={theme.bg} />
-            <Pressable onPress={() => setLook((c) => randomLook(c))} style={{ marginTop: 10, backgroundColor: theme.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.text }}>随机</Text></Pressable>
+            <Avatar bot={{ id: 'new-bot', name: finalName, color: look.color, avatar: image ? { shape: look.shape, image } : { shape: look.shape } } as any} size={88} ring={theme.bg} />
           </View>
+          {/* create-bot.js: 形象 — character grid, then 随机 / 上传照片 / 头像库 / 移除照片; the library opens below. */}
+          <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6, marginTop: 16 }}>形象</Text>
+          <CharacterGrid theme={theme} look={look as any} hasPhoto={!!image} onShape={(shape) => { setImage(null); setLook((c) => ({ ...c, shape })); }} onColor={(color) => { setImage(null); setLook((c) => ({ ...c, color })); }} />
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 }}>
+            <Pressable onPress={() => { setImage(null); setLook((c) => randomLook(c)); }} style={{ backgroundColor: false ? theme.cardHi : theme.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.text }}>随机</Text></Pressable>
+            <Pressable onPress={upload} style={{ backgroundColor: false ? theme.cardHi : theme.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.text }}>{image ? '更换照片' : '上传照片'}</Text></Pressable>
+            <Pressable onPress={() => setLibrary((v) => !v)} style={{ backgroundColor: library ? theme.cardHi : theme.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.text }}>头像库</Text></Pressable>
+            {image ? <Pressable onPress={() => setImage(null)} style={{ backgroundColor: false ? theme.cardHi : theme.card, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7 }}><Text style={{ color: theme.text }}>移除照片</Text></Pressable> : null}
+          </View>
+          {library ? <LibraryPanel theme={theme} onPick={(e) => { setImage(e.image); setLibrary(false); }} /> : null}
           <Group theme={theme} title={t.name}><TextInput value={name} onChangeText={setName} autoFocus maxLength={40} style={input} placeholder={fallbackName} placeholderTextColor={theme.faint} /></Group>
           {name.trim() && problem ? <Text style={{ color: theme.danger, marginHorizontal: 6 }}>{problem}</Text> : clash ? <Text style={{ color: theme.danger, marginHorizontal: 6 }}>{`已经有叫 ${finalName} 的 Bot 了`}</Text> : null}
           {state?.models?.length ? <Group theme={theme} title={t.model}>

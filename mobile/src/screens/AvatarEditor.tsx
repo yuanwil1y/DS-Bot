@@ -28,7 +28,7 @@ export async function avatarImage(asset: { uri: string; width: number; height: n
   if (r.base64 && png.length < MAX) return png;
   throw new Error('图片太大了');
 }
-async function pickImages(multiple: boolean) {
+export async function pickImages(multiple: boolean) {
   const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: multiple, quality: 1 });
   return r.canceled ? [] : r.assets;
 }
@@ -48,8 +48,6 @@ export function AvatarEditorScreen({ theme, bot, onBack }: { theme: Theme; bot: 
     client.updateBot(bot.id, patch).then(() => refresh()).catch((e) => { setPending(null); toast(e); });
   };
   const hasPhoto = Boolean(look.image);
-  const { width } = useWindowDimensions();
-  const cell = Math.floor((width - 36 - 5 * 8) / 6);
   const upload = async () => {
     try {
       const [asset] = await pickImages(false); if (!asset) return;
@@ -78,23 +76,7 @@ export function AvatarEditorScreen({ theme, bot, onBack }: { theme: Theme; bot: 
         </View>
         {tab === 'bot' ? (
           <>
-            <View accessibilityLabel="形状" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
-              {PICKER_SHAPES.map((id: string) => {
-                const on = !hasPhoto && look.shape === id;
-                return (
-                  <Pressable key={id} onPress={() => save({ avatar: { shape: id } }, { shape: id, image: undefined })} style={{ width: cell, height: cell, alignItems: 'center', justifyContent: 'center' }}>
-                    {on ? <View style={{ position: 'absolute', left: cell * 0.1 - cell * 0.8 * 0.08, top: cell * 0.1 - cell * 0.8 * 0.08 }}><SvgXml xml={ringXml(id, theme.text)} width={cell * 0.8 * 1.16} height={cell * 0.8 * 1.16} /></View> : null}
-                    <Mark look={{ shape: id, color: look.color }} size={cell * 0.8} />
-                  </Pressable>
-                );
-              })}
-            </View>
-            <View accessibilityLabel="颜色" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
-              {CHARACTER_COLORS.map((c: string) => (
-                <Pressable key={c} onPress={() => save({ color: c }, { color: c })} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: look.color === c ? theme.text : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: swatch(c, theme.dark) }} />
-                </Pressable>))}
-            </View>
+            <CharacterGrid theme={theme} look={look} hasPhoto={hasPhoto} onShape={(id) => save({ avatar: { shape: id } }, { shape: id, image: undefined })} onColor={(c) => save({ color: c }, { color: c })} />
           </>
         ) : null}
         {tab === 'upload' ? (
@@ -113,7 +95,7 @@ export function AvatarEditorScreen({ theme, bot, onBack }: { theme: Theme; bot: 
 }
 
 const CHUNK = 20;
-function LibraryPanel({ theme, onPick }: { theme: Theme; onPick(e: AvatarEntry): void }) {
+export function LibraryPanel({ theme, onPick }: { theme: Theme; onPick(e: AvatarEntry): void }) {
   const { client } = useStore();
   const [items, setItems] = useState<AvatarEntry[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -177,5 +159,32 @@ function LibraryPanel({ theme, onPick }: { theme: Theme; onPick(e: AvatarEntry):
         {report.failed.map((f, i) => <Text key={i} style={{ color: theme.danger }}>{f.name || '照片'}：{f.message}</Text>)}
       </View> : null}
     </View>
+  );
+}
+
+/** bot-settings.js CharacterGrid: the shapes, then the colors. */
+export function CharacterGrid({ theme, look, hasPhoto, onShape, onColor }: { theme: Theme; look: Look; hasPhoto: boolean; onShape(id: string): void; onColor(c: string): void }) {
+  const { width } = useWindowDimensions();
+  const cell = Math.floor((width - 36 - 5 * 8) / 6);
+  return (
+    <>
+            <View accessibilityLabel="形状" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 16 }}>
+              {PICKER_SHAPES.map((id: string) => {
+                const on = !hasPhoto && look.shape === id;
+                return (
+                  <Pressable key={id} onPress={() => onShape(id)} style={{ width: cell, height: cell, alignItems: 'center', justifyContent: 'center' }}>
+                    {on ? <View style={{ position: 'absolute', left: cell * 0.1 - cell * 0.8 * 0.08, top: cell * 0.1 - cell * 0.8 * 0.08 }}><SvgXml xml={ringXml(id, theme.text)} width={cell * 0.8 * 1.16} height={cell * 0.8 * 1.16} /></View> : null}
+                    <Mark look={{ shape: id, color: look.color }} size={cell * 0.8} />
+                  </Pressable>
+                );
+              })}
+            </View>
+            <View accessibilityLabel="颜色" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 16 }}>
+              {CHARACTER_COLORS.map((c: string) => (
+                <Pressable key={c} onPress={() => onColor(c)} style={{ width: 34, height: 34, borderRadius: 17, borderWidth: 2, borderColor: look.color === c ? theme.text : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: swatch(c, theme.dark) }} />
+                </Pressable>))}
+            </View>
+    </>
   );
 }

@@ -19,6 +19,7 @@ import { t } from '../i18n';
 import type { Theme } from '../theme';
 
 import { startAppearanceTest } from '../appearanceTest'; // TEST-ONLY
+import { startFeatureTest, useFT } from '../featureTest'; // TEST-ONLY
 import { APP_VERSION } from '../version';
 export { APP_VERSION };
 
@@ -39,6 +40,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
   const prefs = usePrefs();
   const [page, setPage] = useState<null | 'about' | 'feedback' | 'usage' | 'secrets' | 'connectors' | 'capabilities' | 'browser'>(null);
   const [usageFocus, setUsageFocus] = useState<string | null>(null);
+  useFT('settings.page', (p: typeof page) => setPage(p)); // TEST-ONLY
   useEffect(() => { if (page !== 'usage') setUsageFocus(null); }, [page]);
   // team-actions.js openConnectors(): the account menu opens settings straight on 连接器.
   useEffect(() => { setPage(visible ? startPage ?? null : null); }, [visible, startPage]);
@@ -112,6 +114,7 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings, startPa
       {/* TEST-ONLY: appearance self-test for screen recording; remove before a real release. */}
       <Group theme={theme} title="测试">
         <Row theme={theme} label="外观自动测试（测试用）" caption="自动切换各外观组合，便于录屏对照网页；仅本机临时生效，结束或停止后恢复" onPress={() => { onClose(); startAppearanceTest(); }} />
+        <Row theme={theme} label="功能自测（测试用）" caption="自动走一遍 0.9.5–0.9.10 的新功能（菜单、连接器、能力、浏览器、用量、密钥、反馈、关于、回复工具栏、定时任务、返回、深浅色），便于录屏；不保存任何东西，结束后恢复" onPress={() => { onClose(); startFeatureTest(); }} />
       </Group>
       </>}
     </Sheet>

@@ -1,5 +1,6 @@
 // Grok-style home (agreed): account top-left, '+' top-right, Main Bot centered, bots/groups list. Web typography/icons inside.
 import React, { useMemo, useState } from 'react';
+import { useFT } from '../featureTest'; // TEST-ONLY
 import { Pressable, RefreshControl, Text, View } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { botState, type MarkState } from '../avatar/motion';
@@ -22,6 +23,7 @@ export function HomeScreen({ theme, onOpen, onAccount, onNew, onUsage, onSchedul
   const needs = useMemo(() => needsCount(state), [state]);
   const needTotal = Object.values(needs).reduce((a, b) => a + b, 0);
   const [acct, setAcct] = useState(false);
+  useFT('home.acct', (on: boolean) => setAcct(on)); // TEST-ONLY
     // context-menu.js: 复制对话 ID copies the Bot's current session id (or the group id).
   const [ctx, setCtx] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);

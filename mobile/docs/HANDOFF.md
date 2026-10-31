@@ -159,3 +159,9 @@
 - 修复：新增 src/components/iconXml.ts，把根 paint 属性下放到每个 shape 并替换 currentColor；Icon 使用 iconXml(xml,color)。
 - 回归测试：test/batch0912.test.mts（32 个图标 XML 合法、无 currentColor、每个 shape 有可见 paint）。
 - 渲染验证：docs/appearance-shots/icon-render/header-buttons.png（Chrome 渲染同一 XML，8 主题×模式）。原生模拟器无 KVM 权限未验证。
+
+## 0.9.11 (vc31) — 功能自测（测试用）
+- 账户设置 → 测试 → 「功能自测（测试用）」：一键走查（约 4 分钟），底部步骤标签，可点「停止」。
+- 实现：src/featureTest.tsx（useFT 动作注册 + 脚本 runFeatureTest）；App.tsx FeatureTestRunner 保存/恢复页面栈与设置。
+- 不改服务器：表单只打开/取消，无效 JSON 只显示错误，删除只第一次点（4 秒复原），聊天用本地演示数据，剪贴板复原。
+- 正式发布前删除：featureTest.tsx、各 useFT 调用、设置行、App.tsx runner。测试：test/batch0913.test.mts。

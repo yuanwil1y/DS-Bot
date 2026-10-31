@@ -5,6 +5,7 @@
 // its content and never clips. Items without an API show '接口尚未实现' as that hint;
 // phone-impossible ones '移动端暂未实现'.
 import React from 'react';
+import { FTLabel } from '../featureTest'; // TEST-ONLY
 import { Modal, Pressable, Text, View } from 'react-native';
 import type { Theme } from '../theme';
 import { Icon } from './ui';
@@ -38,6 +39,7 @@ export function Menu({ theme, visible, onClose, items, top = 64, right = 16, lef
           })}
         </View>
       </Pressable>
+      <FTLabel />
     </Modal>
   );
 }

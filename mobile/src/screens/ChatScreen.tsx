@@ -32,6 +32,7 @@ import { fmt, t } from '../i18n';
 import type { Theme } from '../theme';
 import { useTeamPrefs } from '../teamPrefs';
 import { DEMO_ITEMS, useAppearanceTest } from '../appearanceTest';
+import { LONG_TEXT, ftLog, useFT, useFeatureTest } from '../featureTest'; // TEST-ONLY
 import { MessageTools, ReactionChips, toggleReaction, useReactions } from '../components/MessageTools';
 import { bubbleMax, flatMax, inkTextHex, leadBubbleMax, userMax } from '../appearance';
 
@@ -146,8 +147,24 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const mq = room ? mentionQuery(text) : null;
   // TEST-ONLY: during the appearance self-test this chat shows the fixed local demo conversation.
   const demo = useAppearanceTest().demo === bot?.id && !!bot;
-  const list = useMemo(() => (demo ? rows(withHistory(emptyChat(), DEMO_ITEMS)) : bot ? rows(model) : roomRows(rmodel)), [demo, bot, model, rmodel]);
+  const ftLong = useFeatureTest().long; // TEST-ONLY: a long demo reply for 显示全部 / 收起
+  const list = useMemo(() => (demo ? rows(withHistory(emptyChat(), ftLong ? [...DEMO_ITEMS, { kind: 'bot', text: LONG_TEXT, time: DEMO_ITEMS.at(-1)!.time + 60_000, seq: 2000, turn: 99 }] as any : DEMO_ITEMS)) : bot ? rows(model) : roomRows(rmodel)), [demo, bot, model, rmodel, ftLong]);
   const data = useMemo(() => [...list].reverse(), [list]);
+  // TEST-ONLY feature walkthrough actions (src/featureTest.tsx).
+  const ftBot = () => data.find((r) => r.kind === 'bot' && !r.streaming && r.text !== LONG_TEXT);
+  const ftShow = (key: string) => { const i = data.findIndex((r) => r.key === key); if (i >= 0) listRef.current?.scrollToIndex({ index: i, viewPosition: 0.5, animated: true }); };
+  useFT('chat.tools', (on = true) => { const r = ftBot(); if (!r) { ftLog('跳过：没有 Bot 回复'); return; } if (on) ftShow(r.key); setTools(on ? r.key : null); });
+  useFT('chat.react', (e: string) => { const r = ftBot(); if (r) toggleReaction(`${sessionId}:${r.key}`, e); });
+  useFT('chat.reply', () => { const r = ftBot(); if (r) quote(r.text); });
+  useFT('chat.clear', () => { setText(''); input.current?.blur(); });
+  useFT('chat.long', () => { const r = data.find((x) => x.text === LONG_TEXT); if (r) ftShow(r.key); else ftLog('跳过：没有长消息'); });
+  useFT('chat.bottom', () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
+  useFT('chat.exchange', (on = true) => {
+    if (!on) { setExchangePair(null); return false; }
+    const r = data.find((x) => x.kind === 'event' && x.data?.event === 'exchange' && x.data?.role !== 'report' && x.data?.botId);
+    if (!r || !bot) { ftLog('跳过：这个对话没有交接记录（exchange）'); return false; }
+    ftShow(r.key); setExchangePair([bot.id, r.data.botId]); return true;
+  });
   async function share() {
     setMenu(false);
     const md = list.filter((r) => !r.pending).map((r) => `**${r.kind === 'user' ? t.you : r.name ?? bot?.name ?? ''}**\n\n${r.text}`).join('\n\n---\n\n');

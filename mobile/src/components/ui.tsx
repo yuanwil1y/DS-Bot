@@ -1,5 +1,6 @@
 // Grok-style primitives: round icon buttons, pills, grouped rounded rows, sheets.
 import React from 'react';
+import { FTLabel, useFT } from '../featureTest'; // TEST-ONLY
 import { BackHandler, Modal, Pressable, ScrollView, Switch, Text, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Theme } from '../theme';
@@ -72,6 +73,7 @@ const TITLE = { fontSize: 18, fontWeight: '400' as const, marginLeft: 18 };
 export function PageHeader({ theme, title, onBack, backLabel = '返回', right, sub }: { theme: Theme; title: string; onBack(): void; backLabel?: string; right?: React.ReactNode; sub?: string }) {
   // Hardware / gesture back = this header's back (one level: e.g. 全部记忆 → 摘要, 单个用量 → 全部用量).
   const latest = React.useRef(onBack); latest.current = onBack;
+  useFT('header.back', () => latest.current()); // TEST-ONLY
   React.useEffect(() => { const sub = BackHandler.addEventListener('hardwareBackPress', () => { latest.current(); return true; }); return () => sub.remove(); }, []);
   return (
     <View style={HEAD}>
@@ -87,6 +89,9 @@ export function PageHeader({ theme, title, onBack, backLabel = '返回', right, 
  * Android back goes up one level (settings.js .bt-settings-head: back button + h2 page title). */
 export function Sheet({ theme, visible, onClose, children, right, title, onBack, backLabel }: { theme: Theme; visible: boolean; onClose(): void; children: React.ReactNode; right?: React.ReactNode; title?: string; onBack?: () => void; backLabel?: string }) {
   const ins = useSafeAreaInsets();
+  const scroll = React.useRef<any>(null);
+  useFT(visible ? 'sheet.back' : 'sheet.idle.back', () => { if (visible) (onBack ?? onClose)(); }); // TEST-ONLY
+  useFT(visible ? 'sheet.scroll' : 'sheet.idle.scroll', (y: number | 'end') => { if (y === 'end') scroll.current?.scrollToEnd({ animated: true }); else scroll.current?.scrollTo({ y, animated: true }); }); // TEST-ONLY
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onBack ?? onClose} statusBarTranslucent>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', paddingTop: ins.top + 8 }}>
@@ -96,8 +101,9 @@ export function Sheet({ theme, visible, onClose, children, right, title, onBack,
             <Text numberOfLines={1} style={[TITLE, { flex: 1, color: theme.text }]}>{title ?? ''}</Text>
             {right}
           </View>
-          <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 40 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
+          <ScrollView ref={scroll} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: ins.bottom + 40 }} keyboardShouldPersistTaps="handled">{children}</ScrollView>
         </View>
+        <FTLabel />
       </View>
     </Modal>
   );

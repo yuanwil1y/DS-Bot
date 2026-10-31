@@ -1,3 +1,4 @@
+import { FTLabel, useFT } from '../featureTest'; // TEST-ONLY
 // A Bot reply's toolbar (ds-bot 0.2.4 cells.js 56-142, styles.js 639-667 / touch 1074-1077).
 // Touch has no hover: a tap on the bubble opens it (data-open), a tap elsewhere or on the
 // bubble again closes it. 添加表情 opens the six-emoji strip, 回复 quotes the text into the
@@ -89,6 +90,7 @@ export function MessageTools({ theme, text, name, flat, onReact, onReply, onPane
       else ToastAndroid.show('移动端暂未实现', ToastAndroid.SHORT);
     } catch (e: any) { ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT); }
   };
+  useFT('tools.react', () => open('react')); useFT('tools.more', () => open('more')); useFT('tools.close', () => setPanel(null)); useFT('tools.copy', () => { setPanel(null); copy(); }); // TEST-ONLY
   const { width: W, height: H } = Dimensions.get('window');
   const btn = (ref: React.RefObject<VRef | null> | null, label: string, icon: string, onPress: () => void, expanded?: boolean) => (
     <View ref={ref ?? undefined} collapsable={false}>
@@ -125,6 +127,7 @@ export function MessageTools({ theme, text, name, flat, onReact, onReply, onPane
             ))}
           </View> : null}
         </Pressable>
+        <FTLabel />
       </Modal>
       <Menu theme={theme} scrim={false} visible={panel?.kind === 'more'} onClose={() => setPanel(null)}
         left={r ? Math.min(r.x, W - 208) : 16} {...(below ? { top: r ? r.y + r.h + 4 : 0 } : { bottom: r ? H - r.y + 4 : 0 })}

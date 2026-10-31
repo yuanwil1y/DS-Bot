@@ -2,6 +2,7 @@
 // BotSchedules (Bot 设置里的「定时任务」), ScheduleSummary (详情面板那一行) and TaskForm.
 // The host has list / create / delete only, so there is no edit or pause here either.
 import React, { useEffect, useState } from 'react';
+import { useFT } from '../featureTest'; // TEST-ONLY
 import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import type { BotClient, ScheduleTask, ScheduleView, ScheduleWhen } from '../api';
@@ -103,6 +104,12 @@ export function TaskForm({ theme, start, onDone, onCancel }: { theme: Theme; sta
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [pick, setPick] = useState(false);
+  // TEST-ONLY: open the native pickers the same way the buttons do; the runner closes them with DateTimePickerAndroid.dismiss.
+  useFT('sched.kind', (k: ScheduleWhen['kind']) => setKind(k));
+  useFT('sched.pickDate', () => { let base: Date; try { base = new Date(parseLocal(at)); } catch { base = new Date(); } DateTimePickerAndroid.open({ value: base, mode: 'date', onChange: () => {} }); });
+  useFT('sched.pickClock', () => { let base: Date; try { base = new Date(parseLocal(at)); } catch { base = new Date(); } DateTimePickerAndroid.open({ value: base, mode: 'time', is24Hour: true, onChange: () => {} }); });
+  useFT('sched.pickTime', () => pickTime(time, setTime));
+  useFT('sched.dismiss', async (mode: 'date' | 'time') => { await DateTimePickerAndroid.dismiss(mode); });
   const timing = (): ScheduleWhen => {
     if (kind === 'at') return { kind, at: parseLocal(at) };
     if (kind === 'every') return { kind, minutes: Math.round(Number(count) * UNITS.find(([id]) => id === unit)![1]) };
@@ -174,6 +181,8 @@ export function SchedulesScreen({ theme, start, onBack }: { theme: Theme; start?
   const { client, state } = useStore();
   const view = useSchedules(client);
   const [adding, setAdding] = useState(Boolean(start));
+  useFT('sched.add', (on: boolean) => setAdding(on)); // TEST-ONLY (form is cancelled, never created)
+  useFT('sched.available', () => !!view?.available); // TEST-ONLY
   const bots = state?.bots ?? []; const rooms = state?.rooms ?? [];
   const groups = view?.available ? [
     ...bots.map((b) => ({ id: b.id, avatar: <Avatar bot={b} size={18} />, name: b.name, tasks: view.tasks.filter((t) => t.botId === b.id) })),

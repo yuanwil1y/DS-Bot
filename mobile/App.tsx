@@ -18,6 +18,7 @@ import { SideChatScreen } from './src/screens/SideChat';
 import { VoiceModeScreen } from './src/screens/VoiceMode';
 import { STEPS, pokeAll, stopAppearanceTest, testSet, useAppearanceTest } from './src/appearanceTest'; // TEST-ONLY
 import { Pressable, Text } from 'react-native';
+import { FTLabel, act, ftLog, ftSet, runFeatureTest, stopFeatureTest, useFeatureTest } from './src/featureTest'; // TEST-ONLY
 import { backOne, type NavRoute } from './src/nav';
 
 // A tiny stack (home -> chat -> details) keeps native deps out; hardware back pops it.
@@ -69,6 +70,7 @@ function Root() {
       <StatusBar style={theme.dark ? 'light' : 'dark'} />
       {body}
       {/* TEST-ONLY: appearance self-test runner + overlay; remove before a real release. */}
+      <FeatureTestRunner stack={stack} setStack={setStack} settingsOpen={settings} setSettings={(on) => { setSettingsStart(undefined); setSettings(on); }} />
       <AppearanceTestRunner stack={stack} setStack={setStack} closeSettings={() => setSettings(false)} settingsOpen={settings} reopenSettings={() => setSettings(true)} />
       {client ? <SettingsSheet theme={theme} visible={settings} startPage={settingsStart} onClose={() => setSettings(false)} onOpenSettings={(t) => push({ name: 'settings', target: t, fromSheet: true })} /> : null}
       {client ? <NewChatSheet theme={theme} mode={newChat} onClose={() => setNewChat(null)} onOpen={(t: any) => t.settings ? setStack((s) => [...s, { name: 'chat', target: { kind: 'bot', id: t.id } }, { name: 'settings', target: { kind: 'bot', id: t.id } }]) : open(t)} /> : null}
@@ -83,6 +85,42 @@ installGlobalHandler();
 
 export default function App() {
   return <Boundary where="App"><SafeAreaProvider><PrefsProvider><StoreProvider><TeamPrefsProvider><View style={{ flex: 1 }}><Keyed /></View></TeamPrefsProvider></StoreProvider></PrefsProvider></SafeAreaProvider></Boundary>;
+}
+
+// TEST-ONLY feature walkthrough (see src/featureTest.tsx). Remove before a real release.
+function FeatureTestRunner({ stack, setStack, settingsOpen, setSettings }: { stack: Route[]; setStack: React.Dispatch<React.SetStateAction<Route[]>>; settingsOpen: boolean; setSettings(on: boolean): void }) {
+  const test = useFeatureTest();
+  const { state } = useStore();
+  const latest = useRef(state); latest.current = state;
+  useEffect(() => {
+    if (!test.running) return;
+    const saved = stack;
+    const hadSettings = settingsOpen;
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
+    const restore = () => { testSet({ demo: null, dark: null, override: null }); ftSet({ long: false }); setStack(saved); setSettings(hadSettings); };
+    setSettings(false);
+    (async () => {
+      const st = latest.current;
+      const mainId = (st as any)?.mainBotId ?? st?.bots?.[0]?.id ?? '';
+      try {
+        await wait(800);
+        await runFeatureTest({
+          mainId,
+          setStack: (r) => setStack(r as Route[]),
+          openSettings: async (page) => { setSettings(true); await wait(700); await act('settings.page', page); },
+          closeSettings: () => setSettings(false),
+        });
+        ftSet({ label: '测试完成，正在恢复…' });
+      } catch (e: any) {
+        if (String(e?.message) !== 'stopped') ftLog(`中止：${e?.message ?? e}`);
+      }
+      restore();
+      await wait(2500);
+      stopFeatureTest();
+    })();
+    return undefined;
+  }, [test.running]);
+  return test.running ? <FTLabel onStop={stopFeatureTest} /> : null;
 }
 
 // TEST-ONLY appearance self-test (see src/appearanceTest.tsx). Remove before a real release.

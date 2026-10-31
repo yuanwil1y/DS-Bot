@@ -59,12 +59,21 @@ export function applyFeed(m: ChatModel, sessionId: string, e: FeedEvent): ChatMo
   return m;
 }
 
+/** cells.js event rows: 群聊回复： + the room, or 收到消息：/收到回复：/叫停者： + the other Bot. */
+export function eventData(i: any) {
+  if (i.role === 'report') return { event: 'exchange', role: 'report', prefix: '群聊回复：', roomId: i.roomId, fallback: '一个群聊' };
+  const prefix = ({ stopped: '叫停者：', reply: '收到回复：' } as Record<string, string>)[i.role] ?? '收到消息：';
+  return { event: 'exchange', role: i.role, prefix, botId: i.botId, fallback: i.name ?? '一个 Bot' };
+}
+
 export function rows(m: ChatModel): ChatRow[] {
   const out: ChatRow[] = m.items
-    .filter((i) => i.text || (i.kind === 'view' && i.view !== undefined) || (i.kind === 'answer' && (i.questions?.length || i.views?.length || i.handoff)))
+    .filter((i) => i.text || (i.kind === 'event' && (i as any).role) || (i.kind === 'view' && i.view !== undefined) || (i.kind === 'answer' && (i.questions?.length || i.views?.length || i.handoff)))
     // An answer to a question, a view or a browser handoff draws its settled card (widget-cell.js AnsweredReply).
     .map((i, n) => ({ key: `i${i.seq ?? n}-${n}`, kind: i.kind, text: i.text ?? '', time: i.time, turn: i.turn, seq: i.seq,
-      ...(i.kind === 'view' ? { data: { title: i.title ?? '', view: i.view } }
+      // cells.js 'event' rows (parts.js stamps role/botId/name/roomId): a message between Bots.
+      ...(i.kind === 'event' ? { text: '', data: eventData(i) }
+        : i.kind === 'view' ? { data: { title: i.title ?? '', view: i.view } }
         : i.kind === 'answer' && i.views?.length ? { data: { views: i.views, answers: i.answers ?? [] } }
         : i.kind === 'answer' && i.handoff ? { data: { handoff: i.handoff } }
           : i.kind === 'answer' && i.questions?.length ? { data: { questions: i.questions, answers: i.answers ?? [] } }

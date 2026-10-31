@@ -23,6 +23,7 @@ import { Markdown } from '../components/Markdown';
 import { FoldMarkdown, FoldPlain } from '../components/Fold';
 import { FOLD_AT, FOLD_HUGE, stripLongNote } from '../api/fold';
 import { Boundary } from '../errors';
+import { ExchangeSheet } from '../components/ExchangeSheet';
 import { leaveVisit, loadSeen, unreadOf, type Visit } from '../visits';
 import { AnsweredView, ShownView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
@@ -61,6 +62,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   };
   // web cells.js / user-message.js: a message's Copy writes its text to the clipboard.
   const [copyOf, setCopyOf] = useState<string | null>(null);
+  const [exchangePair, setExchangePair] = useState<[string, string] | null>(null);
   const copyText = (s: string) => { setCopyOf(null); Clipboard.setStringAsync(s).then(() => ToastAndroid.show('已复制', ToastAndroid.SHORT)).catch(() => {}); };
   const dictation = useDictation((chunk, final) => {
     if (final) setText((v) => (v ? (v.endsWith(' ') || v.endsWith('\n') ? v : v + ' ') : '') + chunk);
@@ -255,6 +257,16 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
           renderItem={(p) => <Boundary where="消息" inline resetKey={p.item}>{p.item.key === unread.first ? <NewDivider theme={theme} /> : null}{(({ item, index }: { item: ChatRow; index: number }) => {
             if (item.kind === 'event') {
               const ev = item.data?.event;
+              // cells.js event rows in a Bot's own chat: GroupEvent (report) / EventLine whole (others).
+              if (ev === 'exchange') {
+                const d = item.data;
+                const r = d.roomId ? (state?.rooms ?? []).find((x) => x.id === d.roomId) : undefined;
+                const other: any = d.botId ? byId[d.botId] ?? { id: d.botId, name: d.fallback, color: 'gray' } : undefined;
+                const line = (mark: React.ReactNode, label: string, onPress?: () => void) => <Pressable disabled={!onPress} onPress={onPress} style={{ flexDirection: 'row', alignSelf: 'center', alignItems: 'center', marginVertical: 6, maxWidth: '90%' }}>
+                  <Text style={{ color: theme.sub, fontSize: 13 }}>{d.prefix}</Text>{mark ? <View style={{ marginLeft: 4 }}>{mark}</View> : null}<Text numberOfLines={1} style={{ color: theme.sub, fontSize: 13, marginLeft: mark ? 4 : 0, flexShrink: 1, fontWeight: onPress ? '500' : '400' }}>{label}</Text></Pressable>;
+                if (d.role === 'report') return r ? line(<GroupAvatar members={(r.members ?? []).map((m) => byId[m]).filter(Boolean)} size={16} />, r.name, () => onOpenChat({ kind: 'room', id: r.id })) : line(null, d.fallback);
+                return line(<Avatar bot={other} size={16} badge={false} />, other.name, bot && other.id ? () => setExchangePair([bot.id, other.id]) : undefined);
+              }
               if (ev === 'working' || ev === 'approval') return <Pressable onPress={onDetails} style={{ flexDirection: 'row', alignSelf: 'center', alignItems: 'center', marginVertical: 6 }}>{item.botId && byId[item.botId] ? <Avatar bot={byId[item.botId]} size={16} /> : null}<Text style={{ color: theme.sub, fontSize: 13, marginLeft: 5 }}>{item.text}</Text></Pressable>;
               return <View style={{ alignItems: 'center', marginVertical: 6 }}><Text style={{ color: ev === 'failed' ? theme.danger : theme.sub, fontSize: 13, textAlign: 'center' }}>{item.text}</Text>
                 {ev === 'paused' && room?.paused?.length ? <Pressable onPress={() => client!.continueRoom(room.id).then(refresh).catch(onErr)} style={{ marginTop: 6, paddingHorizontal: 12, height: 28, borderRadius: 14, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: theme.text, fontSize: 13 }}>继续</Text></Pressable> : null}</View>;
@@ -431,6 +443,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
 
       <Menu theme={theme} visible={copyOf !== null} onClose={() => setCopyOf(null)} bottom={80} items={[{ label: '复制', onPress: () => copyText(copyOf ?? '') }]} />
       <Menu theme={theme} visible={menu} onClose={() => setMenu(false)} bottom={80} items={[{ label: '定时任务', onPress: onSchedule }]} />
+      <ExchangeSheet theme={theme} pair={exchangePair} onClose={() => setExchangePair(null)} />
     </KeyboardAvoidingView>
   );
 }

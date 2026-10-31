@@ -80,3 +80,10 @@
 - 头像：state 改用 `avatars:'ref'`，再用 avatar 按编号取图，在客户端缓存。
 - 反馈/诊断：对照 web 反馈页，用 diagnostics、diagnostics-log、diagnostics-clear；GitHub issue 链接长度限制和网页一致。
 - memory-edit：网页没有编辑记忆的界面，不做。
+
+## 10-31 21:40 0.9.7 功能对齐第二批
+- Bot 间对话：exchange.js ExchangeDialog → `src/components/ExchangeSheet.tsx`。底部弹出，标题行两个头像中间「⇄」，每 2 秒拉一次 `exchange`（后台 8 秒），间隔超过 30 分钟显示日期，长消息用 `exchange-text` 读全文，按钮「关闭」。入口是私聊里的事件行（cells.js 'event'：群聊回复：+群 / 叫停者：、收到回复：、收到消息：+Bot）。
+- 密钥页：secret-card.js SecretsPage/SecretRow/ScopeEditor/PurposeEditor/ValueEditor/AddSecret → `src/screens/SecretsPage.tsx`。文案、按钮禁用条件、名字规则 `/^[A-Za-z][\w-]{0,63}$/`、值至少 4 个字符都照网页。
+- 用量页：usage-page.js + usage-data.js → `src/api/usageData.ts`（原样复制）、`src/api/usageModel.ts`、`src/screens/UsagePage.tsx`。悬停改为点按，自选时段一次一个月。
+- 群详情里的用量：网页靠 DSH projections，手机没有 → 标「接口尚未实现」。
+- 剩下「移动端尚未开发」：连接器、能力、浏览器。

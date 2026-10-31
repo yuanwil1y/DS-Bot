@@ -1,4 +1,6 @@
 // Account button -> settings sheet (Grok settings style).
+import { UsagePage } from './UsagePage';
+import { SecretsPage } from './SecretsPage';
 import React, { useEffect, useState } from 'react';
 import { clearLastError, loadLastError, type LastError } from '../errors';
 import { Text, ToastAndroid } from 'react-native';
@@ -32,7 +34,9 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   const setMain = (p: Record<string, unknown>) => client!.call('set-main', p).then(refresh, (e: any) => ToastAndroid.show(String(e?.message ?? e), ToastAndroid.SHORT));
   const openSettings = (t: ChatTarget) => { onClose(); onOpenSettings?.(t); };
   const prefs = usePrefs();
-  const [page, setPage] = useState<null | 'about' | 'feedback'>(null);
+  const [page, setPage] = useState<null | 'about' | 'feedback' | 'usage' | 'secrets'>(null);
+  const [usageFocus, setUsageFocus] = useState<string | null>(null);
+  useEffect(() => { if (page !== 'usage') setUsageFocus(null); }, [page]);
   useEffect(() => { if (!visible) setPage(null); }, [visible]);
   const [lastErr, setLastErr] = useState<LastError | null>(null);
   useEffect(() => { if (visible) loadLastError().then(setLastErr); }, [visible]);
@@ -42,8 +46,10 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
   return (
     <Sheet theme={theme} visible={visible} onClose={onClose}>
       {page ? <>
-        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={page === 'about' ? '‹ 关于 DS Bot' : '‹ 反馈'} chevron={false} onPress={() => setPage(null)} /></Group>
-        {page === 'about' ? <AboutPage theme={theme} onFeedback={() => setPage('feedback')} /> : <FeedbackPage theme={theme} />}
+        <Group theme={theme} style={{ marginTop: 4 }}><Row theme={theme} label={`‹ ${({ about: '关于 DS Bot', feedback: '反馈', usage: '用量', secrets: '密钥' } as const)[page]}`} chevron={false} onPress={() => (page === 'usage' && usageFocus ? setUsageFocus(null) : setPage(null))} /></Group>
+        {page === 'about' ? <AboutPage theme={theme} onFeedback={() => setPage('feedback')} />
+          : page === 'usage' ? <UsagePage theme={theme} focusId={usageFocus} onFocus={setUsageFocus} />
+          : page === 'secrets' ? <SecretsPage theme={theme} /> : <FeedbackPage theme={theme} />}
       </> : <>
       <Group theme={theme} style={{ marginTop: 4 }}>
         <Row theme={theme} label={t.appName} caption={host} value={status === 'open' ? t.online : t.offline} />
@@ -75,7 +81,9 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       </Group>
       <Group theme={theme} title="设置页面">
         <Row theme={theme} label="模型" value={NA_MOBILE} chevron={false} />
-        {['连接器', '能力', '浏览器', '密钥'].map((p) => <Row key={p} theme={theme} label={p} value={NA_TODO} chevron={false} />)}
+        {['连接器', '能力', '浏览器'].map((p) => <Row key={p} theme={theme} label={p} value={NA_TODO} chevron={false} />)}
+        <Row theme={theme} label="用量" onPress={() => setPage('usage')} />
+        <Row theme={theme} label="密钥" onPress={() => setPage('secrets')} />
         <Row theme={theme} label="反馈" onPress={() => setPage('feedback')} />
         <Row theme={theme} label="关于 DS Bot" onPress={() => setPage('about')} />
       </Group>

@@ -119,9 +119,9 @@ if (st.rooms?.length) {
   assert.ok(roomRows(rm).length > 0);
   log('room-chat rows =', roomRows(rm).length, 'running =', !!p.running);
 }
-const u = await client.usage(bot.id); assert.ok(u.day && typeof u.day.calls === 'number');
+const u = await client.usage(); assert.ok(Array.isArray(u.rows) && Array.isArray(u.owners));
 const mem = await client.memory(bot.id); assert.ok(Array.isArray(mem.entries));
-log('usage-summary calls(24h) =', u.day.calls, '; memory entries =', mem.entries.length);
+log('usage rows =', u.rows.length, '; memory entries =', mem.entries.length);
 
 
 // ---- M2/M3: cards, group live, notices ----

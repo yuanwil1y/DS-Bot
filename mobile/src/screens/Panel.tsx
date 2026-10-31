@@ -1,4 +1,5 @@
 // Bot / group panel = web UI "查看对话详情" panel (phone layout), pushed as a page.
+import { UsagePage } from './UsagePage';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native';
 import { type Bot, type Room } from '../api';
@@ -280,7 +281,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                 <Label theme={theme}>用量</Label>
                 <View style={{ flexDirection: 'row' }}>
                   <Text style={{ flex: 1, color: theme.text }}>{name}</Text>
-                  <Text style={{ color: usage ? theme.text : theme.faint }}>{usage || (room ? NA_TODO : NA)}</Text>
+                  <Text style={{ color: usage ? theme.text : theme.faint }}>{usage || NA}</Text>
                 </View>
               </>
             ) : null}
@@ -587,27 +588,15 @@ export function MemoryScreen({ theme, id, name, onBack }: { theme: Theme; id: st
 
 // Account menu "用量": main bot usage summary.
 export function UsageScreen({ theme, onBack }: { theme: Theme; onBack(): void }) {
-  const { client, state } = useStore();
-  const [rows, setRows] = useState<Record<string, any>>({});
-  useEffect(() => {
-    for (const b of state?.bots ?? []) client?.usage(b.id).then((u) => setRows((r) => ({ ...r, [b.id]: u }))).catch(() => {});
-  }, [client, state?.bots.length]);
+  // usage-page.js UsagePage (0.2.4); a focus opens over the overview and 返回 steps back to it.
+  const [focus, setFocus] = useState<any>(null);
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingTop: 8 }}>
-        <RoundButton theme={theme} icon="back" onPress={onBack} label="返回" />
+        <RoundButton theme={theme} icon="back" onPress={() => (focus ? setFocus(null) : onBack())} label="返回" />
         <Text style={{ color: theme.text, fontSize: 18, fontWeight: '600', marginLeft: 10 }}>用量</Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 18 }}>
-        <Text style={{ color: theme.sub, marginBottom: 10 }}>本月</Text>
-        {(state?.bots ?? []).map((b) => (
-          <View key={b.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }}>
-            <Avatar bot={b} size={30} ring={theme.bg} />
-            <Text style={{ flex: 1, color: theme.text, marginLeft: 10 }}>{b.name}</Text>
-            <Text style={{ color: theme.text }}>{usageLine(rows[b.id])}</Text>
-          </View>
-        ))}
-      </ScrollView>
+      <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 40 }}><UsagePage theme={theme} focusId={focus} onFocus={setFocus} /></ScrollView>
     </View>
   );
 }

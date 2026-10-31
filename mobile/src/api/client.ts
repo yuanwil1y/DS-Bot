@@ -81,7 +81,9 @@ export class BotClient {
   privateRelease(id: string) { return this.call<BotState>('private-release', { id }); }
   chat(botId: string, cursor?: string) { return this.call<ChatPage>('chat', cursor ? { botId, cursor } : { botId }); }
   roomChat(roomId: string, cursor?: string) { return this.call<{ roomId: string; items: any[]; cursor: string | null; running?: boolean; speaking?: unknown }>('room-chat', cursor ? { roomId, cursor } : { roomId }); }
-  usage(botId: string) { return this.call<any>('usage-summary', { botId, timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }
+  usage() { return this.call<any>('usage', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }); }
+  exchange(a: string, b: string) { return this.call<any[]>('exchange', { a, b }); }
+  exchangeText(id: string) { return this.call<{ text: string; whole: boolean }>('exchange-text', { id }); }
   memory(botId: string) { return this.call<any>('memory-view', { botId }); }
   memoryAdd(botId: string, text: string, room = false) { return this.call<any>('memory-add', room ? { roomId: botId, text } : { botId, text }); }
   createBot(p: { name: string; role?: string; model?: string }) { return this.call<any>('create-bot', p); }
@@ -110,8 +112,10 @@ export class BotClient {
   dismissView(sessionId: string) { return this.call<any>('dismiss-view', { sessionId }); }
   // Values go out in these requests and never come back in a response.
   learningAnswer(id: string, approve: boolean) { return this.call<any>('learning-answer', { id, approve }); }
-  secretSet(payload: { requestId: string; value: string; scope: 'all' | 'bot' }) { return this.call<any>('secret-set', payload); }
+  secretSet(payload: { requestId: string; value: string; scope: 'all' | 'bot' } | { name: string; purpose?: string; value: string; scope?: 'all' | string[] }) { return this.call<any>('secret-set', payload); }
   secretAllow(requestId: string) { return this.call<any>('secret-allow', { requestId }); }
+  secretUpdate(name: string, p: { scope?: 'all' | string[]; purpose?: string }) { return this.call<any>('secret-update', { name, ...p }); }
+  secretDelete(name: string) { return this.call<any>('secret-delete', { name }); }
   secretCancel(requestId: string) { return this.call<any>('secret-cancel', { requestId }); }
   approvalAnswer(id: string, choice: 'allow' | 'reject') { return this.call<any>('approval-answer', { id, choice }); }
   stopMemberWork(roomId: string, botId: string) { return this.call<boolean>('stop-member-work', { roomId, botId }); }

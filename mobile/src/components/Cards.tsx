@@ -180,7 +180,7 @@ function Node({ n, c }: { n: any; c: Ctx }): React.ReactElement | null {
       const items = (Array.isArray(n.items) ? n.items : []).filter((x: any) => typeof x?.url === 'string' && /^https?:\/\//i.test(x.url));
       return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{items.map((x: any, i: number) => <Pressable key={i} onPress={() => Linking.openURL(x.url)} style={{ height: 20, paddingHorizontal: 6, borderRadius: 4, backgroundColor: theme.cardHi, justifyContent: 'center', maxWidth: '100%' }}><Text numberOfLines={1} style={{ color: theme.sub, fontSize: 11 }}>🔗 {x.label}</Text></Pressable>)}</View>;
     }
-    case 'html': return <Text style={{ color: theme.sub, fontSize: 12 }}>（这段 HTML 内容请在网页版查看）</Text>;
+    case 'html': return <Text style={{ color: theme.sub, fontSize: 12 }}>HTML 内容 · 移动端暂未实现</Text>;
     case 'slider': case 'number': return <NumberLike n={n} c={c} />;
     case 'choice': {
       const o = opts(n); const cur = c.values[n.id];
@@ -407,4 +407,9 @@ export function SecretCard({ theme, bot, bots, request, saved, onSet, onAllow, o
       </View>
     </View>
   );
+}
+
+/** handoff-card.js PendingHandoff: the live hand-off needs the Bot's browser, which the phone has no view of. */
+export function PendingHandoffStub({ theme }: { theme: Theme }) {
+  return <Shell theme={theme} title="需要你在浏览器里帮忙" badge="移动端暂未实现" />;
 }

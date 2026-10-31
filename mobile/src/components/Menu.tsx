@@ -1,10 +1,11 @@
-// Popup menu (web UI dropdowns). Items without an API are shown disabled with '暂不支持'.
+// Popup menu (web UI dropdowns). Items without an API show '接口尚未实现'; phone-impossible ones '移动端暂未实现'.
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 import type { Theme } from '../theme';
 
-export const NA = '暂不支持';
-export type MenuItem = { label: string; onPress?: () => void; checked?: boolean; sep?: boolean };
+export const NA = '接口尚未实现';
+export const NA_MOBILE = '移动端暂未实现';
+export type MenuItem = { label: string; onPress?: () => void; checked?: boolean; sep?: boolean; na?: string };
 
 export function Menu({ theme, visible, onClose, items, top = 64, right = 16, left, bottom }: { theme: Theme; visible: boolean; onClose(): void; items: MenuItem[]; top?: number; right?: number; left?: number; bottom?: number }) {
   const pos = bottom != null ? { bottom, left: left ?? 16 } : left != null ? { top, left } : { top, right };
@@ -18,7 +19,7 @@ export function Menu({ theme, visible, onClose, items, top = 64, right = 16, lef
               <Pressable disabled={!o.onPress} onPress={() => { onClose(); o.onPress?.(); }} android_ripple={{ color: theme.fill }} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 18, paddingVertical: 14 }}>
                 <Text style={{ flex: 1, color: o.onPress ? theme.text : theme.faint, fontSize: 16 }}>{o.label}</Text>
                 {o.checked ? <Text style={{ color: theme.text }}>✓</Text> : null}
-                {!o.onPress ? <Text style={{ color: theme.faint, fontSize: 11, marginLeft: 10 }}>{NA}</Text> : null}
+                {!o.onPress ? <Text style={{ color: theme.faint, fontSize: 11, marginLeft: 10 }}>{o.na ?? NA}</Text> : null}
               </Pressable>
             </React.Fragment>
           ))}

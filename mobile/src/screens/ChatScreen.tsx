@@ -18,7 +18,7 @@ import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
 import { Boundary } from '../errors';
-import { AnsweredView, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
+import { AnsweredView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import { fmt, t } from '../i18n';
@@ -37,7 +37,6 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
   const [text, setText] = useState('');
   const [err, setErr] = useState('');
   const [menu, setMenu] = useState(false);
-  const setNa = (what: string) => ToastAndroid.show(`${what}：暂不支持`, ToastAndroid.SHORT);
   const dictation = useDictation((chunk, final) => {
     if (final) setText((v) => (v ? (v.endsWith(' ') || v.endsWith('\n') ? v : v + ' ') : '') + chunk);
   });
@@ -182,6 +181,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
                 <Avatar bot={byId[b]} size={22} working />
                 <Text style={{ color: theme.sub, fontSize: 13, marginLeft: 6 }}>{w?.tool ? `${byId[b].name} · ${workPhrase(w)}…` : `${byId[b].name} 正在输入…`}</Text>
               </View>) : null; })}
+            {bot && (state?.work as any)?.bots?.[bot.id]?.tool === 'browser_handoff' ? <PendingHandoffStub theme={theme} /> : null}
             {bot ? (((state as any)?.btwCards?.[bot.id] ?? []) as any[]).filter((c) => c?.partId === (bot.sessionId ?? bot.id)).map((c) => <BtwCard key={c.id} theme={theme} card={c} onDelete={() => client!.call<any>('btw-delete', { sessionId: c.partId, cardId: c.id }).then(async (r) => { await after(); return r; })} />) : null}
             {bot ? (state?.learning?.[bot.id] ?? []).map((p: any) => <LearningCard key={p.id} theme={theme} proposal={p} onAnswer={(approve) => client!.learningAnswer(p.id, approve).then(after)} />) : null}
             {bot ? (cards.secrets ?? []).map((r) => <SecretCard key={JSON.stringify([cards.sessionId, r.id, r.kind])} theme={theme} bot={bot} bots={state?.bots ?? []} request={r} saved={(state?.secrets ?? []).find((x) => x.name === r.name)}

@@ -7,7 +7,7 @@ import { shownMode } from '../api/cards';
 import { ApprovalCard } from '../components/Cards';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Icon, PillButton, RoundButton } from '../components/ui';
-import { Menu, NA } from '../components/Menu';
+import { Menu, NA, NA_MOBILE } from '../components/Menu';
 import { FolderField, ModelField, modelLine, PermissionPicker, presetName } from '../components/Pickers';
 import { ToastAndroid } from 'react-native';
 import { useStore } from '../store';
@@ -149,7 +149,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
   const model = bot ? bot.model ?? bot.appliedModel ?? state?.defaultModel : undefined;
   const top = [
     { icon: '⚙', label: bot ? '编辑 Bot' : '群设置', f: onSettings },
-    ...(bot ? [{ icon: '⋯', label: '更多', f: () => setMore(true) }] : []),
+    { icon: '⋯', label: '更多', f: () => setMore(true) },
     { icon: copied ? '✓' : '⇪', label: copied ? '已复制对话' : '分享对话', f: share },
     { icon: '✕', label: '关闭详情', f: onClose },
   ];
@@ -272,12 +272,12 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
                 </Pressable>
               </>
             )}
-            {usage ? (
+            {usage || room ? (
               <>
                 <Label theme={theme}>用量</Label>
                 <View style={{ flexDirection: 'row' }}>
                   <Text style={{ flex: 1, color: theme.text }}>{name}</Text>
-                  <Text style={{ color: theme.text }}>{usage}</Text>
+                  <Text style={{ color: usage ? theme.text : theme.faint }}>{usage || NA}</Text>
                 </View>
               </>
             ) : null}
@@ -285,7 +285,7 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
           </>
         ) : null}
       </ScrollView>
-      <Menu theme={theme} visible={more} onClose={() => setMore(false)} items={[{ label: SIDE.title, onPress: newSide }]} />
+      <Menu theme={theme} visible={more} onClose={() => setMore(false)} items={[...(bot ? [{ label: SIDE.title, onPress: newSide }] : []), { label: '终端', na: NA_MOBILE }, { label: '文件树', na: NA_MOBILE }]} />
     </View>
   );
 }

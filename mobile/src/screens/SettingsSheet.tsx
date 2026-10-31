@@ -4,6 +4,7 @@ import { clearLastError, loadLastError, type LastError } from '../errors';
 import { Text, ToastAndroid } from 'react-native';
 import type { ChatTarget } from './HomeScreen';
 import { Group, Row, Sheet } from '../components/ui';
+import { NA, NA_MOBILE } from '../components/Menu';
 import { usePrefs } from '../prefs';
 import { useStore } from '../store';
 import { t } from '../i18n';
@@ -57,6 +58,12 @@ export function SettingsSheet({ theme, visible, onClose, onOpenSettings }: { the
       </Group>
       <Group theme={theme} title={`群聊 · ${rooms.length}`}>
         {rooms.length === 0 ? <Row theme={theme} label="还没有群聊。" caption="在群聊里，几个 Bot 和你一起做一件事。" /> : rooms.map((r) => <Row key={r.id} theme={theme} label={r.name} value={[`${(r.members ?? []).length} 位成员`, r.admin && byId[r.admin] ? `★ ${byId[r.admin].name}` : '', r.hidden ? '已隐藏' : ''].filter(Boolean).join(' · ')} onPress={() => openSettings({ kind: 'room', id: r.id })} />)}
+      </Group>
+      <Group theme={theme} title="设置页面">
+        {['模型', '连接器', '能力', '浏览器', '密钥', '反馈', '关于 DS Bot'].map((p) => <Row key={p} theme={theme} label={p} value={NA} chevron={false} />)}
+      </Group>
+      <Group theme={theme} title="模式">
+        <Row theme={theme} label="经典 Agent 模式" value={NA_MOBILE} chevron={false} />
       </Group>
       <Group theme={theme}>
         <Row theme={theme} label={t.disconnect} danger chevron={false} onPress={() => { onClose(); disconnect(); }} />

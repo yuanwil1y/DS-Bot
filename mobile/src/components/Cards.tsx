@@ -339,6 +339,11 @@ export function AnsweredView({ theme, views, answers }: { theme: Theme; views: a
   return <WidgetCard theme={theme} title={view.title ?? ''} view={view.view} settled answer={answer} />;
 }
 
+/** widget-cell.js WidgetCell for a display-only show_view: the blueprint the host kept on the call. */
+export function ShownView({ theme, title, view }: { theme: Theme; title: string; view: any }) {
+  return <WidgetCard theme={theme} title={title} view={view} />;
+}
+
 /** handoff-card.js SettledHandoff: the title and how it ended. */
 const HANDOFF_TITLE: Record<string, string> = { login: '需要登录', payment: '需要付款', captcha: '需要验证' };
 export function SettledHandoff({ theme, handoff }: { theme: Theme; handoff: { reason?: string; outcome?: string } }) {

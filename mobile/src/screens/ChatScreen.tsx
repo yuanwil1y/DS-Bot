@@ -19,7 +19,7 @@ import { dockModel, workPhrase } from '../api/work';
 import { Avatar, GroupAvatar } from '../components/Avatar';
 import { Markdown } from '../components/Markdown';
 import { Boundary } from '../errors';
-import { AnsweredView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
+import { AnsweredView, ShownView, PendingHandoffStub, ApprovalCard, QuestionCard, SecretCard, SettledHandoff, SettledQuestion, ViewCardView } from '../components/Cards';
 import { Icon, RoundButton } from '../components/ui';
 import { useStore } from '../store';
 import { fmt, t } from '../i18n';
@@ -203,6 +203,7 @@ export function ChatScreen({ theme, bot, room, onBack, onDetails, onSchedule, on
               return <View style={{ alignItems: 'center', marginVertical: 6 }}><Text style={{ color: ev === 'failed' ? theme.danger : theme.sub, fontSize: 13, textAlign: 'center' }}>{item.text}</Text>
                 {ev === 'paused' && room?.paused?.length ? <Pressable onPress={() => client!.continueRoom(room.id).then(refresh).catch(onErr)} style={{ marginTop: 6, paddingHorizontal: 12, height: 28, borderRadius: 14, backgroundColor: theme.cardHi, justifyContent: 'center' }}><Text style={{ color: theme.text, fontSize: 13 }}>继续</Text></Pressable> : null}</View>;
             }
+            if (item.kind === 'view' && item.data) return <View style={{ alignSelf: 'stretch', marginVertical: 4 }}><ShownView theme={theme} title={item.data.title} view={item.data.view} /></View>;
             if (item.kind === 'answer' && item.data?.views) return <View style={{ alignSelf: 'flex-end', width: '88%' }}><AnsweredView theme={theme} views={item.data.views} answers={item.data.answers} /></View>;
             if (item.kind === 'answer' && item.data?.handoff) return <View style={{ alignSelf: 'flex-end', width: '88%' }}><SettledHandoff theme={theme} handoff={item.data.handoff} /></View>;
             if (item.kind === 'answer' && item.data) return <View style={{ alignSelf: 'flex-end', width: '88%' }}>{item.data.questions.map((q: any) => <SettledQuestion key={q.id} theme={theme} q={q} answer={item.data.answers.find((x: any) => x.id === q.id)} />)}</View>;

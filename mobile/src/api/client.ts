@@ -12,7 +12,7 @@ export class BotClient {
 
   async connect(): Promise<Hello> {
     await this.auth.establish(this.conn);
-    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.7.0', platform: 'android' }, api: [1] });
+    const h = await this.call<Hello>('hello', { client: { name: 'ds-bot-mobile', version: '0.7.1', platform: 'android' }, api: [1] });
     this.hello = h;
     if (h.api !== 1) throw new ApiCallError('client/api', 'server does not speak mobile API v1');
     return h;

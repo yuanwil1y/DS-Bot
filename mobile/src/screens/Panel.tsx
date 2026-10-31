@@ -69,22 +69,26 @@ export function PanelScreen({ theme, bot, room, onClose, onSettings, onMemory, o
   ];
   return (
     <View style={{ flex: 1, backgroundColor: theme.bg }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, paddingHorizontal: 16, paddingTop: 8 }}>
-        {top.map((b) => <RoundButton key={b.label} theme={theme} label={b.label} onPress={b.f}><Icon name={b.icon} color={theme.text} size={18} /></RoundButton>)}
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 16, paddingTop: 8, gap: 8 }}>
+        {sides.length ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flex: 1, minWidth: 0 }} contentContainerStyle={{ alignItems: 'center', gap: 8, paddingVertical: 2 }}>
+            {sides.map((c) => (
+              <View key={c.id} style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 200, height: 36, borderRadius: 18, paddingLeft: 12, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
+                <Pressable onPress={() => onSide(c.id)} hitSlop={{ top: 8, bottom: 8, left: 4, right: 0 }} style={{ flexDirection: 'row', alignItems: 'center', flexShrink: 1, minWidth: 0, paddingVertical: 6 }}>
+                  <Text style={{ color: theme.sub, fontSize: 13, marginRight: 6 }}>◫</Text>
+                  <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, flexShrink: 1 }}>{sideTitle(c)}</Text>
+                </Pressable>
+                <Pressable hitSlop={12} accessibilityLabel={SIDE.close} onPress={() => client!.sideClose(c.id).then(refresh, () => {})} style={{ paddingHorizontal: 12, height: 36, justifyContent: 'center' }}>
+                  <Text style={{ color: theme.sub, fontSize: 18, lineHeight: 20 }}>×</Text>
+                </Pressable>
+              </View>
+            ))}
+          </ScrollView>
+        ) : <View style={{ flex: 1 }} />}
+        <View style={{ flexDirection: 'row', gap: 10, flexShrink: 0 }}>
+          {top.map((b) => <RoundButton key={b.label} theme={theme} label={b.label} onPress={b.f}><Icon name={b.icon} color={theme.text} size={18} /></RoundButton>)}
+        </View>
       </View>
-      {sides.length ? (
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, marginTop: 10 }} contentContainerStyle={{ paddingHorizontal: 16, gap: 8 }}>
-          {sides.map((c) => (
-            <Pressable key={c.id} onPress={() => onSide(c.id)} style={{ flexDirection: 'row', alignItems: 'center', maxWidth: 220, height: 34, borderRadius: 17, paddingLeft: 12, backgroundColor: theme.card, borderWidth: 1, borderColor: theme.fillBorder }}>
-              <Text style={{ color: theme.sub, fontSize: 13, marginRight: 6 }}>◫</Text>
-              <Text numberOfLines={1} style={{ color: theme.text, fontSize: 14, flexShrink: 1 }}>{sideTitle(c)}</Text>
-              <Pressable hitSlop={8} accessibilityLabel={SIDE.close} onPress={() => client!.sideClose(c.id).then(refresh, () => {})} style={{ paddingHorizontal: 10, height: 34, justifyContent: 'center' }}>
-                <Text style={{ color: theme.sub, fontSize: 16 }}>×</Text>
-              </Pressable>
-            </Pressable>
-          ))}
-        </ScrollView>
-      ) : null}
       <ScrollView contentContainerStyle={{ paddingHorizontal: 18, paddingBottom: 40 }}>
         <View style={{ alignItems: 'center', marginTop: 10 }}>
           {bot ? <Avatar bot={bot} size={84} ring={theme.bg} /> : <GroupAvatar members={members} size={84} ring={theme.bg} />}

@@ -102,4 +102,26 @@ App：移动端 chat API（host/parts.js displayItems）只下发文字块，不
 
 ## 6. 平价表
 
-见文末「Parity」节（Phase 3 填写）。
+见文末「Parity」节。
+
+## Parity（Phase 3）
+
+| 项 | Web 0.2.4 | Android | 状态 |
+|---|---|---|---|
+| 存储 | state.prefs，set-prefs 补丁，host 校验 | 同一接口；applyPrefs 复刻 host 校验做乐观更新；SecureStore 仅作启动缓存；只读 host 禁用控件 | ✅ 一致（单测覆盖） |
+| 主题 DeepSeek/黑白/纸张/月光 | themes.js 浅/深两套 | palette() 逐值移植 | ✅ |
+| 深浅色 | DSH 外壳决定 | 跟随本设备（行名「深浅色」并注明） | ⚠️ 平台差异，已注明 |
+| 强调色（默认 + 7 色 + 自定义 hex） | accent，深色变体 darkAccent，文字色 accentInk | 同算法；用于发送/语音按钮、主按钮、选中、开关、新消息分隔线、滑块 | ✅ |
+| 布局 气泡/平铺 | layout | 同；平铺有头行（头像/名/时间），无气泡 | ✅ |
+| 气泡宽度 / 平铺宽度 50–100 step 5 | width / flatWidth | 自绘滑块，350ms 防抖写入；bubbleMax/leadBubbleMax/userMax/flatMax 公式移植 | ✅（单测覆盖） |
+| 字号 | 网页 15px 正文 | 保持 17（手机可读性） | ⚠️ 差异，已记录 |
+| 显示思考过程 | thinking 开关 + 思考块 | 开关同步到服务器；手机聊天接口不返回思考内容 | 「接口尚未实现」 |
+| 动画级别 安静/正常/活泼 | motion | 同一偏好；设置在 Bot 列表之后 | ✅ |
+| 状态动画（ponder/squint/seek/scan/bob/wiggle/squash/blink/dash/sway/roll/hop/done） | styles.js keyframes | motion.ts 关键帧逐值移植，逐段 cubic-bezier，fill-box 原点；身体用原生驱动 Animated，眼睛 ~30fps 重绘遮罩 | ✅（单测逐帧校验） |
+| botState / toolState / 结束 settle 1.8s | mark.js | 同函数；首页行与主 Bot、聊天头部、详情（64，可点 poke）、打字行（28，可点 poke，按工具名）、语音（思考/说话） | ✅ |
+| 活泼：眨眼 / 小动作 / ? 骑头 / alert 无限 | lively | 同哈希与负延迟；? 徽标 q-ride | ✅ |
+| 点击 poke | normal/lively，.8s 原点 50% 60%；照片 poke-img | 同；安静级别点按无反应（web 安静下点后动画被 none 覆盖、且不复位——这里不复刻该缺陷） | ✅/⚠️ 小差异 |
+| 悬停抚摸 nuzzle、开心眼、眼睛跟随指针 | 仅鼠标 | 触屏无悬停/指针 | 「移动端暂未实现」（无对应偏好 UI，行为缺口） |
+| 系统减少动态效果 | prefers-reduced-motion 全停 | AccessibilityInfo.isReduceMotionEnabled 全停 | ✅ |
+| 徽标 | working 绿点右下 / ? / 主星 / 管理员星 | working 右下绿点（theme.ok）、? 用强调色、主星保留原样式；管理员星未在头像上显示 | ⚠️ 管理员星缺 |
+| 截图 | — | 本环境无 Android 模拟器/设备，未能截图；需真机目测 | ⚠️ |
